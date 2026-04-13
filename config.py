@@ -5,6 +5,7 @@ load_dotenv()
 
 # --- Modèle et paramètres LLM ---
 MODEL_DEFAULT = "gpt-4o-mini"
+MODEL_VISION = "gpt-4o"  # Vision nécessite gpt-4o (pas mini)
 TEMPERATURE = 0.3
 MAX_TOKENS = 1024
 

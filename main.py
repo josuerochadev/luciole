@@ -12,6 +12,8 @@ from llm import appeler_llm, appeler_llm_json
 from tools.search import search_web
 from tools.database import query_db
 from tools.rag import rechercher_articles
+from tools.transcribe import transcrire_audio
+from tools.vision import analyser_image
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,10 +26,11 @@ logger = logging.getLogger(__name__)
 # Schéma de décision ReAct
 # ---------------------------------------------------------------------------
 SCHEMA_DECISION = {
-    "intent": "database | search | rag | general",
-    "outil": "query_db | search_web | search_articles | reponse_directe",
+    "intent": "database | search | rag | transcribe | vision | general",
+    "outil": "query_db | search_web | search_articles | transcribe_audio | analyze_image | reponse_directe",
     "sql": "requête SQL si intent=database, sinon chaîne vide",
     "query_recherche": "requête si intent=search ou rag, sinon chaîne vide",
+    "file_path": "chemin du fichier si intent=transcribe ou vision, sinon chaîne vide",
     "raisonnement": "explication courte du choix de l'outil",
 }
 
@@ -40,6 +43,10 @@ SYSTEM_REACT = (
     "nouveautés, veille externe\n"
     "- search_articles : pour toute question sur des articles DÉJÀ collectés et archivés "
     "('quels articles parlent de...', 'résume ce qu'on a sur...', 'retrouve les articles sur...')\n"
+    "- transcribe_audio : quand l'utilisateur fournit un fichier audio à transcrire "
+    "('transcris ce fichier', 'analyse cet audio', 'que dit cet enregistrement')\n"
+    "- analyze_image : quand l'utilisateur fournit une image à analyser "
+    "('analyse cette image', 'extrais les infos de cette facture', 'que montre cette photo')\n"
     "- reponse_directe : pour les salutations, questions générales sans besoin d'outil\n"
     "En cas de doute entre search_web et search_articles : "
     "search_articles si la question porte sur l'historique de veille, "
@@ -103,6 +110,36 @@ def executer_outil(decision: dict) -> str:
             logger.info(f"[ReAct] Résultat search_articles (RAG) : {len(resultats)} résultat(s)")
         except Exception as e:
             resultat = f"[ERREUR_OUTIL] Recherche sémantique échouée : {e}"
+            logger.error(f"[ReAct] {resultat}")
+
+    elif outil == "transcribe_audio":
+        fichier = decision.get("file_path", "")
+        try:
+            result = transcrire_audio(fichier)
+            resultat = (
+                f"**Transcription :**\n{result['transcription']}\n\n"
+                f"**Analyse :**\n{result['analyse']}"
+            )
+            logger.info(f"[ReAct] Résultat transcribe_audio : {len(result['transcription'])} car.")
+        except (FileNotFoundError, ValueError) as e:
+            resultat = f"[ERREUR_OUTIL] Transcription impossible : {e}"
+            logger.error(f"[ReAct] {resultat}")
+        except RuntimeError as e:
+            resultat = f"[ERREUR_OUTIL] Erreur API Whisper : {e}"
+            logger.error(f"[ReAct] {resultat}")
+
+    elif outil == "analyze_image":
+        fichier = decision.get("file_path", "")
+        consigne = decision.get("query_recherche", None) or None
+        try:
+            result = analyser_image(fichier, consigne=consigne)
+            resultat = json.dumps(result, ensure_ascii=False, indent=2)
+            logger.info(f"[ReAct] Résultat analyze_image : {len(result)} clé(s) extraites")
+        except (FileNotFoundError, ValueError) as e:
+            resultat = f"[ERREUR_OUTIL] Analyse image impossible : {e}"
+            logger.error(f"[ReAct] {resultat}")
+        except RuntimeError as e:
+            resultat = f"[ERREUR_OUTIL] Erreur GPT-4o Vision : {e}"
             logger.error(f"[ReAct] {resultat}")
 
     else:  # reponse_directe
@@ -220,7 +257,7 @@ def test_connexion_llm():
 # Point d'entrée
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    # Exercice 3 — 3 tests de la boucle ReAct
+    # Exercice 3 — Tests de la boucle ReAct
     cas_tests = [
         "Tous les clients Premium",
         "Bonjour",
@@ -228,3 +265,7 @@ if __name__ == "__main__":
     ]
     for requete in cas_tests:
         agent_react(requete)
+
+    # Exercice 4 — Tests multimodaux (décommenter avec vos fichiers)
+    # agent_react("Transcris ce fichier audio : data/sample.mp3")
+    # agent_react("Analyse cette facture : data/facture.jpg")

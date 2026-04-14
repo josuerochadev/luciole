@@ -14,6 +14,7 @@ from tools.database import query_db
 from tools.rag import rechercher_articles
 from tools.transcribe import transcrire_audio
 from tools.vision import analyser_image
+from security import analyser_securite, valider_sql, filtrer_sortie
 
 logging.basicConfig(
     level=logging.INFO,
@@ -80,6 +81,11 @@ def executer_outil(decision: dict) -> str:
 
     if outil == "query_db":
         sql = decision.get("sql", "SELECT * FROM clients")
+        sql_ok, sql_msg = valider_sql(sql)
+        if not sql_ok:
+            resultat = f"[ERREUR_SECURITE] {sql_msg}"
+            logger.warning(f"[ReAct] SQL bloqué par security : {sql}")
+            return resultat
         try:
             lignes = query_db(sql)
             if not lignes:
@@ -197,6 +203,14 @@ def agent_react(requete: str) -> str:
     print(f"REQUÊTE : {requete}")
     print("=" * 60)
 
+    # --- Garde de sécurité (M4E5) ---
+    check = analyser_securite(requete)
+    if check["bloque"]:
+        msg = f"[BLOQUÉ] {check['raison']} (type: {check['type']})"
+        logger.warning(f"[SECURITE] {msg}")
+        print(f"\nRÉPONSE :\n{check['raison']}\n")
+        return check["raison"]
+
     outils_essayes = []
 
     for iteration in range(1, MAX_ITERATIONS + 1):
@@ -226,6 +240,9 @@ def agent_react(requete: str) -> str:
     else:
         logger.error("[ReAct] Max itérations atteint — abandon.")
         reponse = "Je n'ai pas pu répondre à votre requête après plusieurs tentatives."
+
+    # --- Filtrage de sortie (M4E5) : masquer données sensibles ---
+    reponse = filtrer_sortie(reponse)
 
     logger.info("[ReAct] Réponse finale générée.")
     print(f"\nRÉPONSE :\n{reponse}\n")

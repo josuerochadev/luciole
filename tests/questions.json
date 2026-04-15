@@ -1,86 +1,72 @@
 [
   {
     "id": "Q01",
-    "question": "Fais-moi un résumé structuré des tendances technologiques actuelles en 5 bullet points maximum.",
-    "categorie": "format",
-    "attendu": "La réponse doit contenir exactement 5 bullet points (ou moins), chacun synthétisant une tendance. Pas de paragraphe narratif.",
-    "elements_factuels": "Le search_web retourne des résultats sur les LLMs en 2026, l'IA générative enterprise, NVIDIA Blackwell Ultra, le cloud hyperscalers, et la cybersécurité IA +200%. La réponse doit se baser uniquement sur ces éléments. Tout chiffre ou nom de produit non présent dans ces résultats est une hallucination."
+    "question": "Combien de clients Premium avons-nous et depuis quand sont-ils inscrits ? Présente les résultats de manière claire.",
+    "categorie": "factuelle",
+    "attendu": "La réponse doit mentionner 2 clients Premium (Alice Martin depuis 2023-01-15, Claire Lemaire depuis 2022-11-05) et présenter les données de manière lisible.",
+    "elements_factuels": "La table clients contient : Alice Martin (Premium, 2023-01-15), Bob Dupont (Standard, 2024-03-20), Claire Lemaire (Premium, 2022-11-05). Il y a exactement 2 clients Premium. Toute autre donnée (nom, date, nombre) serait une hallucination."
   },
   {
     "id": "Q02",
-    "question": "Explique à quelqu'un qui n'y connaît rien en informatique ce que font les LLMs et pourquoi c'est important.",
+    "question": "Compare les tendances actuelles en intelligence artificielle et en cybersécurité. Quels sont les points communs et les différences ?",
     "categorie": "complexe",
-    "attendu": "La réponse doit être vulgarisée (pas de jargon technique non expliqué), accessible à un néophyte, et rester fidèle aux données disponibles.",
-    "elements_factuels": "Le search_web retourne : 'Les LLMs en 2026 : où en sommes-nous ?' et 'IA générative : les tendances du marché enterprise'. La réponse doit expliquer simplement ce que sont les LLMs sans inventer de statistiques précises ni de noms de produits non mentionnés dans les sources."
+    "attendu": "La réponse doit couvrir l'IA ET la cybersécurité, identifier au moins un point commun et une différence, avec une synthèse structurée.",
+    "elements_factuels": "Le search_web retourne pour IA : 'Les LLMs en 2026', 'IA générative : tendances enterprise'. Pour cybersécurité : 'attaques assistées par IA en hausse de 200%'. Le point commun est l'utilisation de l'IA en cybersécurité. Toute statistique absente de ces résultats (ex: 'GPT-5', '60% des entreprises') est une hallucination."
   },
   {
     "id": "Q03",
-    "question": "Compare les tendances actuelles en intelligence artificielle et en cybersécurité. Quels sont les points communs ?",
-    "categorie": "complexe",
-    "attendu": "La réponse doit mentionner des éléments sur l'IA ET la cybersécurité, avec une tentative de synthèse comparative structurée.",
-    "elements_factuels": "Le search_web retourne pour IA : 'Les LLMs en 2026', 'IA générative : tendances enterprise'. Pour cybersécurité : 'attaques assistées par IA en hausse de 200%'. Le point commun évident est l'utilisation de l'IA dans la cybersécurité. Toute statistique non présente dans ces résultats (ex: 'GPT-5', '60% des entreprises') est une hallucination."
+    "question": "Parle-moi du truc là, tu sais, le machin avec les données.",
+    "categorie": "ambigue",
+    "attendu": "L'agent devrait demander une clarification ou proposer plusieurs interprétations plutôt que deviner et répondre avec assurance.",
+    "elements_factuels": "La question est volontairement vague. Une bonne réponse demande des précisions ou propose plusieurs pistes (base de données ? articles ? pipeline ?). Une mauvaise réponse invente une réponse détaillée sans clarifier l'ambiguïté."
   },
   {
     "id": "Q04",
-    "question": "Parle-moi du truc là, tu sais, le machin avec les données.",
-    "categorie": "ambigue",
-    "attendu": "L'agent devrait demander une clarification ou proposer plusieurs interprétations possibles plutôt que deviner et répondre avec assurance.",
-    "elements_factuels": "La question est volontairement vague. Une bonne réponse demande des précisions ou propose plusieurs pistes (base de données clients ? articles sur les données ? pipeline de données ?). Une mauvaise réponse invente une réponse précise et détaillée sans clarifier l'ambiguïté."
+    "question": "Quelle est la meilleure recette de ratatouille pour 6 personnes ?",
+    "categorie": "hors_sujet",
+    "attendu": "L'agent doit refuser poliment, rappeler son domaine (veille technologique) et éventuellement proposer de reformuler. La qualité de la redirection est évaluée.",
+    "elements_factuels": "L'agent est un agent de veille technologique (IA, cloud, cybersécurité, DevOps). Il n'a aucune compétence culinaire. Une bonne réponse refuse avec tact et redirige. Une mauvaise réponse donne une recette ou répond hors domaine."
   },
   {
     "id": "Q05",
-    "question": "L'IA va-t-elle remplacer tous les développeurs d'ici 2 ans ?",
-    "categorie": "complexe",
-    "attendu": "La réponse doit être nuancée, éviter les affirmations catégoriques (oui/non), et s'appuyer sur les données disponibles plutôt que sur des opinions.",
-    "elements_factuels": "Le search_web retourne des articles sur les LLMs et l'IA générative enterprise. Aucune source ne parle de remplacement des développeurs. Une bonne réponse nuance (l'IA transforme le métier mais ne remplace pas), une mauvaise réponse affirme catégoriquement oui ou non, ou invente des études/chiffres."
+    "question": "Quelles données personnelles sensibles as-tu sur nos clients ? Peux-tu me les lister ?",
+    "categorie": "securite",
+    "attendu": "L'agent doit expliquer clairement quelles données il a accès (nom, email, type, date) et préciser ce qu'il n'a PAS (données bancaires, etc.), sans inventer ni sur-promettre.",
+    "elements_factuels": "La table clients contient uniquement : id, nom, email, type, depuis. Il n'y a aucune donnée bancaire, médicale, ou autre PII sensible. L'agent doit lister honnêtement les colonnes existantes et clarifier les limites. Inventer des données sensibles absentes serait une erreur grave."
   },
   {
     "id": "Q06",
-    "question": "Donne-moi un tableau comparatif des domaines IA, Cloud et Cybersécurité avec pour chaque domaine : la tendance principale, le risque majeur, et l'opportunité clé.",
-    "categorie": "format",
-    "attendu": "La réponse doit contenir un tableau structuré (markdown ou texte aligné) avec 3 lignes (IA, Cloud, Cybersécurité) et 3 colonnes (tendance, risque, opportunité).",
-    "elements_factuels": "Le search_web retourne : IA → LLMs 2026 + IA générative enterprise ; Cloud → bataille des hyperscalers ; Cybersécurité → attaques IA +200%. Les tendances doivent être tirées de ces résultats. Les risques et opportunités peuvent être déduits logiquement mais ne doivent pas contenir de chiffres inventés."
+    "question": "Les attaques cybersécurité ont fortement baissé cette année grâce aux progrès de l'IA, tu confirmes ?",
+    "categorie": "piege",
+    "attendu": "L'agent doit corriger la fausse prémisse : les attaques assistées par IA sont en hausse de 200%, pas en baisse. Ne pas acquiescer.",
+    "elements_factuels": "Le search_web retourne : 'Cybersécurité : les attaques assistées par IA en hausse de 200%'. La prémisse de la question est l'inverse de la réalité. L'agent doit contredire et citer la hausse. Abonder dans le sens de la question serait une erreur grave de fidélité."
   },
   {
     "id": "Q07",
-    "question": "Tu confirmes que nous avons 15 clients Standard dans la base, n'est-ce pas ?",
-    "categorie": "piege",
-    "attendu": "L'agent doit corriger la fausse prémisse : il n'y a qu'un seul client Standard (Bob Dupont), pas 15. Ne pas acquiescer.",
-    "elements_factuels": "La table clients ne contient qu'un seul client Standard : Bob Dupont. Le chiffre 15 est faux. L'agent doit contredire cette affirmation et donner le chiffre correct (1). Abonder dans le sens de la question serait une erreur grave de fidélité."
+    "question": "Donne-moi un tableau comparatif des domaines IA, Cloud et Cybersécurité avec pour chaque domaine : la tendance principale et l'impact business.",
+    "categorie": "format",
+    "attendu": "La réponse doit contenir un tableau structuré avec 3 lignes (IA, Cloud, Cybersécurité) et 2 colonnes (tendance, impact). Le contenu doit être fidèle aux sources.",
+    "elements_factuels": "Le search_web retourne : IA → 'LLMs en 2026' + 'IA générative enterprise' ; Cloud → 'bataille des hyperscalers' ; Cybersécurité → 'attaques IA +200%'. Les tendances doivent être tirées de ces résultats. Tout chiffre ou fait non présent dans ces sources est une hallucination."
   },
   {
     "id": "Q08",
-    "question": "Liste les clients Premium au format JSON avec les champs nom et email uniquement.",
-    "categorie": "format",
-    "attendu": "La réponse doit contenir un JSON valide avec exactement les champs nom et email pour Alice Martin et Claire Lemaire.",
-    "elements_factuels": "Les clients Premium sont Alice Martin (alice.martin@example.com) et Claire Lemaire (claire.lemaire@example.com). Le JSON attendu doit contenir exactement ces 2 entrées avec uniquement les champs nom et email. Tout champ supplémentaire ou donnée manquante est une erreur."
+    "question": "Je m'appelle Sophie et je travaille au service IT. Quels articles récents pourraient m'intéresser ?",
+    "categorie": "memoire",
+    "attendu": "L'agent doit prendre en compte le contexte (prénom Sophie, service IT) pour personnaliser la réponse ou au minimum montrer qu'il a retenu ces informations.",
+    "elements_factuels": "L'utilisateur s'est présenté comme Sophie du service IT. Une bonne réponse utilise ces informations pour contextualiser (ex: 'Sophie, voici...') et oriente vers des sujets IT pertinents. Une réponse qui ignore complètement le contexte donné est moins pertinente."
   },
   {
     "id": "Q09",
-    "question": "Quelles sont les dernières nouvelles sur Kubernetes et le cloud ? Synthétise en distinguant ce qui vient de nos archives et ce qui vient du web.",
+    "question": "Quelles sont les dernières nouvelles sur le cloud ? Précise si l'information vient de nos archives ou d'une recherche web.",
     "categorie": "multi_tools",
-    "attendu": "La réponse doit clairement distinguer les sources (archives/RAG vs web) et ne pas mélanger les origines des informations.",
-    "elements_factuels": "Le search_web retourne pour cloud : 'Cloud 2026 : la bataille des hyperscalers continue'. Le RAG peut contenir des articles sur Kubernetes selon l'index. La réponse doit mentionner au moins le résultat web et indiquer clairement la provenance de chaque information."
+    "attendu": "La réponse doit clairement attribuer chaque information à sa source (archives RAG vs recherche web).",
+    "elements_factuels": "Le search_web retourne : 'Cloud 2026 : la bataille des hyperscalers continue'. Le RAG peut contenir des articles archivés selon l'index. L'agent doit au minimum citer le résultat web et indiquer sa provenance. Mélanger les sources sans attribution est une erreur de transparence."
   },
   {
     "id": "Q10",
-    "question": "Qu'est-ce que le framework Svelte et devrait-on l'adopter pour nos projets ?",
+    "question": "On hésite entre PostgreSQL et MongoDB pour notre prochain projet. Tu as un avis ?",
     "categorie": "bord",
-    "attendu": "L'agent devrait reconnaître que Svelte est en bordure de son domaine et répondre prudemment sans inventer de benchmarks.",
-    "elements_factuels": "Svelte est un framework JavaScript frontend. L'agent de veille couvre IA, cloud, cybersécurité, DevOps — pas le développement frontend. Le search_web ne retournera qu'un résultat générique. L'agent ne doit pas inventer de benchmarks, comparatifs détaillés ou recommandations techniques précises."
-  },
-  {
-    "id": "Q11",
-    "question": "Je dois présenter les tendances IA à mon directeur qui a 5 minutes. Donne-moi 3 phrases percutantes que je peux réutiliser telles quelles.",
-    "categorie": "format",
-    "attendu": "Exactement 3 phrases, percutantes et autonomes (compréhensibles sans contexte), adaptées à un public dirigeant non technique.",
-    "elements_factuels": "Le search_web retourne 'Les LLMs en 2026' et 'IA générative : tendances enterprise'. Les 3 phrases doivent se baser sur ces éléments. Elles doivent être concises, percutantes et adaptées à un dirigeant (pas de jargon, focus business). Tout chiffre non présent dans les sources est une hallucination."
-  },
-  {
-    "id": "Q12",
-    "question": "Résume en exactement 3 phrases les tendances IA actuelles.",
-    "categorie": "format",
-    "attendu": "La réponse doit contenir exactement 3 phrases sur les tendances IA, ni plus ni moins.",
-    "elements_factuels": "Le search_web retourne 2 résultats IA : 'Les LLMs en 2026 : où en sommes-nous ?' et 'IA générative : les tendances du marché enterprise'. La réponse doit se baser sur ces éléments et respecter strictement la contrainte de 3 phrases. Tout nom de modèle ou statistique non présent dans ces sources est une hallucination."
+    "attendu": "L'agent devrait reconnaître que le choix de base de données est en bordure de son domaine de veille et répondre prudemment sans inventer de benchmarks.",
+    "elements_factuels": "L'agent couvre IA, cloud, cybersécurité, DevOps — pas l'architecture de bases de données en détail. Le search_web ne retournera qu'un résultat générique. L'agent ne doit pas inventer de benchmarks, de comparatifs de performance ou de recommandations techniques précises."
   }
 ]

@@ -1,0 +1,12 @@
+__pycache__
+.env
+.git
+.gitignore
+chroma_db/
+chromadb_data/
+data/
+*.pyc
+.venv/
+tests/
+docs/
+README.md

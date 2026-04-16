@@ -93,6 +93,11 @@ def search_web(query: str) -> list[dict]:
                     "url": "https://example.com/ia-enterprise-2026",
                     "extrait": "L'adoption de l'IA générative en entreprise dépasse 60% dans le secteur IT. Les cas d'usage principaux : automatisation du code, veille, support client.",
                 },
+                {
+                    "titre": "Agents IA autonomes : l'année de l'industrialisation",
+                    "url": "https://example.com/agents-ia-2026",
+                    "extrait": "Les frameworks d'agents (ReAct, multi-tool orchestration) passent en production. Les retours d'expérience mettent en avant le coût de supervision et la nécessité d'une observabilité fine.",
+                },
             ],
         },
         {

@@ -212,7 +212,17 @@ def formuler_reponse(requete: str, resultat_outil: str) -> str:
             "simulée (4 thèmes prédéfinis : IA, cloud, cybersécurité, GPU), base SQLite interne. "
             "N'invente pas d'accès à des bases académiques ou à des APIs temps réel.\n"
             "5. **Format** : si la question impose un format (bullet points, N éléments, "
-            "JSON, etc.), respecte-le strictement en n'utilisant QUE les données du résultat."
+            "JSON, etc.), respecte-le strictement en n'utilisant QUE les données du résultat.\n"
+            "6. **Nombre d'éléments demandés** : si l'utilisateur demande N éléments (ex : "
+            "« 3 actus », « top 5 tendances ») mais que le résultat de l'outil n'en contient "
+            "que M < N, tu DOIS :\n"
+            "   - annoncer honnêtement « J'ai trouvé M résultat(s) sur les N demandés » "
+            "au début de la réponse ;\n"
+            "   - ne présenter QUE les M résultats réels, sans les compléter par des éléments "
+            "inventés ni en annoncer davantage dans l'introduction (n'écris jamais « voici 3 "
+            "actus » si tu n'en as que 2) ;\n"
+            "   - proposer une piste à l'utilisateur (ex : élargir le thème, consulter une "
+            "autre source) s'il manque des éléments."
         )
 
     prompt = (

@@ -15,6 +15,7 @@ from tools.rag import rechercher_articles
 from tools.transcribe import transcrire_audio
 from tools.vision import analyser_image
 from security import analyser_securite, valider_sql, filtrer_sortie
+from monitoring import mark_fallback
 
 logging.basicConfig(
     level=logging.INFO,
@@ -208,6 +209,7 @@ def agent_react(requete: str) -> str:
     if check["bloque"]:
         msg = f"[BLOQUÉ] {check['raison']} (type: {check['type']})"
         logger.warning(f"[SECURITE] {msg}")
+        mark_fallback(f"security:{check.get('type', 'inconnu')}")
         print(f"\nRÉPONSE :\n{check['raison']}\n")
         return check["raison"]
 
@@ -222,6 +224,7 @@ def agent_react(requete: str) -> str:
         # Correction Log C : si le même outil échoue deux fois, basculer en réponse directe
         if outil in outils_essayes:
             logger.warning(f"[ReAct] Outil '{outil}' déjà essayé — abandon, réponse directe.")
+            mark_fallback(f"outil_repete:{outil}")
             reponse = appeler_llm(
                 f"Réponds à cette question en reconnaissant tes limites si nécessaire : {requete}"
             )
@@ -239,6 +242,7 @@ def agent_react(requete: str) -> str:
         break
     else:
         logger.error("[ReAct] Max itérations atteint — abandon.")
+        mark_fallback("max_iterations")
         reponse = "Je n'ai pas pu répondre à votre requête après plusieurs tentatives."
 
     # --- Filtrage de sortie (M4E5) : masquer données sensibles ---

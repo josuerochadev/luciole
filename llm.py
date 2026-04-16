@@ -5,6 +5,13 @@ import time
 import logging
 from config import OPENAI_API_KEY, MODEL_DEFAULT, TEMPERATURE, MAX_TOKENS, SYSTEM_PROMPT
 
+# Monitoring : hook optionnel — no-op si le module n'est pas présent (ex: tests isolés)
+try:
+    from monitoring import add_llm_usage
+except ImportError:  # pragma: no cover
+    def add_llm_usage(prompt_tokens: int, completion_tokens: int) -> None:
+        pass
+
 logger = logging.getLogger(__name__)
 
 _client = None
@@ -126,6 +133,13 @@ def appeler_llm(question: str, system_prompt: str = SYSTEM_PROMPT, retries: int 
                 ],
                 timeout=30,
             )
+            # Monitoring M5E5 : report token usage (no-op hors requête API)
+            usage = getattr(response, "usage", None)
+            if usage is not None:
+                add_llm_usage(
+                    getattr(usage, "prompt_tokens", 0) or 0,
+                    getattr(usage, "completion_tokens", 0) or 0,
+                )
             return response.choices[0].message.content.strip()
 
         except openai.AuthenticationError as e:

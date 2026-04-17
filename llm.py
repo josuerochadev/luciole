@@ -126,7 +126,12 @@ def appeler_llm_json(question: str, schema: dict = None, system_prompt: str = SY
 
 
 @observe(name="appeler_llm")
-def appeler_llm(question: str, system_prompt: str = SYSTEM_PROMPT, retries: int = 3) -> str:
+def appeler_llm(
+    question: str,
+    system_prompt: str = SYSTEM_PROMPT,
+    retries: int = 3,
+    historique: list[dict] | None = None,
+) -> str:
     """
     Appelle l'API OpenAI et retourne le texte généré.
 
@@ -134,6 +139,7 @@ def appeler_llm(question: str, system_prompt: str = SYSTEM_PROMPT, retries: int 
         question: Le message utilisateur à envoyer au modèle.
         system_prompt: Le prompt système (rôle de l'agent).
         retries: Nombre de tentatives en cas d'erreur temporaire.
+        historique: Messages précédents (user/assistant) à injecter pour le contexte.
 
     Returns:
         Le texte de la réponse du modèle.
@@ -142,16 +148,18 @@ def appeler_llm(question: str, system_prompt: str = SYSTEM_PROMPT, retries: int 
         ValueError: Si la clé API est absente ou invalide.
         RuntimeError: Si toutes les tentatives échouent.
     """
+    messages = [{"role": "system", "content": system_prompt}]
+    if historique:
+        messages.extend(historique)
+    messages.append({"role": "user", "content": question})
+
     for tentative in range(1, retries + 1):
         try:
             response = get_openai_client().chat.completions.create(
                 model=MODEL_DEFAULT,
                 temperature=TEMPERATURE,
                 max_tokens=MAX_TOKENS,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": question},
-                ],
+                messages=messages,
                 timeout=30,
             )
             # Monitoring M5E5 : report token usage (no-op hors requête API)

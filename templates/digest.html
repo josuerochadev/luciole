@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block head %}
+<style>
+  /* Digest page — follows Pulse design system */
+  .digest-section {
+    font-family: var(--pulse-sans);
+    font-size: var(--pulse-text-xs);
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--pulse-muted);
+    padding-bottom: var(--pulse-space-3);
+    border-bottom: var(--pulse-rule-thin);
+    margin: var(--pulse-space-12) 0 var(--pulse-space-6);
+  }
+  .digest-section--accent {
+    color: var(--pulse-accent);
+    margin-top: var(--pulse-space-8);
+  }
+
+  /* KPI row */
+  .digest-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--pulse-space-6);
+  }
+  .digest-kpi {
+    padding: var(--pulse-space-6) 0;
+    border-top: var(--pulse-rule-thin);
+  }
+  .digest-kpi-label {
+    font-family: var(--pulse-sans);
+    font-size: var(--pulse-text-xs);
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--pulse-muted);
+  }
+  .digest-kpi-value {
+    font-family: var(--pulse-serif);
+    font-weight: 900;
+    font-size: var(--pulse-text-3xl);
+    line-height: 1.1;
+    color: var(--pulse-ink);
+    margin: var(--pulse-space-2) 0 var(--pulse-space-1);
+  }
+  .digest-kpi-sub {
+    font-family: var(--pulse-sans);
+    font-size: var(--pulse-text-xs);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--pulse-muted);
+  }
+
+  /* Actions bar */
+  .digest-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--pulse-space-4);
+    margin-bottom: var(--pulse-space-6);
+    flex-wrap: wrap;
+  }
+  .digest-btn {
+    font-family: var(--pulse-sans);
+    font-weight: 500;
+    font-size: var(--pulse-text-xs);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--pulse-ink);
+    background: transparent;
+    color: var(--pulse-ink);
+    padding: var(--pulse-space-2) var(--pulse-space-4);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .digest-btn:hover {
+    background: var(--pulse-ink);
+    color: var(--pulse-paper);
+  }
+  .digest-btn--accent {
+    border-color: var(--pulse-accent);
+    color: var(--pulse-accent);
+  }
+  .digest-btn--accent:hover {
+    background: var(--pulse-accent);
+    color: var(--pulse-white);
+  }
+  .digest-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .digest-btn:disabled:hover {
+    background: transparent;
+    color: var(--pulse-ink);
+  }
+  .digest-btn--accent:disabled:hover {
+    color: var(--pulse-accent);
+  }
+  .digest-status {
+    font-family: var(--pulse-sans);
+    font-size: var(--pulse-text-sm);
+    color: var(--pulse-muted);
+    transition: color 0.2s;
+  }
+  .digest-status--ok { color: #22c55e; }
+  .digest-status--err { color: var(--pulse-accent); }
+
+  /* Preview iframe */
+  .digest-preview-frame {
+    width: 100%;
+    min-height: 600px;
+    border: 1px solid var(--pulse-rule);
+    border-radius: 6px;
+    background: var(--pulse-white);
+  }
+
+  /* Empty state */
+  .digest-empty {
+    text-align: center;
+    padding: var(--pulse-space-16) var(--pulse-space-8);
+    border: 1px dashed var(--pulse-rule);
+    border-radius: 6px;
+  }
+  .digest-empty h3 {
+    font-family: var(--pulse-serif);
+    font-weight: 700;
+    font-size: var(--pulse-text-xl);
+    color: var(--pulse-ink);
+    margin-bottom: var(--pulse-space-2);
+  }
+  .digest-empty p {
+    color: var(--pulse-muted);
+    font-size: var(--pulse-text-sm);
+  }
+
+  /* History table */
+  .digest-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--pulse-sans);
+    font-size: var(--pulse-text-sm);
+    margin-top: var(--pulse-space-3);
+  }
+  .digest-table th {
+    font-size: var(--pulse-text-xs);
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--pulse-muted);
+    text-align: left;
+    padding: var(--pulse-space-3) var(--pulse-space-4);
+    border-bottom: var(--pulse-rule-medium);
+  }
+  .digest-table td {
+    padding: var(--pulse-space-3) var(--pulse-space-4);
+    border-bottom: var(--pulse-rule-thin);
+    color: var(--pulse-ink-soft);
+  }
+  .digest-table tr:hover td {
+    background: var(--pulse-paper-alt);
+  }
+
+  @media (max-width: 768px) {
+    .digest-kpis { grid-template-columns: 1fr; }
+    .digest-actions { flex-direction: column; align-items: stretch; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="digest-section digest-section--accent">Digest Email · Veille Technologique</div>
+
+<!-- KPIs -->
+<div class="digest-kpis" id="digest-kpis">
+  <div class="digest-kpi">
+    <div class="digest-kpi-label">Articles disponibles</div>
+    <div class="digest-kpi-value" id="kpi-articles">--</div>
+    <div class="digest-kpi-sub">pertinence >= 5</div>
+  </div>
+  <div class="digest-kpi">
+    <div class="digest-kpi-label">Categories</div>
+    <div class="digest-kpi-value" id="kpi-categories">--</div>
+    <div class="digest-kpi-sub">thematiques</div>
+  </div>
+  <div class="digest-kpi">
+    <div class="digest-kpi-label">Derniers envois</div>
+    <div class="digest-kpi-value" id="kpi-envois">--</div>
+    <div class="digest-kpi-sub">total</div>
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="digest-section">Actions</div>
+<div class="digest-actions">
+  <button class="digest-btn" id="btn-preview">Previsualiser</button>
+  <button class="digest-btn digest-btn--accent" id="btn-send" disabled>Envoyer par email</button>
+  <span class="digest-status" id="digest-status"></span>
+</div>
+
+<!-- Preview -->
+<div id="digest-preview-container">
+  <div class="digest-empty" id="digest-empty">
+    <h3>Aucun apercu</h3>
+    <p>Cliquez sur Previsualiser pour generer le digest.</p>
+  </div>
+</div>
+
+<!-- History -->
+<div class="digest-section">Historique des envois</div>
+<div id="digest-history">
+  <div class="digest-empty">
+    <h3>Chargement...</h3>
+    <p>Recuperation de l'historique.</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  const btnPreview = document.getElementById('btn-preview');
+  const btnSend = document.getElementById('btn-send');
+  const status = document.getElementById('digest-status');
+  const previewContainer = document.getElementById('digest-preview-container');
+  const emptyState = document.getElementById('digest-empty');
+  const historyContainer = document.getElementById('digest-history');
+
+  function setStatus(msg, type) {
+    status.textContent = msg;
+    status.className = 'digest-status' + (type ? ' digest-status--' + type : '');
+  }
+
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // ── Load digest stats ──────────────────────────────────
+  async function loadStats() {
+    try {
+      const res = await fetch('/digest/stats');
+      if (!res.ok) return;
+      const data = await res.json();
+
+      document.getElementById('kpi-articles').textContent = data.nb_articles;
+      document.getElementById('kpi-categories').textContent = data.nb_categories;
+      document.getElementById('kpi-envois').textContent = data.nb_envois;
+    } catch {
+      // API offline
+    }
+  }
+
+  // ── Load history ───────────────────────────────────────
+  async function loadHistory() {
+    try {
+      const res = await fetch('/digest/history');
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+
+      if (!data.historique || data.historique.length === 0) {
+        historyContainer.innerHTML =
+          '<div class="digest-empty">' +
+          '<h3>Aucun envoi</h3>' +
+          '<p>Le digest n\'a pas encore ete envoye.</p>' +
+          '</div>';
+        return;
+      }
+
+      let html = '<table class="digest-table"><thead><tr>' +
+        '<th>Date</th><th>Destinataires</th><th>Articles</th>' +
+        '</tr></thead><tbody>';
+
+      const sorted = data.historique.slice().reverse();
+      for (const entry of sorted) {
+        const date = entry.date ? new Date(entry.date).toLocaleString('fr-FR') : '--';
+        const dest = (entry.destinataires || []).join(', ') || '--';
+        html += '<tr>' +
+          '<td>' + esc(date) + '</td>' +
+          '<td>' + esc(dest) + '</td>' +
+          '<td>' + (entry.nb_articles || 0) + '</td>' +
+          '</tr>';
+      }
+      html += '</tbody></table>';
+      historyContainer.innerHTML = html;
+    } catch {
+      historyContainer.innerHTML =
+        '<div class="digest-empty">' +
+        '<h3>API indisponible</h3>' +
+        '<p>Impossible de charger l\'historique.</p>' +
+        '</div>';
+    }
+  }
+
+  // ── Preview ────────────────────────────────────────────
+  btnPreview.addEventListener('click', async function () {
+    btnPreview.disabled = true;
+    setStatus('Generation en cours...', '');
+
+    try {
+      const res = await fetch('/digest');
+      if (!res.ok) throw new Error('Erreur API');
+      const html = await res.text();
+
+      if (emptyState) emptyState.remove();
+
+      // Remove old iframe
+      const oldFrame = previewContainer.querySelector('iframe');
+      if (oldFrame) oldFrame.remove();
+
+      const iframe = document.createElement('iframe');
+      iframe.className = 'digest-preview-frame';
+      iframe.setAttribute('sandbox', 'allow-same-origin');
+      iframe.title = 'Apercu du digest';
+      previewContainer.appendChild(iframe);
+
+      iframe.contentDocument.open();
+      iframe.contentDocument.write(html);
+      iframe.contentDocument.close();
+
+      btnSend.disabled = false;
+      setStatus('Apercu genere', 'ok');
+    } catch {
+      setStatus('Erreur lors de la generation', 'err');
+    } finally {
+      btnPreview.disabled = false;
+    }
+  });
+
+  // ── Send ───────────────────────────────────────────────
+  btnSend.addEventListener('click', async function () {
+    if (!confirm('Envoyer le digest par email aux destinataires configures ?')) return;
+
+    btnSend.disabled = true;
+    setStatus('Envoi en cours...', '');
+
+    try {
+      const apiKey = prompt('Cle API (X-API-Key) :', '');
+      if (!apiKey) {
+        setStatus('Envoi annule', '');
+        btnSend.disabled = false;
+        return;
+      }
+
+      const res = await fetch('/digest/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+        },
+        body: JSON.stringify({}),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.ok) {
+        setStatus('Digest envoye — ' + data.nb_articles + ' articles', 'ok');
+        loadHistory();
+        loadStats();
+      } else {
+        setStatus(data.message || data.detail || 'Erreur', 'err');
+      }
+    } catch {
+      setStatus('Erreur reseau', 'err');
+    } finally {
+      btnSend.disabled = false;
+    }
+  });
+
+  // ── Init ───────────────────────────────────────────────
+  loadStats();
+  loadHistory();
+})();
+</script>
+{% endblock %}

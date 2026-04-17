@@ -14,6 +14,8 @@ from tools.database import query_db
 from tools.rag import rechercher_articles
 from tools.transcribe import transcrire_audio
 from tools.vision import analyser_image
+from tools.email import selectionner_articles, envoyer_rapport
+from memory.store import store as memory_store, recall as memory_recall
 from security import analyser_securite, valider_sql, filtrer_sortie
 from monitoring import mark_fallback
 from tracing import observe, update_current_trace, flush
@@ -39,7 +41,7 @@ TOOLS_DECISION = [
                 "properties": {
                     "intent": {
                         "type": "string",
-                        "enum": ["database", "search", "rag", "transcribe", "vision", "general"],
+                        "enum": ["database", "search", "rag", "transcribe", "vision", "email", "general"],
                         "description": "Type de requête détecté.",
                     },
                     "outil": {
@@ -50,6 +52,8 @@ TOOLS_DECISION = [
                             "search_articles",
                             "transcribe_audio",
                             "analyze_image",
+                            "preview_digest",
+                            "send_digest",
                             "reponse_directe",
                         ],
                         "description": "Outil sélectionné pour traiter la requête.",
@@ -93,7 +97,14 @@ SYSTEM_REACT = (
     "- search_articles → archives internes déjà collectées (RAG)\n"
     "- transcribe_audio → fichier audio fourni par l'utilisateur\n"
     "- analyze_image → image fournie par l'utilisateur\n"
+    "- preview_digest → prévisualiser le digest email (résumé des articles, nombre, catégories)\n"
+    "- send_digest → envoyer le digest par email aux destinataires configurés\n"
     "- reponse_directe → salutations, questions générales, OU requêtes hors périmètre\n\n"
+    "ARBITRAGE preview_digest vs send_digest :\n"
+    "- « montre / prévisualise / résume / aperçu / affiche le digest » → preview_digest\n"
+    "- « envoie-moi un aperçu » ou « envoie un aperçu » → preview_digest (le mot « aperçu » prime sur « envoie »)\n"
+    "- « envoie / expédie le digest / rapport par mail » (sans « aperçu ») → send_digest\n"
+    "- En cas de doute entre preview et send → preview_digest (plus sûr)\n\n"
     "ARBITRAGE search_web vs search_articles :\n"
     "- Actus / tendances / briefing / récent → search_web\n"
     "- « archives », « historique », « déjà collectés » explicite → search_articles\n"
@@ -108,12 +119,13 @@ SYSTEM_REACT = (
 # Étape 1 — Raisonnement : choisir l'outil (function calling natif)
 # ---------------------------------------------------------------------------
 @observe(name="choisir_outil")
-def choisir_outil(requete: str) -> dict:
+def choisir_outil(requete: str, historique: list[dict] | None = None) -> dict:
     """Demande au LLM quel outil utiliser via function calling natif OpenAI."""
-    messages = [
-        {"role": "system", "content": SYSTEM_REACT},
-        {"role": "user", "content": f"Requête de l'utilisateur : {requete}"},
-    ]
+    messages = [{"role": "system", "content": SYSTEM_REACT}]
+    # Injecter l'historique conversationnel pour garder le contexte
+    if historique:
+        messages.extend(historique)
+    messages.append({"role": "user", "content": f"Requête de l'utilisateur : {requete}"})
     decision = appeler_llm_tools(messages=messages, tools=TOOLS_DECISION)
     logger.info(f"[ReAct] Intent détecté    : {decision.get('intent', '?')}")
     logger.info(f"[ReAct] Outil choisi      : {decision.get('outil', '?')}")
@@ -198,6 +210,41 @@ def executer_outil(decision: dict) -> str:
             resultat = f"[ERREUR_OUTIL] Erreur GPT-4o Vision : {e}"
             logger.error(f"[ReAct] {resultat}")
 
+    elif outil == "preview_digest":
+        try:
+            articles = selectionner_articles(nb_max=20)
+            if not articles:
+                resultat = "[AUCUN_RESULTAT] Aucun article pertinent disponible pour le digest."
+            else:
+                # Résumé structuré pour le LLM
+                categories = {}
+                for a in articles:
+                    cat = a.get("categorie", "Autre")
+                    categories.setdefault(cat, []).append(a.get("titre", "Sans titre"))
+                resume = {
+                    "nb_articles": len(articles),
+                    "categories": {cat: len(arts) for cat, arts in categories.items()},
+                    "top_articles": [
+                        {"titre": a.get("titre", ""), "categorie": a.get("categorie", ""),
+                         "pertinence": a.get("pertinence", 0)}
+                        for a in articles[:5]
+                    ],
+                }
+                resultat = json.dumps(resume, ensure_ascii=False, indent=2)
+            logger.info(f"[ReAct] Résultat preview_digest : {len(articles)} article(s)")
+        except Exception as e:
+            resultat = f"[ERREUR_OUTIL] Prévisualisation du digest échouée : {e}"
+            logger.error(f"[ReAct] {resultat}")
+
+    elif outil == "send_digest":
+        try:
+            result = envoyer_rapport(dry_run=False)
+            resultat = json.dumps(result, ensure_ascii=False, indent=2)
+            logger.info(f"[ReAct] Résultat send_digest : {result.get('message', '?')}")
+        except Exception as e:
+            resultat = f"[ERREUR_OUTIL] Envoi du digest échoué : {e}"
+            logger.error(f"[ReAct] {resultat}")
+
     else:  # reponse_directe
         resultat = (
             "(aucun outil — réponse directe du LLM)\n"
@@ -269,10 +316,19 @@ _FORMAT_MULTIMODAL = (
     "3. Utilise **gras** pour les informations importantes."
 )
 
+_FORMAT_EMAIL = (
+    "FORMAT DE RÉPONSE (Markdown) :\n"
+    "1. Commence par un résumé TL;DR du digest (nombre d'articles, catégories couvertes).\n"
+    "2. Liste les top articles avec leur catégorie et score de pertinence.\n"
+    "3. Si c'est un envoi, confirme le résultat (succès/échec, destinataires).\n"
+    "Utilise **gras** pour les chiffres clés."
+)
+
 _FORMATS_PAR_INTENT = {
     "search": _FORMAT_SEARCH,
     "database": _FORMAT_DATABASE,
     "rag": _FORMAT_RAG,
+    "email": _FORMAT_EMAIL,
     "general": _FORMAT_DIRECT,
     "transcribe": _FORMAT_MULTIMODAL,
     "vision": _FORMAT_MULTIMODAL,
@@ -280,7 +336,7 @@ _FORMATS_PAR_INTENT = {
 
 
 @observe(name="formuler_reponse")
-def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general") -> str:
+def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general", historique: list[dict] | None = None) -> str:
     """Demande au LLM de formuler une réponse finale à partir du résultat de l'outil."""
     # Correction Log B : instruction stricte si l'outil a échoué ou retourné vide
     if resultat_outil.startswith("[ERREUR_OUTIL]"):
@@ -308,7 +364,7 @@ def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general")
         f"Résultat de l'outil :\n{resultat_outil}\n\n"
         f"{instruction}"
     )
-    return appeler_llm(prompt)
+    return appeler_llm(prompt, historique=historique)
 
 
 # ---------------------------------------------------------------------------
@@ -344,12 +400,16 @@ def agent_react(requete: str) -> str:
         print(f"\nRÉPONSE :\n{check['raison']}\n")
         return check["raison"]
 
+    # --- Mémoire conversationnelle : rappeler l'historique ---
+    historique = memory_recall(n=20)
+    memory_store(requete, role="user")
+
     outils_essayes = []
 
     for iteration in range(1, MAX_ITERATIONS + 1):
         logger.info(f"[ReAct] Itération {iteration}/{MAX_ITERATIONS}")
 
-        decision = choisir_outil(requete)
+        decision = choisir_outil(requete, historique=historique)
         outil    = decision.get("outil", "reponse_directe")
 
         # Correction Log C : si le même outil échoue deux fois, basculer en réponse directe
@@ -369,7 +429,7 @@ def agent_react(requete: str) -> str:
             logger.warning(f"[ReAct] Itération {iteration} — outil en erreur, nouvelle tentative.")
             continue
 
-        reponse = formuler_reponse(requete, resultat, intent=decision.get("intent", "general"))
+        reponse = formuler_reponse(requete, resultat, intent=decision.get("intent", "general"), historique=historique)
         break
     else:
         logger.error("[ReAct] Max itérations atteint — abandon.")
@@ -378,6 +438,9 @@ def agent_react(requete: str) -> str:
 
     # --- Filtrage de sortie (M4E5) : masquer données sensibles ---
     reponse = filtrer_sortie(reponse)
+
+    # --- Mémoire conversationnelle : sauvegarder la réponse ---
+    memory_store(reponse, role="assistant")
 
     logger.info("[ReAct] Réponse finale générée.")
     print(f"\nRÉPONSE :\n{reponse}\n")

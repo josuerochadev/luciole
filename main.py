@@ -8,7 +8,7 @@ import json
 import logging
 import sys
 
-from llm import appeler_llm, appeler_llm_json
+from llm import appeler_llm, appeler_llm_json, appeler_llm_tools
 from tools.search import search_web
 from tools.database import query_db
 from tools.rag import rechercher_articles
@@ -26,69 +26,88 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Schéma de décision ReAct
+# Tools OpenAI pour la décision ReAct (function calling natif)
 # ---------------------------------------------------------------------------
-SCHEMA_DECISION = {
-    "intent": "database | search | rag | transcribe | vision | general",
-    "outil": "query_db | search_web | search_articles | transcribe_audio | analyze_image | reponse_directe",
-    "sql": "requête SQL si intent=database, sinon chaîne vide",
-    "query_recherche": "requête si intent=search ou rag, sinon chaîne vide",
-    "file_path": "chemin du fichier si intent=transcribe ou vision, sinon chaîne vide",
-    "raisonnement": "explication courte du choix de l'outil",
-}
+TOOLS_DECISION = [
+    {
+        "type": "function",
+        "function": {
+            "name": "choisir_outil",
+            "description": "Choisit l'outil à utiliser pour répondre à la requête utilisateur.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "intent": {
+                        "type": "string",
+                        "enum": ["database", "search", "rag", "transcribe", "vision", "general"],
+                        "description": "Type de requête détecté.",
+                    },
+                    "outil": {
+                        "type": "string",
+                        "enum": [
+                            "query_db",
+                            "search_web",
+                            "search_articles",
+                            "transcribe_audio",
+                            "analyze_image",
+                            "reponse_directe",
+                        ],
+                        "description": "Outil sélectionné pour traiter la requête.",
+                    },
+                    "sql": {
+                        "type": "string",
+                        "description": "Requête SQL si intent=database, sinon chaîne vide.",
+                    },
+                    "query_recherche": {
+                        "type": "string",
+                        "description": "Requête de recherche si intent=search ou rag, sinon chaîne vide.",
+                    },
+                    "file_path": {
+                        "type": "string",
+                        "description": "Chemin du fichier si intent=transcribe ou vision, sinon chaîne vide.",
+                    },
+                    "raisonnement": {
+                        "type": "string",
+                        "description": "Explication courte du choix de l'outil.",
+                    },
+                },
+                "required": ["intent", "outil", "raisonnement"],
+                "additionalProperties": False,
+            },
+        },
+    }
+]
 
 SYSTEM_REACT = (
-    "Tu es un agent de veille technologique. "
-    "Quand tu reçois une requête, tu dois choisir le bon outil parmi :\n"
-    "- query_db : pour toute question sur des clients, données internes, base de données, "
-    "tickets, statistiques, chiffres internes, comptages, score de pertinence, KPIs\n"
-    "- search_web : pour toute question sur des tendances, actualités, technologies récentes, "
-    "nouveautés, veille externe. "
-    "**TOUJOURS utiliser search_web si la requête contient : 'briefing', 'actus', 'actualités', "
-    "'dernières', 'récent', 'récentes', 'en ce moment', 'du moment', 'cette semaine', "
-    "'ce mois', 'aujourd'hui', 'top 3', 'tendances'.**\n"
-    "- search_articles : UNIQUEMENT pour les archives internes déjà collectées "
-    "('quels articles a-t-on archivés', 'résume ce qu'on a dans nos archives sur...', "
-    "'retrouve les articles archivés sur...'). "
-    "Ne choisis search_articles QUE si le mot 'archives', 'archivés', 'historique', "
-    "'déjà collectés' apparaît explicitement.\n"
-    "- transcribe_audio : quand l'utilisateur fournit un fichier audio à transcrire "
-    "('transcris ce fichier', 'analyse cet audio', 'que dit cet enregistrement')\n"
-    "- analyze_image : quand l'utilisateur fournit une image à analyser "
-    "('analyse cette image', 'extrais les infos de cette facture', 'que montre cette photo')\n"
-    "- reponse_directe : pour les salutations, questions générales sans besoin d'outil\n"
-    "\nRègle d'arbitrage search_web vs search_articles :\n"
-    "- Si la question demande des ACTUS / NOUVEAUTÉS / BRIEFING → search_web.\n"
-    "- Si elle demande EXPLICITEMENT les archives internes → search_articles.\n"
-    "- Si la question mentionne les deux (ex : 'archives ET actus récentes'), "
-    "choisis search_web en priorité et indique-le dans 'raisonnement'.\n"
-    "\nEXEMPLES :\n"
-    "- 'Briefing matinal, 3 actus tech' → outil = search_web\n"
-    "- 'Résume tout ce qu'on a sur le cloud, archives et actus' → outil = search_web\n"
-    "- 'Retrouve les articles archivés sur Kubernetes' → outil = search_articles\n"
-    "- 'Tendances IA 2026' → outil = search_web\n"
-    "\nSOURCES RÉELLES DE L'AGENT (pour ton 'raisonnement' uniquement, ne jamais inventer d'autres) :\n"
-    "1) Articles RSS ingérés et indexés (RAG, accessible via search_articles) ;\n"
-    "2) Recherche web simulée avec 4 catégories de résultats prédéfinis "
-    "(IA/LLMs, Cloud, Cybersécurité, GPU/hardware) ;\n"
-    "3) Base SQLite interne (clients, tickets) via query_db.\n"
-    "Tu n'as PAS accès à des bases académiques, ni à une API d'actualités temps réel, "
-    "ni à des sources payantes.\n"
-    "\nRéponds UNIQUEMENT avec un objet JSON valide, sans texte avant ni après."
+    "Tu es un agent de veille technologique. Choisis l'outil adapté à chaque requête.\n\n"
+    "OUTILS :\n"
+    "- query_db → données internes : clients, tickets, stats, KPIs (SQL)\n"
+    "- search_web → actus, tendances, nouveautés, veille externe\n"
+    "- search_articles → archives internes déjà collectées (RAG)\n"
+    "- transcribe_audio → fichier audio fourni par l'utilisateur\n"
+    "- analyze_image → image fournie par l'utilisateur\n"
+    "- reponse_directe → salutations, questions générales\n\n"
+    "ARBITRAGE search_web vs search_articles :\n"
+    "- Actus / tendances / briefing / récent → search_web\n"
+    "- « archives », « historique », « déjà collectés » explicite → search_articles\n"
+    "- Doute → search_web en priorité\n\n"
+    "SOURCES : RSS archivés (search_articles), recherche web simulée "
+    "(IA, Cloud, Cybersécurité, GPU), SQLite interne (query_db). "
+    "Pas d'accès académique, temps réel ou payant."
 )
 
 
 # ---------------------------------------------------------------------------
-# Étape 1 — Raisonnement : choisir l'outil
+# Étape 1 — Raisonnement : choisir l'outil (function calling natif)
 # ---------------------------------------------------------------------------
 @observe(name="choisir_outil")
 def choisir_outil(requete: str) -> dict:
-    """Demande au LLM quel outil utiliser pour répondre à la requête."""
-    decision = appeler_llm_json(
-        question=f"Requête de l'utilisateur : {requete}",
-        schema=SCHEMA_DECISION,
-        system_prompt=SYSTEM_REACT,
-    )
+    """Demande au LLM quel outil utiliser via function calling natif OpenAI."""
+    messages = [
+        {"role": "system", "content": SYSTEM_REACT},
+        {"role": "user", "content": f"Requête de l'utilisateur : {requete}"},
+    ]
+    decision = appeler_llm_tools(messages=messages, tools=TOOLS_DECISION)
     logger.info(f"[ReAct] Intent détecté    : {decision.get('intent', '?')}")
     logger.info(f"[ReAct] Outil choisi      : {decision.get('outil', '?')}")
     logger.info(f"[ReAct] Raisonnement      : {decision.get('raisonnement', '?')}")

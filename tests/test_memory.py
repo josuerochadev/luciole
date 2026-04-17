@@ -5,7 +5,7 @@ Valide les 3 cas : sans mémoire vs avec mémoire.
 Utilisation : python test_memory.py
 """
 import logging
-from memory.store import store, recall, clear, taille
+from memory.store import store, recall, clear, taille, LIMITE_MEMOIRE
 from llm import appeler_llm
 
 logging.basicConfig(
@@ -97,25 +97,26 @@ def test_questions_enchainées():
 # Test 3 — 12 messages puis rappel du 1er
 # ---------------------------------------------------------------------------
 def test_limite_memoire():
+    overflow = LIMITE_MEMOIRE + 2
     print(f"\n{SEPARATEUR}")
-    print("TEST 3 — 12 messages, rappel du 1er (limite = 10)")
+    print(f"TEST 3 — {overflow} messages, rappel du 1er (limite = {LIMITE_MEMOIRE})")
     print(SEPARATEUR)
     clear()
 
-    # Remplir avec 12 messages
-    for i in range(1, 13):
+    # Remplir au-delà de la limite
+    for i in range(1, overflow + 1):
         store(f"Message numéro {i}", role="user")
 
-    print(f"Messages stockés : {taille()} (attendu : 10 — les 2 premiers sont perdus)")
-    assert taille() == 10, f"Attendu 10, obtenu {taille()}"
+    print(f"Messages stockés : {taille()} (attendu : {LIMITE_MEMOIRE} — les 2 premiers sont perdus)")
+    assert taille() == LIMITE_MEMOIRE, f"Attendu {LIMITE_MEMOIRE}, obtenu {taille()}"
 
-    historique = recall(n=10)
+    historique = recall(n=LIMITE_MEMOIRE)
     premier = historique[0]["content"]
     print(f"Premier message en mémoire : '{premier}' (attendu : 'Message numéro 3')")
     assert premier == "Message numéro 3", f"Attendu 'Message numéro 3', obtenu '{premier}'"
 
-    print("\nObservation : la mémoire est bornée à 10 messages. "
-          "Les messages 1 et 2 sont automatiquement écrasés par le deque(maxlen=10).")
+    print(f"\nObservation : la mémoire est bornée à {LIMITE_MEMOIRE} messages. "
+          "Les messages les plus anciens sont automatiquement évincés par SQLite.")
     print("✓ Limite de mémoire respectée.")
 
 
@@ -131,7 +132,7 @@ if __name__ == "__main__":
     for nom, fn in [
         ("Rappel prénom",          test_rappel_prenom),
         ("Questions enchaînées",   test_questions_enchainées),
-        ("Limite 10 messages",     test_limite_memoire),
+        (f"Limite {LIMITE_MEMOIRE} messages", test_limite_memoire),
     ]:
         try:
             fn()

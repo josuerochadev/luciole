@@ -192,6 +192,83 @@ def appeler_llm(question: str, system_prompt: str = SYSTEM_PROMPT, retries: int 
             raise RuntimeError(f"Erreur API OpenAI : {e}") from e
 
 
+@observe(name="appeler_llm_tools")
+def appeler_llm_tools(
+    messages: list[dict],
+    tools: list[dict],
+    retries: int = 3,
+) -> dict:
+    """
+    Appelle l'API OpenAI avec le function calling natif.
+
+    Args:
+        messages: Liste de messages (system + user).
+        tools:    Liste de tools au format OpenAI (type: "function", ...).
+        retries:  Nombre de tentatives en cas d'erreur temporaire.
+
+    Returns:
+        dict avec les arguments parsés du premier tool_call,
+        ou {} si le modèle ne déclenche aucun tool_call.
+
+    Raises:
+        ValueError: Si la clé API est absente ou invalide.
+        RuntimeError: Si toutes les tentatives échouent.
+    """
+    for tentative in range(1, retries + 1):
+        try:
+            response = get_openai_client().chat.completions.create(
+                model=MODEL_DEFAULT,
+                temperature=TEMPERATURE,
+                max_tokens=MAX_TOKENS,
+                messages=messages,
+                tools=tools,
+                tool_choice="required",
+                timeout=30,
+            )
+            usage = getattr(response, "usage", None)
+            if usage is not None:
+                add_llm_usage(
+                    getattr(usage, "prompt_tokens", 0) or 0,
+                    getattr(usage, "completion_tokens", 0) or 0,
+                )
+
+            message = response.choices[0].message
+            if message.tool_calls:
+                tc = message.tool_calls[0]
+                return json.loads(tc.function.arguments)
+
+            logger.warning("Le modèle n'a déclenché aucun tool_call.")
+            return {}
+
+        except openai.AuthenticationError as e:
+            raise ValueError(f"Clé API invalide ou révoquée : {e}") from e
+
+        except openai.RateLimitError as e:
+            logger.warning(f"Rate limit atteint (tentative {tentative}/{retries}). Attente 10s...")
+            if tentative < retries:
+                time.sleep(10)
+            else:
+                raise RuntimeError("Rate limit persistant après plusieurs tentatives.") from e
+
+        except openai.APITimeoutError as e:
+            logger.warning(f"Timeout API (tentative {tentative}/{retries})...")
+            if tentative < retries:
+                time.sleep(5)
+            else:
+                raise RuntimeError("Timeout persistant après plusieurs tentatives.") from e
+
+        except openai.APIConnectionError as e:
+            logger.warning(f"Erreur de connexion (tentative {tentative}/{retries})...")
+            if tentative < retries:
+                time.sleep(5)
+            else:
+                raise RuntimeError("Impossible de joindre l'API OpenAI.") from e
+
+        except openai.APIError as e:
+            logger.error(f"Erreur API inattendue : {e}")
+            raise RuntimeError(f"Erreur API OpenAI : {e}") from e
+
+
 def resumer_article(titre: str, contenu: str) -> dict:
     """
     Résume un article RSS et retourne pertinence, catégorie, résumé et action.

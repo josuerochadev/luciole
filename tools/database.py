@@ -200,6 +200,67 @@ def query_db(sql: str) -> list[dict]:
         raise RuntimeError(f"Erreur SQLite : {e}") from e
 
 
+# ---------------------------------------------------------------------------
+# Feedbacks utilisateur — amélioration continue de la pertinence RAG
+# ---------------------------------------------------------------------------
+
+FEEDBACKS_DB_PATH = os.path.join(DATA_DIR, "feedbacks.db")
+
+
+def _init_feedbacks_db() -> None:
+    """Crée la table feedbacks si elle n'existe pas."""
+    _assurer_data_dir()
+    conn = sqlite3.connect(FEEDBACKS_DB_PATH)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS feedbacks (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            article_url TEXT NOT NULL,
+            score_user  INTEGER NOT NULL CHECK(score_user BETWEEN 1 AND 10),
+            timestamp   TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def noter_article(url: str, score: int) -> dict:
+    """
+    Enregistre un feedback utilisateur pour un article.
+
+    Args:
+        url:   URL de l'article noté.
+        score: Note de 1 à 10.
+
+    Returns:
+        Dict de confirmation.
+    """
+    if not 1 <= score <= 10:
+        raise ValueError("Le score doit être entre 1 et 10.")
+    _init_feedbacks_db()
+    conn = sqlite3.connect(FEEDBACKS_DB_PATH)
+    conn.execute(
+        "INSERT INTO feedbacks (article_url, score_user, timestamp) VALUES (?, ?, ?)",
+        (url, score, datetime.now(timezone.utc).isoformat()),
+    )
+    conn.commit()
+    conn.close()
+    logger.info(f"[feedback] Article noté {score}/10 : {url}")
+    return {"article_url": url, "score": score, "status": "enregistré"}
+
+
+def get_feedbacks_moyens() -> dict[str, float]:
+    """
+    Retourne un dict {article_url: score_moyen} pour tous les articles notés.
+    """
+    _init_feedbacks_db()
+    conn = sqlite3.connect(FEEDBACKS_DB_PATH)
+    rows = conn.execute(
+        "SELECT article_url, AVG(score_user) FROM feedbacks GROUP BY article_url"
+    ).fetchall()
+    conn.close()
+    return {row[0]: row[1] for row in rows}
+
+
 def ajouter_log(niveau: str, message: str, extra: dict = None) -> None:
     """Ajoute une entrée de log structuré en JSONL."""
     _assurer_data_dir()

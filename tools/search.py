@@ -1,6 +1,7 @@
 """
-Outil de récupération et filtrage des flux RSS.
+Outil de récupération et filtrage des flux RSS + recherche web (Tavily).
 """
+import os
 import feedparser
 import logging
 from datetime import datetime, timezone
@@ -66,14 +67,40 @@ def filtrer_par_theme(articles: list[dict], themes: list[str] = None) -> list[di
 
 def search_web(query: str) -> list[dict]:
     """
-    Simule une recherche web et retourne des résultats fictifs cohérents
-    avec la requête. Utilisé par l'agent ReAct pour l'intent 'search'.
+    Recherche web via l'API Tavily. Fallback sur une banque simulée
+    si TAVILY_API_KEY n'est pas définie.
 
     Args:
         query: La requête de recherche.
 
     Returns:
         Liste de dicts avec: titre, url, extrait.
+    """
+    api_key = os.environ.get("TAVILY_API_KEY")
+    if api_key:
+        try:
+            from tavily import TavilyClient
+            client = TavilyClient(api_key=api_key)
+            response = client.search(query, max_results=5, search_depth="basic")
+            resultats = []
+            for r in response.get("results", []):
+                resultats.append({
+                    "titre": r.get("title", "Sans titre"),
+                    "url": r.get("url", ""),
+                    "extrait": r.get("content", ""),
+                })
+            logger.info(f"[search_web] Tavily : {len(resultats)} résultat(s) pour '{query}'.")
+            return resultats
+        except Exception as e:
+            logger.error(f"[search_web] Erreur Tavily, fallback simulé : {e}")
+
+    return _search_web_simule(query)
+
+
+def _search_web_simule(query: str) -> list[dict]:
+    """
+    Recherche web simulée (fallback). Retourne des résultats fictifs
+    cohérents avec la requête.
     """
     logger.info(f"[search_web] Recherche simulée : '{query}'")
 

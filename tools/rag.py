@@ -1,12 +1,13 @@
 """
-Module RAG — embeddings OpenAI + similarité cosine numpy.
+Module RAG — embeddings OpenAI + similarité cosine numpy + BM25.
 Améliorations v2 :
   - Batch embeddings    : 1 appel API pour N articles (au lieu de N appels)
   - Index chargé 1 fois : lecture/écriture disque unique par opération batch
   - Similarité vectorisée : numpy matrix ops au lieu d'une boucle Python
   - Filtrage par métadonnées : catégorie, date, pertinence
-  - Score hybride : similarité cosine + fraîcheur de l'article
+  - Score hybride : similarité cosine + BM25 + fraîcheur de l'article
 """
+import functools
 import hashlib
 import json
 import logging
@@ -18,14 +19,30 @@ import numpy as np
 from config import DATA_DIR
 from llm import get_openai_client
 
+try:
+    from rank_bm25 import BM25Okapi
+    HAS_BM25 = True
+except ImportError:
+    HAS_BM25 = False
+
 logger = logging.getLogger(__name__)
 
 EMBEDDINGS_FILE = os.path.join(DATA_DIR, "embeddings.json")
 EMBEDDING_MODEL = "text-embedding-3-small"
 BATCH_SIZE      = 512          # Max inputs par appel OpenAI (limite : 2048)
-FRESHNESS_DECAY = 90           # Jours après lesquels un article est considéré "vieux"
-ALPHA_SIMILARITE = 0.75        # Poids similarité cosine dans le score hybride
-ALPHA_FRAICHEUR  = 0.25        # Poids fraîcheur dans le score hybride
+FRESHNESS_DECAY  = 90           # Jours après lesquels un article est considéré "vieux"
+
+# Poids du score hybride (avec BM25)
+ALPHA_SEMANTIC   = 0.5          # Poids similarité cosine
+ALPHA_BM25       = 0.25         # Poids BM25 (lexical)
+ALPHA_FRAICHEUR  = 0.25         # Poids fraîcheur
+
+# Fallback sans BM25 (ancien comportement)
+ALPHA_SIMILARITE_FALLBACK = 0.75
+ALPHA_FRAICHEUR_FALLBACK  = 0.25
+
+# Bonus feedback utilisateur (amélioration continue)
+ALPHA_FEEDBACK = 0.1
 
 # ---------------------------------------------------------------------------
 # Persistance
@@ -72,6 +89,13 @@ def _embedder_batch(textes: list[str]) -> list[list[float]]:
 def _embedder(texte: str) -> list[float]:
     """Embedding d'un texte unique (pour les requêtes de recherche)."""
     return _embedder_batch([texte])[0]
+
+
+@functools.lru_cache(maxsize=128)
+def _get_query_embedding(query: str) -> tuple[float, ...]:
+    """Embedding de requête avec cache LRU (évite les appels API répétés)."""
+    logger.info("[RAG] Cache miss — appel API embedding pour : '%s'", query[:80])
+    return tuple(_embedder(query))
 
 
 # ---------------------------------------------------------------------------
@@ -216,9 +240,12 @@ def rechercher_articles(
 
     logger.info(f"[RAG] Recherche : '{query}' sur {len(candidats)}/{len(index)} articles")
 
-    # --- Embedding de la requête ---
+    # --- Embedding de la requête (avec cache LRU) ---
     try:
-        query_vec = np.array(_embedder(query), dtype=np.float32)
+        cached = _get_query_embedding.cache_info().hits
+        query_vec = np.array(_get_query_embedding(query), dtype=np.float32)
+        if _get_query_embedding.cache_info().hits > cached:
+            logger.info("[RAG] Cache hit — embedding réutilisé pour : '%s'", query[:80])
     except Exception as e:
         logger.error(f"[RAG] Échec embedding requête : {e}")
         return []
@@ -233,15 +260,48 @@ def rechercher_articles(
     normes_safe = np.where(normes == 0, 1e-10, normes)
     similarites = (matrix @ query_vec) / (normes_safe * norme_query)
 
-    # --- Score hybride : similarité + fraîcheur ---
+    # --- Score BM25 (lexical) ---
+    scores_bm25_norm = np.zeros(len(candidats), dtype=np.float32)
+    if HAS_BM25:
+        corpus_tokens = [e.get("document", "").lower().split() for e in candidats]
+        bm25 = BM25Okapi(corpus_tokens)
+        query_tokens = query.lower().split()
+        scores_bm25_raw = np.array(bm25.get_scores(query_tokens), dtype=np.float32)
+        bm25_min, bm25_max = scores_bm25_raw.min(), scores_bm25_raw.max()
+        if bm25_max > bm25_min:
+            scores_bm25_norm = (scores_bm25_raw - bm25_min) / (bm25_max - bm25_min)
+
+    # --- Score hybride : cosine + BM25 + fraîcheur ---
     if avec_fraicheur:
         fraicheurs = np.array([
             _score_fraicheur(e["metadata"].get("date_publication", ""))
             for e in candidats
         ], dtype=np.float32)
-        scores = ALPHA_SIMILARITE * similarites + ALPHA_FRAICHEUR * fraicheurs
+        if HAS_BM25:
+            scores = (ALPHA_SEMANTIC * similarites
+                      + ALPHA_BM25 * scores_bm25_norm
+                      + ALPHA_FRAICHEUR * fraicheurs)
+        else:
+            scores = (ALPHA_SIMILARITE_FALLBACK * similarites
+                      + ALPHA_FRAICHEUR_FALLBACK * fraicheurs)
     else:
-        scores = similarites
+        if HAS_BM25:
+            scores = ALPHA_SEMANTIC * similarites + ALPHA_BM25 * scores_bm25_norm
+        else:
+            scores = similarites
+
+    # --- Bonus feedback utilisateur ---
+    feedbacks = {}
+    try:
+        from tools.database import get_feedbacks_moyens
+        feedbacks = get_feedbacks_moyens()
+        if feedbacks:
+            for i, entry in enumerate(candidats):
+                url = entry["metadata"].get("lien", "")
+                if url in feedbacks:
+                    scores[i] += ALPHA_FEEDBACK * (feedbacks[url] / 10)
+    except Exception as e:
+        logger.warning(f"[RAG] Feedbacks indisponibles (non bloquant) : {e}")
 
     # --- Top N ---
     indices_top = np.argsort(scores)[::-1][:n]
@@ -258,7 +318,9 @@ def rechercher_articles(
             "date_publication":   meta.get("date_publication", ""),
             "source":             meta.get("source", ""),
             "score_similarite":   round(float(similarites[idx]), 3),
+            "score_bm25":         round(float(scores_bm25_norm[idx]), 3),
             "score_fraicheur":    round(float(_score_fraicheur(meta.get("date_publication", ""))), 3),
+            "score_feedback":     round(float(ALPHA_FEEDBACK * (feedbacks.get(meta.get("lien", ""), 0) / 10)), 3),
             "score_final":        round(float(scores[idx]), 3),
             "resume_extrait":     entry.get("document", "")[:300],
         })

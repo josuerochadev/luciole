@@ -36,29 +36,144 @@ def sauvegarder_json(chemin: str, données) -> None:
         json.dump(données, f, ensure_ascii=False, indent=2)
 
 
+ARTICLES_DB_PATH = os.path.join(DATA_DIR, "articles.db")
+
+
+def _init_articles_db() -> None:
+    """Crée la table articles si elle n'existe pas."""
+    _assurer_data_dir()
+    conn = sqlite3.connect(ARTICLES_DB_PATH)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS articles (
+            lien            TEXT PRIMARY KEY,
+            titre           TEXT NOT NULL,
+            resume_brut     TEXT DEFAULT '',
+            resume          TEXT DEFAULT '',
+            contenu_complet TEXT DEFAULT '',
+            categorie       TEXT DEFAULT 'Autre',
+            pertinence      INTEGER DEFAULT 0,
+            action          TEXT DEFAULT 'lire',
+            source          TEXT DEFAULT '',
+            source_url      TEXT DEFAULT '',
+            date_publication TEXT DEFAULT '',
+            date_ajout      TEXT NOT NULL,
+            archive         INTEGER DEFAULT 0
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_archive ON articles(archive)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_date ON articles(date_publication)")
+    conn.commit()
+    conn.close()
+
+
+def _migrer_json_vers_sqlite() -> None:
+    """Migration one-shot : importe articles.json et archives.json dans SQLite."""
+    conn = sqlite3.connect(ARTICLES_DB_PATH)
+    count = conn.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
+    conn.close()
+    if count > 0:
+        return  # déjà migré
+
+    for fichier, is_archive in [(ARTICLES_FILE, 0), (ARCHIVES_FILE, 1)]:
+        articles = charger_json(fichier)
+        if articles:
+            _insert_articles_sqlite(articles, archive=is_archive)
+            logger.info(f"Migration : {len(articles)} articles importés depuis {fichier}")
+
+
+def _insert_articles_sqlite(articles: list[dict], archive: int = 0) -> int:
+    """Insère des articles dans SQLite (ignore les doublons par lien)."""
+    conn = sqlite3.connect(ARTICLES_DB_PATH)
+    now = datetime.now(timezone.utc).isoformat()
+    inseres = 0
+    for a in articles:
+        lien = a.get("lien", "")
+        if not lien:
+            continue
+        try:
+            conn.execute(
+                """INSERT OR IGNORE INTO articles
+                   (lien, titre, resume_brut, resume, contenu_complet, categorie,
+                    pertinence, action, source, source_url, date_publication, date_ajout, archive)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    lien,
+                    a.get("titre", ""),
+                    a.get("resume_brut", ""),
+                    a.get("resume", ""),
+                    a.get("contenu_complet", ""),
+                    a.get("categorie", "Autre"),
+                    int(a.get("pertinence", 0)),
+                    a.get("action", "lire"),
+                    a.get("source", ""),
+                    a.get("source_url", ""),
+                    a.get("date_publication", ""),
+                    a.get("date_ajout", now),
+                    archive,
+                ),
+            )
+            inseres += conn.total_changes  # approximation
+        except sqlite3.Error as e:
+            logger.debug(f"Insert échoué pour {lien} : {e}")
+    conn.commit()
+    conn.close()
+    return inseres
+
+
 def article_deja_traite(lien: str) -> bool:
-    """Vérifie si un article (identifié par son URL) a déjà été traité."""
-    articles = charger_json(ARTICLES_FILE)
-    liens_connus = {a["lien"] for a in articles}
-    archives = charger_json(ARCHIVES_FILE)
-    liens_archives = {a["lien"] for a in archives}
-    return lien in liens_connus or lien in liens_archives
+    """Vérifie si un article (identifié par son URL) existe déjà en base."""
+    _init_articles_db()
+    _migrer_json_vers_sqlite()
+    conn = sqlite3.connect(ARTICLES_DB_PATH)
+    row = conn.execute("SELECT 1 FROM articles WHERE lien = ?", (lien,)).fetchone()
+    conn.close()
+    return row is not None
 
 
 def sauvegarder_articles(articles: list[dict]) -> int:
     """
-    Ajoute les nouveaux articles au fichier articles.json
-    et les indexe dans ChromaDB pour la recherche sémantique (RAG).
+    Ajoute les nouveaux articles dans SQLite et les indexe dans le RAG.
 
     Returns:
         Nombre d'articles effectivement ajoutés (doublons exclus).
     """
-    existants = charger_json(ARTICLES_FILE)
-    liens_existants = {a["lien"] for a in existants}
+    _init_articles_db()
+    conn = sqlite3.connect(ARTICLES_DB_PATH)
+    now = datetime.now(timezone.utc).isoformat()
+    nouveaux = []
 
-    nouveaux = [a for a in articles if a["lien"] not in liens_existants]
-    sauvegarder_json(ARTICLES_FILE, existants + nouveaux)
-    logger.info(f"{len(nouveaux)} nouveaux articles sauvegardés.")
+    for a in articles:
+        lien = a.get("lien", "")
+        if not lien:
+            continue
+        exists = conn.execute("SELECT 1 FROM articles WHERE lien = ?", (lien,)).fetchone()
+        if exists:
+            continue
+        conn.execute(
+            """INSERT INTO articles
+               (lien, titre, resume_brut, resume, contenu_complet, categorie,
+                pertinence, action, source, source_url, date_publication, date_ajout, archive)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)""",
+            (
+                lien,
+                a.get("titre", ""),
+                a.get("resume_brut", ""),
+                a.get("resume", ""),
+                a.get("contenu_complet", ""),
+                a.get("categorie", "Autre"),
+                int(a.get("pertinence", 0)),
+                a.get("action", "lire"),
+                a.get("source", ""),
+                a.get("source_url", ""),
+                a.get("date_publication", ""),
+                now,
+            ),
+        )
+        nouveaux.append(a)
+
+    conn.commit()
+    conn.close()
+    logger.info(f"{len(nouveaux)} nouveaux articles sauvegardés en SQLite.")
 
     # Indexation RAG des nouveaux articles
     if nouveaux:
@@ -83,32 +198,32 @@ def enregistrer_envoi(destinataires: list[str], nb_articles: int) -> None:
 
 
 def archiver_articles_traites(articles: list[dict]) -> None:
-    """Déplace des articles de articles.json vers archives.json."""
-    archives = charger_json(ARCHIVES_FILE)
-    liens_à_archiver = {a["lien"] for a in articles}
-
-    existants = charger_json(ARTICLES_FILE)
-    restants = [a for a in existants if a["lien"] not in liens_à_archiver]
-    à_archiver = [a for a in existants if a["lien"] in liens_à_archiver]
-
-    sauvegarder_json(ARTICLES_FILE, restants)
-    sauvegarder_json(ARCHIVES_FILE, archives + à_archiver)
-    logger.info(f"{len(à_archiver)} articles archivés.")
+    """Marque des articles comme archivés dans SQLite."""
+    _init_articles_db()
+    conn = sqlite3.connect(ARTICLES_DB_PATH)
+    liens = [a["lien"] for a in articles if a.get("lien")]
+    for lien in liens:
+        conn.execute("UPDATE articles SET archive = 1 WHERE lien = ?", (lien,))
+    conn.commit()
+    conn.close()
+    logger.info(f"{len(liens)} articles archivés.")
 
 
 def purger_donnees_perimees() -> None:
     """Supprime les données dépassant les durées de rétention RGPD."""
     maintenant = datetime.now(timezone.utc)
 
-    # Purge des archives (90 jours)
-    limite_articles = maintenant - timedelta(days=RETENTION_ARTICLES_JOURS)
-    archives = charger_json(ARCHIVES_FILE)
-    archives_valides = [
-        a for a in archives
-        if datetime.fromisoformat(a.get("date_publication", maintenant.isoformat())) > limite_articles
-    ]
-    sauvegarder_json(ARCHIVES_FILE, archives_valides)
-    logger.info(f"Purge archives : {len(archives) - len(archives_valides)} entrées supprimées.")
+    # Purge des archives SQLite (90 jours)
+    _init_articles_db()
+    limite_articles = (maintenant - timedelta(days=RETENTION_ARTICLES_JOURS)).isoformat()
+    conn = sqlite3.connect(ARTICLES_DB_PATH)
+    cur = conn.execute(
+        "DELETE FROM articles WHERE archive = 1 AND date_publication < ?",
+        (limite_articles,),
+    )
+    conn.commit()
+    conn.close()
+    logger.info(f"Purge archives SQLite : {cur.rowcount} entrées supprimées.")
 
     # Purge des logs (30 jours)
     if not os.path.exists(LOGS_FILE):

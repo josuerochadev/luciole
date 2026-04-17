@@ -7,7 +7,7 @@ load_dotenv()
 MODEL_DEFAULT = "gpt-4o-mini"
 MODEL_VISION = "gpt-4o"  # Vision nécessite gpt-4o (pas mini)
 TEMPERATURE = 0.3
-MAX_TOKENS = 1024
+MAX_TOKENS = 2048
 
 # --- Clé API (depuis variable d'environnement) ---
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -22,45 +22,82 @@ SYSTEM_PROMPT = (
 
 # --- Sources RSS surveillées ---
 RSS_SOURCES = [
-    # Français
+    # ── Français ──
     "https://next.ink/rss/news.xml",
     "https://korben.info/feed",
     "https://www.silicon.fr/feed",
     "https://www.zdnet.fr/feeds/rss/actualites/",
-    # International
-    "https://4sysops.com/feed/",
+    "https://www.journaldunet.com/rss/",
+    "https://www.lemondeinformatique.fr/flux-rss/thematique/toutes-les-actualites/rss.xml",
+    "https://www.blogdumoderateur.com/feed/",
+    "https://siecledigital.fr/feed/",
+    # ── IA & Machine Learning ──
+    "https://blogs.microsoft.com/ai/feed/",
+    "https://blog.google/technology/ai/rss/",
+    "https://openai.com/blog/rss.xml",
+    "https://huggingface.co/blog/feed.xml",
+    "https://ai.meta.com/blog/rss/",
+    "https://deepmind.google/blog/rss.xml",
+    "https://www.marktechpost.com/feed/",
+    "https://thesequence.substack.com/feed",
+    "https://jack-clark.net/feed/",
+    "https://newsletter.ruder.io/feed",
+    # ── Tech généraliste ──
     "https://techcrunch.com/feed/",
     "https://feeds.arstechnica.com/arstechnica/index",
     "https://www.theverge.com/rss/index.xml",
-    # Cloud & DevOps
+    "https://www.wired.com/feed/rss",
+    "https://thenewstack.io/feed",
+    "https://news.ycombinator.com/rss",
+    "https://www.infoq.com/feed/",
+    "https://dev.to/feed",
+    # ── Cloud & DevOps ──
     "https://aws.amazon.com/blogs/aws/feed/",
+    "https://cloud.google.com/blog/products/ai-machine-learning/rss",
+    "https://azure.microsoft.com/en-us/blog/feed/",
     "https://kubernetes.io/feed.xml",
-    # Cybersécurité
+    "https://www.hashicorp.com/blog/feed.xml",
+    "https://www.cncf.io/blog/feed/",
+    "https://4sysops.com/feed/",
+    # ── Cybersécurité ──
     "https://www.cybersecuritydive.com/feeds/news/",
-    # IA
-    "https://blogs.microsoft.com/ai/feed/",
+    "https://thehackernews.com/feeds/posts/default",
+    "https://www.bleepingcomputer.com/feed/",
+    "https://krebsonsecurity.com/feed/",
+    "https://www.schneier.com/feed/atom/",
+    "https://www.darkreading.com/rss.xml",
+    # ── Open Source & Linux ──
+    "https://www.phoronix.com/rss.php",
+    "https://www.omgubuntu.co.uk/feed",
+    "https://itsfoss.com/feed/",
 ]
 
 # --- Thèmes de filtrage ---
 THEMES = [
-    "intelligence artificielle",
-    "cybersécurité",
-    "cyber",
-    "cloud",
-    "infrastructure",
-    "DevOps",
-    "LLM",
-    "GPU",
-    "données",
-    "kubernetes",
-    "docker",
-    "sécurité",
-    "machine learning",
-    "deep learning",
-    "open source",
-    "azure",
-    "aws",
-    "linux",
+    # IA & LLM
+    "intelligence artificielle", "artificial intelligence",
+    "machine learning", "deep learning", "neural network",
+    "LLM", "GPT", "chatgpt", "gemini", "claude", "mistral", "llama",
+    "openai", "anthropic", "hugging face", "transformer",
+    "RAG", "fine-tuning", "embedding", "prompt",
+    "agent", "agentique", "agentic",
+    "IA générative", "generative ai", "gen ai",
+    "computer vision", "NLP", "diffusion",
+    # Cloud & Infrastructure
+    "cloud", "infrastructure", "serverless", "microservice",
+    "azure", "aws", "gcp", "google cloud",
+    "kubernetes", "docker", "terraform", "ansible",
+    "DevOps", "CI/CD", "MLOps", "GitOps",
+    "SaaS", "PaaS", "IaaS",
+    # Cybersécurité
+    "cybersécurité", "cybersecurity", "cyber",
+    "sécurité", "security", "zero-day", "ransomware",
+    "phishing", "malware", "vulnerability", "faille",
+    "SOC", "SIEM", "pentest", "zero trust",
+    # Data & Open Source
+    "données", "data", "big data", "data lake",
+    "open source", "linux", "GPU", "NVIDIA",
+    "API", "python", "rust",
 ]
 
 # --- Seuil de pertinence (articles en-dessous ignorés) ---

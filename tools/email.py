@@ -32,7 +32,28 @@ def selectionner_articles(nb_max: int = MAX_ARTICLES_PAR_RAPPORT) -> list[dict]:
     """
     Retourne les meilleurs articles triés par pertinence décroissante.
     Exclut les articles hors-sujet (catégorie 'Hors-sujet').
+    Lit depuis SQLite si disponible, sinon fallback JSON.
     """
+    try:
+        from tools.database import ARTICLES_DB_PATH, _init_articles_db
+        import sqlite3
+        _init_articles_db()
+        conn = sqlite3.connect(ARTICLES_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """SELECT * FROM articles
+               WHERE archive = 0 AND pertinence >= 5
+                 AND LOWER(categorie) != 'hors-sujet'
+               ORDER BY pertinence DESC LIMIT ?""",
+            (nb_max,),
+        ).fetchall()
+        conn.close()
+        if rows:
+            return [dict(r) for r in rows]
+    except Exception:
+        pass
+
+    # Fallback JSON
     articles = charger_json(ARTICLES_FILE)
     pertinents = [
         a for a in articles

@@ -12,13 +12,42 @@ import argparse
 import logging
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
+from difflib import SequenceMatcher
+
 from tools.search import recuperer_articles_rss, filtrer_par_theme
+from tools.scraper import scraper_articles_batch
 from tools.database import sauvegarder_articles, article_deja_traite
 from tools.email import selectionner_articles, envoyer_rapport
 from llm import resumer_article
 from config import PERTINENCE_MIN
+
+TITRE_SIMILARITY_THRESHOLD = 0.85  # seuil de similarité pour considérer un doublon
+
+
+def _dedoublonner_par_titre(articles: list[dict]) -> list[dict]:
+    """
+    Supprime les articles dont le titre est quasi-identique (même sujet,
+    syndiqué sur plusieurs flux). Garde le premier rencontré.
+    """
+    uniques = []
+    titres_vus = []
+    for article in articles:
+        titre = article.get("titre", "").strip().lower()
+        if not titre:
+            uniques.append(article)
+            continue
+        doublon = False
+        for t in titres_vus:
+            if SequenceMatcher(None, titre, t).ratio() >= TITRE_SIMILARITY_THRESHOLD:
+                doublon = True
+                break
+        if not doublon:
+            titres_vus.append(titre)
+            uniques.append(article)
+    return uniques
 
 logging.basicConfig(
     level=logging.WARNING,
@@ -50,53 +79,72 @@ def run(dry_run: bool = False, no_email: bool = False) -> dict:
     filtres = filtrer_par_theme(articles)
     print(f"      {len(filtres)} articles retenus.")
 
-    # --- Étape 3 — Enrichissement LLM (résumé + catégorie + pertinence) ---
-    print(f"[3/{nb_etapes}] Enrichissement LLM (seuil pertinence >= {PERTINENCE_MIN})...")
-
+    # --- Étape 3a — Scraping du contenu complet ---
     nouveaux = [a for a in filtres if not article_deja_traite(a["lien"])]
-    print(f"      {len(nouveaux)} nouveaux articles à enrichir (doublons exclus).")
+    avant_dedup = len(nouveaux)
+    nouveaux = _dedoublonner_par_titre(nouveaux)
+    print(f"      {len(nouveaux)} nouveaux articles ({avant_dedup - len(nouveaux)} doublons titre supprimés).")
 
-    enrichis = []
-    for i, article in enumerate(nouveaux, 1):
+    nb_etapes_total = nb_etapes + 1 if not no_email else nb_etapes + 1
+    print(f"[3/{nb_etapes_total}] Scraping du contenu complet...")
+    nouveaux = scraper_articles_batch(nouveaux)
+    nb_scrapes = sum(1 for a in nouveaux if a.get("contenu_complet"))
+    print(f"      {nb_scrapes}/{len(nouveaux)} articles scrapés avec succès.")
+
+    # --- Étape 4 — Enrichissement LLM parallèle (résumé + catégorie + pertinence) ---
+    print(f"[4/{nb_etapes_total}] Enrichissement LLM (seuil pertinence >= {PERTINENCE_MIN}, 5 threads)...")
+
+    LLM_WORKERS = 5  # threads parallèles pour l'API OpenAI
+
+    def _enrichir_un(article: dict) -> dict | None:
+        """Enrichit un article via le LLM. Retourne l'article enrichi ou None."""
         titre = article.get("titre", "")
-        contenu = article.get("resume_brut", "")
+        contenu = article.get("contenu_complet", article.get("resume_brut", ""))
         try:
             analyse = resumer_article(titre, contenu)
             pertinence = int(analyse.get("pertinence", 0))
-
             if pertinence < PERTINENCE_MIN:
-                print(f"      [{i}/{len(nouveaux)}] Ignoré (pertinence {pertinence}) : {titre[:50]}")
-                continue
-
+                return None
             article.update({
                 "resume":     analyse.get("resume", contenu[:300]),
                 "categorie":  analyse.get("categorie", "Autre"),
                 "pertinence": pertinence,
                 "action":     analyse.get("action", "lire"),
             })
-            enrichis.append(article)
-            print(f"      [{i}/{len(nouveaux)}] ✓ [{pertinence}/10] {analyse.get('categorie','?')} — {titre[:50]}")
-
+            return article
         except Exception as e:
             logging.warning(f"Enrichissement échoué pour '{titre}' : {e}")
             article.setdefault("categorie", "Autre")
             article.setdefault("pertinence", 5)
-            enrichis.append(article)
+            return article
 
-        if i % 10 == 0:
-            time.sleep(1)
+    enrichis = []
+    done = 0
+    with ThreadPoolExecutor(max_workers=LLM_WORKERS) as pool:
+        futures = {pool.submit(_enrichir_un, a): a for a in nouveaux}
+        for future in as_completed(futures):
+            done += 1
+            result = future.result()
+            titre = futures[future].get("titre", "")[:50]
+            if result is None:
+                print(f"      [{done}/{len(nouveaux)}] Ignoré (pertinence faible) : {titre}")
+            else:
+                p = result.get("pertinence", "?")
+                c = result.get("categorie", "?")
+                print(f"      [{done}/{len(nouveaux)}] ✓ [{p}/10] {c} — {titre}")
+                enrichis.append(result)
 
     print(f"      {len(enrichis)} articles enrichis et pertinents.")
 
-    # --- Étape 4 — Sauvegarde + indexation RAG ---
-    print(f"[4/{nb_etapes}] Sauvegarde et indexation RAG...")
+    # --- Étape 5 — Sauvegarde + indexation RAG ---
+    print(f"[5/{nb_etapes_total}] Sauvegarde et indexation RAG...")
     nb = sauvegarder_articles(enrichis)
     print(f"      {nb} articles sauvegardés et indexés.")
 
-    # --- Étape 5 — Envoi du digest email ---
+    # --- Étape 6 — Envoi du digest email ---
     resultat_email = None
     if not no_email:
-        print(f"[5/{nb_etapes}] Envoi du digest email{' (dry-run)' if dry_run else ''}...")
+        print(f"[6/{nb_etapes_total}] Envoi du digest email{' (dry-run)' if dry_run else ''}...")
         articles_digest = selectionner_articles()
 
         if not articles_digest:

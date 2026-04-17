@@ -139,8 +139,12 @@ def indexer_articles(articles: list[dict]) -> int:
         if not lien:
             continue
         titre  = article.get("titre", "")
-        resume = article.get("resume", article.get("resume_brut", ""))
-        texte  = f"{titre}. {resume}"[:3000].strip()
+        contenu = (
+            article.get("contenu_complet")
+            or article.get("resume")
+            or article.get("resume_brut", "")
+        )
+        texte  = f"{titre}. {contenu}"[:5000].strip()
         if texte:
             valides.append((article, texte, _article_id(lien)))
 
@@ -169,7 +173,7 @@ def indexer_articles(articles: list[dict]) -> int:
         ajouts.append({
             "id":        doc_id,
             "embedding": embedding,
-            "document":  texte[:500],
+            "document":  texte[:2000],
             "metadata": {
                 "titre":            article.get("titre", ""),
                 "lien":             article.get("lien", ""),

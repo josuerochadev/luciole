@@ -16,6 +16,7 @@ from tools.transcribe import transcrire_audio
 from tools.vision import analyser_image
 from security import analyser_securite, valider_sql, filtrer_sortie
 from monitoring import mark_fallback
+from tracing import observe, update_current_trace, flush
 
 logging.basicConfig(
     level=logging.INFO,
@@ -80,6 +81,7 @@ SYSTEM_REACT = (
 # ---------------------------------------------------------------------------
 # Étape 1 — Raisonnement : choisir l'outil
 # ---------------------------------------------------------------------------
+@observe(name="choisir_outil")
 def choisir_outil(requete: str) -> dict:
     """Demande au LLM quel outil utiliser pour répondre à la requête."""
     decision = appeler_llm_json(
@@ -96,6 +98,7 @@ def choisir_outil(requete: str) -> dict:
 # ---------------------------------------------------------------------------
 # Étape 2 — Action : exécuter l'outil choisi
 # ---------------------------------------------------------------------------
+@observe(name="executer_outil")
 def executer_outil(decision: dict) -> str:
     """Exécute l'outil indiqué dans la décision et retourne le résultat en texte."""
     outil = decision.get("outil", "reponse_directe")
@@ -179,6 +182,7 @@ def executer_outil(decision: dict) -> str:
 # ---------------------------------------------------------------------------
 # Étape 3 — Observation : formuler la réponse finale
 # ---------------------------------------------------------------------------
+@observe(name="formuler_reponse")
 def formuler_reponse(requete: str, resultat_outil: str) -> str:
     """Demande au LLM de formuler une réponse finale à partir du résultat de l'outil."""
     # Correction Log B : instruction stricte si l'outil a échoué ou retourné vide
@@ -238,6 +242,7 @@ def formuler_reponse(requete: str, resultat_outil: str) -> str:
 # ---------------------------------------------------------------------------
 MAX_ITERATIONS = 2  # Correction Log C : limite de boucle pour éviter les boucles infinies
 
+@observe(name="agent_react")
 def agent_react(requete: str) -> str:
     """
     Boucle ReAct complète : Reason → Act → Observe → Respond.
@@ -252,6 +257,9 @@ def agent_react(requete: str) -> str:
     print(f"\n{'='*60}")
     print(f"REQUÊTE : {requete}")
     print("=" * 60)
+
+    # Langfuse : taguer la trace avec la requête utilisateur
+    update_current_trace(input=requete, tags=["react-agent"])
 
     # --- Garde de sécurité (M4E5) ---
     check = analyser_securite(requete)
@@ -299,6 +307,10 @@ def agent_react(requete: str) -> str:
 
     logger.info("[ReAct] Réponse finale générée.")
     print(f"\nRÉPONSE :\n{reponse}\n")
+
+    # Langfuse : flush des traces en fin de requête
+    flush()
+
     return reponse
 
 

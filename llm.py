@@ -12,13 +12,28 @@ except ImportError:  # pragma: no cover
     def add_llm_usage(prompt_tokens: int, completion_tokens: int) -> None:
         pass
 
+# Langfuse : instrumentation automatique du client OpenAI + décorateurs
+try:
+    from tracing import observe, _langfuse_enabled
+    if _langfuse_enabled:
+        from langfuse.openai import OpenAI as LangfuseOpenAI
+    else:
+        LangfuseOpenAI = None
+except ImportError:
+    LangfuseOpenAI = None
+    def observe(*args, **kwargs):
+        def passthrough(fn): return fn
+        if args and callable(args[0]): return args[0]
+        return passthrough
+
 logger = logging.getLogger(__name__)
 
 _client = None
 
 
-def get_openai_client() -> openai.OpenAI:
+def get_openai_client():
     """Initialise le client OpenAI au premier appel (lazy init).
+    Si Langfuse est actif, utilise le wrapper instrumenté.
     Point d'accès unique — utilisé aussi par tools/rag.py."""
     global _client
     if _client is None:
@@ -27,7 +42,11 @@ def get_openai_client() -> openai.OpenAI:
                 "Clé API OpenAI manquante. Définissez OPENAI_API_KEY dans le fichier .env "
                 "ou via PowerShell : $env:OPENAI_API_KEY = 'sk-...'"
             )
-        _client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        if LangfuseOpenAI is not None:
+            _client = LangfuseOpenAI(api_key=OPENAI_API_KEY)
+            logger.info("[Langfuse] Client OpenAI instrumenté.")
+        else:
+            _client = openai.OpenAI(api_key=OPENAI_API_KEY)
     return _client
 
 # Schéma JSON métier de l'agent de veille technologique
@@ -39,6 +58,7 @@ SCHEMA_VEILLE = {
 }
 
 
+@observe(name="appeler_llm_json")
 def appeler_llm_json(question: str, schema: dict = None, system_prompt: str = SYSTEM_PROMPT) -> dict:
     """
     Appelle le LLM en lui demandant de répondre UNIQUEMENT en JSON valide
@@ -105,6 +125,7 @@ def appeler_llm_json(question: str, schema: dict = None, system_prompt: str = SY
     }
 
 
+@observe(name="appeler_llm")
 def appeler_llm(question: str, system_prompt: str = SYSTEM_PROMPT, retries: int = 3) -> str:
     """
     Appelle l'API OpenAI et retourne le texte généré.

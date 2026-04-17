@@ -24,8 +24,8 @@
   --pulse-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
 
   /* === Type scale === */
-  --pulse-text-xs: 11px;
-  --pulse-text-sm: 13px;
+  --pulse-text-xs: 12px;
+  --pulse-text-sm: 14px;
   --pulse-text-base: 16px;
   --pulse-text-lg: 18px;
   --pulse-text-xl: 22px;
@@ -158,7 +158,7 @@ img { max-width: 100%; display: block; }
 .pulse-wordmark {
   font-family: var(--pulse-serif);
   font-weight: 700;
-  font-size: 28px;
+  font-size: 32px;
   letter-spacing: -0.01em;
   color: var(--pulse-ink);
   line-height: 1;
@@ -272,7 +272,7 @@ img { max-width: 100%; display: block; }
   overflow: hidden;
   transition: all 0.3s ease;
   width: 100%;
-  max-width: 640px;
+  max-width: 720px;
 }
 .pulse-chat-input:focus-within {
   border-color: var(--pulse-accent);
@@ -333,7 +333,7 @@ img { max-width: 100%; display: block; }
   grid-template-rows: auto auto;
   gap: var(--pulse-space-6);
   padding: var(--pulse-space-8) 0 var(--pulse-space-16);
-  max-width: 800px;
+  max-width: 960px;
   margin: 0 auto;
 }
 
@@ -392,7 +392,7 @@ img { max-width: 100%; display: block; }
 
 .pulse-chat-zone {
   padding: var(--pulse-space-6) 0 var(--pulse-space-16);
-  max-width: 800px;
+  max-width: 960px;
   margin: 0 auto;
 }
 
@@ -465,8 +465,8 @@ img { max-width: 100%; display: block; }
 }
 
 .pulse-message-avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: 1px solid var(--pulse-rule);
   border-radius: 50%;
   display: flex;

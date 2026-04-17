@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pulse_ · The signal in the noise</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/static/pulse-favicon.svg">
+
+  <!-- OpenGraph -->
+  <meta property="og:title" content="pulse_ · The signal in the noise">
+  <meta property="og:description" content="Agent IA de veille technologique conversationnel. Tech intelligence, daily.">
+  <meta property="og:image" content="/static/pulse-wordmark.svg">
+  <meta property="og:type" content="website">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
+  <!-- Design System -->
+  <link rel="stylesheet" href="/static/pulse.css">
+
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+  <!-- Masthead -->
+  <header class="pulse-masthead">
+    <div class="pulse-masthead-row">
+      <span class="t-meta">Vol. 01 — N°042</span>
+      <a href="/" class="pulse-wordmark-link">
+        <img src="/static/pulse-wordmark.svg" alt="pulse_" width="120">
+      </a>
+      <span class="t-meta" id="today-date"></span>
+    </div>
+    <nav class="pulse-nav">
+      <a href="/" {% if active_page == "chat" %}class="active"{% endif %}>Chat</a>
+      <a href="/dashboard" {% if active_page == "dashboard" %}class="active"{% endif %}>Dashboard</a>
+      <a href="/about" {% if active_page == "about" %}class="active"{% endif %}>About</a>
+    </nav>
+  </header>
+
+  <!-- Content -->
+  <main class="pulse-container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="pulse-footer">
+    <div class="pulse-footer-row">
+      <span class="t-meta">pulse_ · AJC Formation · 2026</span>
+      <span class="t-meta">v1.0.0 · ReAct Agent · gpt-4o-mini</span>
+      <span class="t-meta"><a href="https://github.com/josuerochadev/formation-ia">GitHub</a></span>
+    </div>
+  </footer>
+
+  <!-- Date dynamique -->
+  <script>
+    document.getElementById('today-date').textContent =
+      new Date().toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

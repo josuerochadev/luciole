@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section style="padding: var(--pulse-space-16) 0;">
+
+  <!-- Hero -->
+  <span class="t-eyebrow-accent">About</span>
+  <h1 class="t-display-md" style="margin: var(--pulse-space-4) 0 var(--pulse-space-6); max-width: 720px;">
+    pulse<span class="pulse-underscore">_</span> is a tech watch agent for teams that don't have time to read.
+  </h1>
+  <p class="t-body-lg" style="color: var(--pulse-muted); max-width: 600px; margin-bottom: var(--pulse-space-16);">
+    Veille augmentée. Décisions éclairées.
+  </p>
+
+  <!-- The Problem -->
+  <div style="border-top: var(--pulse-rule-heavy); padding-top: var(--pulse-space-8); margin-bottom: var(--pulse-space-16);">
+    <span class="t-eyebrow" style="margin-bottom: var(--pulse-space-6); display: block;">The problem</span>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--pulse-space-8);">
+      <div>
+        <div class="pulse-kpi-value">1,200</div>
+        <span class="t-meta">ingénieurs à informer</span>
+      </div>
+      <div>
+        <div class="pulse-kpi-value">0.5h</div>
+        <span class="t-meta">de veille manuelle / jour</span>
+      </div>
+      <div>
+        <div class="pulse-kpi-value">6.8M&euro;</div>
+        <span class="t-meta">coût annuel estimé</span>
+      </div>
+    </div>
+    <p class="t-body" style="max-width: 600px; margin-top: var(--pulse-space-8); color: var(--pulse-ink-soft);">
+      Chaque ingénieur passe 30 minutes par jour à parcourir des flux RSS, newsletters, et Hacker News.
+      Multipliez par 1 200 personnes, 220 jours ouvrés, au coût moyen chargé : le total est vertigineux.
+      Et malgré cet effort, les signaux faibles passent entre les mailles.
+    </p>
+  </div>
+
+  <!-- How it works -->
+  <div style="border-top: var(--pulse-rule-thin); padding-top: var(--pulse-space-8); margin-bottom: var(--pulse-space-16);">
+    <span class="t-eyebrow" style="margin-bottom: var(--pulse-space-6); display: block;">How it works</span>
+    <h2 class="t-headline-md" style="margin-bottom: var(--pulse-space-8);">7 couches, un agent.</h2>
+    <ol class="t-body" style="max-width: 600px; padding-left: var(--pulse-space-6); color: var(--pulse-ink-soft);">
+      <li style="margin-bottom: var(--pulse-space-4);"><strong>Ingestion RSS</strong> — 12 sources tech en continu (AWS, K8s, cybersécurité, IA…)</li>
+      <li style="margin-bottom: var(--pulse-space-4);"><strong>Vectorisation</strong> — Embeddings text-embedding-3-small, index numpy maison</li>
+      <li style="margin-bottom: var(--pulse-space-4);"><strong>Agent ReAct</strong> — Boucle Reason → Act → Observe avec max 2 itérations</li>
+      <li style="margin-bottom: var(--pulse-space-4);"><strong>6 outils</strong> — RAG articles, recherche web, base SQL, transcription audio, vision, email</li>
+      <li style="margin-bottom: var(--pulse-space-4);"><strong>Sécurité</strong> — Validation SQL, filtrage RGPD, masquage données sensibles</li>
+      <li style="margin-bottom: var(--pulse-space-4);"><strong>Monitoring</strong> — Latence, tokens, coûts, taux d'erreur temps réel</li>
+      <li style="margin-bottom: var(--pulse-space-4);"><strong>Observabilité</strong> — Tracing Langfuse pour chaque span de l'agent</li>
+    </ol>
+  </div>
+
+  <!-- Team -->
+  <div style="border-top: var(--pulse-rule-thin); padding-top: var(--pulse-space-8); margin-bottom: var(--pulse-space-16);">
+    <span class="t-eyebrow" style="margin-bottom: var(--pulse-space-6); display: block;">The team</span>
+    <div style="display: flex; gap: var(--pulse-space-8); flex-wrap: wrap;">
+      <span class="t-meta" style="font-size: var(--pulse-text-sm);">Alexis Dubus</span>
+      <span class="t-meta" style="font-size: var(--pulse-text-sm);">Josué X. Rocha</span>
+      <span class="t-meta" style="font-size: var(--pulse-text-sm);">Zhengfeng Ding</span>
+      <span class="t-meta" style="font-size: var(--pulse-text-sm);">Stéphanie Consoli</span>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div style="border-top: var(--pulse-rule-heavy); padding-top: var(--pulse-space-8);">
+    <a href="/" style="font-family: var(--pulse-serif); font-weight: 700; font-size: var(--pulse-text-xl); color: var(--pulse-ink); text-decoration: none; border-bottom: 2px solid var(--pulse-accent);">
+      Try pulse_ &rarr;
+    </a>
+  </div>
+
+</section>
+{% endblock %}

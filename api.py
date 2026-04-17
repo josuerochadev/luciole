@@ -2,8 +2,14 @@
 API FastAPI pour l'agent de veille technologique.
 - M5E4 : containerisation Docker (POST /ask, GET /health).
 - M5E5 : monitoring + KPIs (GET /metrics, GET /metrics/recent).
+- Pulse_ : interface éditoriale HTML (GET /, GET /about).
 """
-from fastapi import FastAPI
+from pathlib import Path
+
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from main import agent_react
@@ -14,7 +20,11 @@ from monitoring import (
     start_request,
 )
 
-app = FastAPI(title="Agent Veille Technologique", version="1.1.0")
+BASE_DIR = Path(__file__).resolve().parent
+
+app = FastAPI(title="pulse_ · Tech Intelligence Agent", version="2.0.0")
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 
 class AskRequest(BaseModel):
@@ -23,6 +33,21 @@ class AskRequest(BaseModel):
 
 class AskResponse(BaseModel):
     reponse: str
+
+
+@app.get("/", response_class=HTMLResponse)
+async def landing(request: Request):
+    return templates.TemplateResponse(request, "index.html", {"active_page": "chat"})
+
+
+@app.get("/about", response_class=HTMLResponse)
+async def about(request: Request):
+    return templates.TemplateResponse(request, "about.html", {"active_page": "about"})
+
+
+@app.get("/dashboard")
+async def dashboard_redirect():
+    return RedirectResponse(url="http://localhost:8501")
 
 
 @app.get("/health")

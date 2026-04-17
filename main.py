@@ -79,20 +79,27 @@ TOOLS_DECISION = [
 ]
 
 SYSTEM_REACT = (
-    "Tu es un agent de veille technologique. Choisis l'outil adapté à chaque requête.\n\n"
+    "Tu es Luciole, un agent de veille technologique spécialisé dans : "
+    "IA, cybersécurité, cloud, infrastructure, DevOps, data et open source.\n\n"
+    "PÉRIMÈTRE STRICT :\n"
+    "- Tu ne traites QUE les sujets liés à la tech / informatique / numérique.\n"
+    "- Si la requête est hors périmètre (recettes, sport, météo, santé, etc.), "
+    "choisis reponse_directe et explique poliment que tu es un agent de veille "
+    "technologique et que tu ne peux pas aider sur ce sujet. Propose de reformuler "
+    "vers un sujet tech si possible.\n\n"
     "OUTILS :\n"
     "- query_db → données internes : clients, tickets, stats, KPIs (SQL)\n"
-    "- search_web → actus, tendances, nouveautés, veille externe\n"
+    "- search_web → actus, tendances, nouveautés, veille externe tech\n"
     "- search_articles → archives internes déjà collectées (RAG)\n"
     "- transcribe_audio → fichier audio fourni par l'utilisateur\n"
     "- analyze_image → image fournie par l'utilisateur\n"
-    "- reponse_directe → salutations, questions générales\n\n"
+    "- reponse_directe → salutations, questions générales, OU requêtes hors périmètre\n\n"
     "ARBITRAGE search_web vs search_articles :\n"
     "- Actus / tendances / briefing / récent → search_web\n"
     "- « archives », « historique », « déjà collectés » explicite → search_articles\n"
     "- Doute → search_web en priorité\n\n"
-    "SOURCES : RSS archivés (search_articles), recherche web simulée "
-    "(IA, Cloud, Cybersécurité, GPU), SQLite interne (query_db). "
+    "SOURCES : RSS archivés (search_articles), recherche web "
+    "(IA, Cloud, Cybersécurité, GPU, etc.), SQLite interne (query_db). "
     "Pas d'accès académique, temps réel ou payant."
 )
 
@@ -192,7 +199,11 @@ def executer_outil(decision: dict) -> str:
             logger.error(f"[ReAct] {resultat}")
 
     else:  # reponse_directe
-        resultat = "(aucun outil — réponse directe du LLM)"
+        resultat = (
+            "(aucun outil — réponse directe du LLM)\n"
+            "Rappel : tu es Luciole, agent de veille technologique. "
+            "Si la requête est hors périmètre tech, recadre poliment."
+        )
         logger.info("[ReAct] Outil : réponse directe, pas d'exécution d'outil.")
 
     return resultat
@@ -201,8 +212,75 @@ def executer_outil(decision: dict) -> str:
 # ---------------------------------------------------------------------------
 # Étape 3 — Observation : formuler la réponse finale
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Instructions de formatage par type d'intent
+# ---------------------------------------------------------------------------
+_REGLES_FIDELITE = (
+    "\nRÈGLES IMPÉRATIVES DE FIDÉLITÉ :\n"
+    "1. **Ne JAMAIS inventer** un titre d'article, une URL, un chiffre, une date, "
+    "un nom propre ou une statistique qui ne figure pas dans le résultat de l'outil.\n"
+    "2. **Corriger les fausses prémisses** : si la question contient une affirmation "
+    "que le résultat contredit, dis-le explicitement.\n"
+    "3. **Clarification sur question ambiguë** : si la requête est vague, propose "
+    "2 interprétations possibles ou demande une précision.\n"
+    "4. **Nombre d'éléments** : si l'utilisateur demande N éléments mais que tu n'en as "
+    "que M < N, annonce-le et ne présente que les M résultats réels."
+)
+
+_FORMAT_SEARCH = (
+    "FORMAT DE RÉPONSE (Markdown) :\n"
+    "1. Commence par une phrase de synthèse TL;DR (1-2 phrases résumant l'essentiel).\n"
+    "2. Puis une section détaillée avec des bullet points `- **Titre** : description`.\n"
+    "3. Termine TOUJOURS par un bloc sources :\n"
+    "   `### Sources`\n"
+    "   `- [Titre](URL)` pour chaque source citée.\n"
+    "Utilise **gras** pour les points clés, et structure avec des titres `##` si pertinent."
+)
+
+_FORMAT_DATABASE = (
+    "FORMAT DE RÉPONSE (Markdown) :\n"
+    "1. Commence par une phrase de synthèse TL;DR résumant le résultat (ex : « 12 clients Premium trouvés »).\n"
+    "2. Présente les données sous forme de liste structurée ou tableau Markdown.\n"
+    "3. Mets en **gras** les chiffres clés et les valeurs importantes.\n"
+    "4. Si pertinent, ajoute une observation ou tendance visible dans les données."
+)
+
+_FORMAT_RAG = (
+    "FORMAT DE RÉPONSE (Markdown) :\n"
+    "1. Commence par une phrase de synthèse TL;DR.\n"
+    "2. Présente chaque article pertinent avec :\n"
+    "   - **Titre** et score de pertinence\n"
+    "   - Résumé en 1-2 phrases\n"
+    "3. Termine TOUJOURS par un bloc sources :\n"
+    "   `### Sources`\n"
+    "   `- [Titre](URL)` pour chaque article cité.\n"
+    "Utilise **gras** pour les points clés."
+)
+
+_FORMAT_DIRECT = (
+    "Réponds de manière conversationnelle, concise et naturelle en français. "
+    "Pas besoin de structure lourde — une réponse courte et directe suffit."
+)
+
+_FORMAT_MULTIMODAL = (
+    "FORMAT DE RÉPONSE (Markdown) :\n"
+    "1. Commence par une phrase de synthèse de ce qui a été analysé.\n"
+    "2. Détaille les éléments clés extraits avec des bullet points.\n"
+    "3. Utilise **gras** pour les informations importantes."
+)
+
+_FORMATS_PAR_INTENT = {
+    "search": _FORMAT_SEARCH,
+    "database": _FORMAT_DATABASE,
+    "rag": _FORMAT_RAG,
+    "general": _FORMAT_DIRECT,
+    "transcribe": _FORMAT_MULTIMODAL,
+    "vision": _FORMAT_MULTIMODAL,
+}
+
+
 @observe(name="formuler_reponse")
-def formuler_reponse(requete: str, resultat_outil: str) -> str:
+def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general") -> str:
     """Demande au LLM de formuler une réponse finale à partir du résultat de l'outil."""
     # Correction Log B : instruction stricte si l'outil a échoué ou retourné vide
     if resultat_outil.startswith("[ERREUR_OUTIL]"):
@@ -218,34 +296,11 @@ def formuler_reponse(requete: str, resultat_outil: str) -> str:
             "NE JAMAIS inventer de titre d'article, d'URL, de chiffre ou de date pour combler ce vide."
         )
     else:
+        format_instruction = _FORMATS_PAR_INTENT.get(intent, _FORMAT_DIRECT)
         instruction = (
-            "Formule une réponse claire, concise et structurée en français pour l'utilisateur.\n"
-            "\nRÈGLES IMPÉRATIVES DE FIDÉLITÉ (M5E6) :\n"
-            "1. **Ne JAMAIS inventer** un titre d'article, une URL, un chiffre, une date, "
-            "un nom propre ou une statistique qui ne figure pas dans le résultat de l'outil ci-dessus.\n"
-            "2. **Corriger les fausses prémisses** : si la question utilisateur contient une "
-            "affirmation que le résultat de l'outil contredit, dis-le explicitement et cite "
-            "le chiffre/fait correct (ex : « Les sources indiquent au contraire que... »). "
-            "N'acquiesce jamais à une affirmation fausse.\n"
-            "3. **Clarification sur question ambiguë** : si la requête est vague ou floue, "
-            "ne comble pas le vide par une réponse précise inventée ; propose 2 interprétations "
-            "possibles ou demande une précision.\n"
-            "4. **Transparence sur les sources** : si l'utilisateur demande d'où viennent tes "
-            "informations, décris honnêtement ce que tu as : flux RSS archivés, recherche web "
-            "simulée (4 thèmes prédéfinis : IA, cloud, cybersécurité, GPU), base SQLite interne. "
-            "N'invente pas d'accès à des bases académiques ou à des APIs temps réel.\n"
-            "5. **Format** : si la question impose un format (bullet points, N éléments, "
-            "JSON, etc.), respecte-le strictement en n'utilisant QUE les données du résultat.\n"
-            "6. **Nombre d'éléments demandés** : si l'utilisateur demande N éléments (ex : "
-            "« 3 actus », « top 5 tendances ») mais que le résultat de l'outil n'en contient "
-            "que M < N, tu DOIS :\n"
-            "   - annoncer honnêtement « J'ai trouvé M résultat(s) sur les N demandés » "
-            "au début de la réponse ;\n"
-            "   - ne présenter QUE les M résultats réels, sans les compléter par des éléments "
-            "inventés ni en annoncer davantage dans l'introduction (n'écris jamais « voici 3 "
-            "actus » si tu n'en as que 2) ;\n"
-            "   - proposer une piste à l'utilisateur (ex : élargir le thème, consulter une "
-            "autre source) s'il manque des éléments."
+            "Formule une réponse claire et structurée en français pour l'utilisateur.\n\n"
+            f"{format_instruction}\n"
+            f"{_REGLES_FIDELITE}"
         )
 
     prompt = (
@@ -314,7 +369,7 @@ def agent_react(requete: str) -> str:
             logger.warning(f"[ReAct] Itération {iteration} — outil en erreur, nouvelle tentative.")
             continue
 
-        reponse = formuler_reponse(requete, resultat)
+        reponse = formuler_reponse(requete, resultat, intent=decision.get("intent", "general"))
         break
     else:
         logger.error("[ReAct] Max itérations atteint — abandon.")

@@ -2,6 +2,7 @@
 # Multi-stage Dockerfile — Agent de veille technologique (luciole_)
 # =============================================================================
 # Variables d'environnement requises au runtime :
+#   API_KEY                 — Cle API pour authentifier les requetes (obligatoire)
 #   OPENAI_API_KEY          — Cle API OpenAI (obligatoire)
 #   SMTP_HOST               — Serveur SMTP (defaut: smtp.gmail.com)
 #   SMTP_PORT               — Port SMTP (defaut: 587)
@@ -33,8 +34,12 @@ COPY --from=build /install /usr/local
 # Copier le code source
 COPY . .
 
-# Creer le dossier data (utilise au runtime pour articles, logs, archives)
-RUN mkdir -p /app/data
+# Utilisateur non-root pour la securite
+RUN useradd --create-home --no-log-init appuser \
+    && mkdir -p /app/data \
+    && chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8000
 

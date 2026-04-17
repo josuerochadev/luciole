@@ -103,14 +103,36 @@ class TestChargerSauvegarderJson:
 
 
 class TestArticles:
-    """Tests de gestion des articles (ajout, déduplication, archivage)."""
+    """Tests de gestion des articles (ajout, déduplication, archivage) — SQLite."""
+
+    def _count_articles(self, data_dir, archive=0):
+        """Helper : compte les articles dans SQLite."""
+        import sqlite3
+        db_path = str(data_dir / "articles.db")
+        conn = sqlite3.connect(db_path)
+        count = conn.execute(
+            "SELECT COUNT(*) FROM articles WHERE archive = ?", (archive,)
+        ).fetchone()[0]
+        conn.close()
+        return count
+
+    def _get_articles(self, data_dir, archive=0):
+        """Helper : récupère les articles depuis SQLite."""
+        import sqlite3
+        db_path = str(data_dir / "articles.db")
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT * FROM articles WHERE archive = ?", (archive,)
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
 
     def test_sauvegarder_nouveaux_articles(self, data_dir, sample_articles):
         with patch("tools.rag.indexer_articles", return_value=2):
             nb = sauvegarder_articles(sample_articles[:2])
         assert nb == 2
-        saved = charger_json(str(data_dir / "articles.json"))
-        assert len(saved) == 2
+        assert self._count_articles(data_dir, archive=0) == 2
 
     def test_deduplication(self, data_dir, sample_articles):
         with patch("tools.rag.indexer_articles", return_value=1):
@@ -128,9 +150,9 @@ class TestArticles:
         with patch("tools.rag.indexer_articles", return_value=2):
             sauvegarder_articles(sample_articles[:2])
         archiver_articles_traites(sample_articles[:1])  # archiver GPT-5
-        restants = charger_json(str(data_dir / "articles.json"))
-        archives = charger_json(str(data_dir / "archives.json"))
-        assert len(restants) == 1
+        actifs = self._get_articles(data_dir, archive=0)
+        archives = self._get_articles(data_dir, archive=1)
+        assert len(actifs) == 1
         assert len(archives) == 1
         assert archives[0]["lien"] == "https://example.com/gpt5"
 
@@ -138,8 +160,7 @@ class TestArticles:
         with patch("tools.rag.indexer_articles", return_value=2):
             sauvegarder_articles(sample_articles[:2])
         archiver_articles_traites([])
-        restants = charger_json(str(data_dir / "articles.json"))
-        assert len(restants) == 2
+        assert self._count_articles(data_dir, archive=0) == 2
 
 
 class TestHistoriqueEtLogs:
@@ -203,8 +224,10 @@ class TestSearchWeb:
         assert len(results) >= 1
 
     def test_requete_sans_correspondance(self):
-        """Requête sans mot-clé reconnu retourne un résultat générique."""
-        results = search_web("recette de tarte aux pommes")
+        """Requête sans mot-clé reconnu retourne un résultat générique (fallback simulé)."""
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("TAVILY_API_KEY", None)
+            results = search_web("recette de tarte aux pommes")
         assert len(results) == 1
         assert "générique" in results[0]["url"] or "generique" in results[0]["url"]
 

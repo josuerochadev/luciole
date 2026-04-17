@@ -301,6 +301,10 @@ def query_db(sql: str) -> list[dict]:
     if not sql_propre.upper().startswith("SELECT"):
         raise ValueError(f"Seules les requêtes SELECT sont autorisées. Reçu : {sql_propre[:50]}")
 
+    # Ajouter un LIMIT si absent pour éviter les résultats non bornés
+    if "LIMIT" not in sql_propre.upper():
+        sql_propre += " LIMIT 1000"
+
     logger.info(f"[query_db] Exécution : {sql_propre}")
     try:
         conn = sqlite3.connect(DB_TEST_PATH)

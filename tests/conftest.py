@@ -34,6 +34,7 @@ def data_dir(tmp_path):
     db_mod.LOGS_FILE = config.LOGS_FILE
     db_mod.DATA_DIR = config.DATA_DIR
     db_mod.DB_TEST_PATH = str(tmp_path / "test_clients.db")
+    db_mod.ARTICLES_DB_PATH = str(tmp_path / "articles.db")
 
     yield tmp_path
 

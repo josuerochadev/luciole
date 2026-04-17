@@ -88,7 +88,7 @@ def health():
 @app.post("/ask", response_model=AskResponse)
 @limiter.limit("10/minute")
 def ask(request: Request, req: AskRequest, x_api_key: str | None = Header(default=None)):
-    _verifier_api_key(x_api_key)
+    _verifier_api_key(x_api_key, request)
     start_request(req.question)
     try:
         reponse = agent_react(req.question)
@@ -116,7 +116,20 @@ def metrics_recent(limit: int = 20):
 # Digest endpoints (M6)
 # ---------------------------------------------------------------------------
 
-def _verifier_api_key(x_api_key: str | None):
+def _is_same_origin(request: Request) -> bool:
+    """Vérifie si la requête provient du frontend servi par ce même serveur.
+    Supporte les reverse proxies (Render, etc.) via X-Forwarded-Host."""
+    referer = request.headers.get("referer", "")
+    origin = request.headers.get("origin", "")
+    # Derrière un reverse proxy, host peut être l'IP interne
+    host = request.headers.get("x-forwarded-host", "") or request.headers.get("host", "")
+    return host and (referer.startswith(f"http://{host}") or referer.startswith(f"https://{host}")
+                     or origin == f"http://{host}" or origin == f"https://{host}")
+
+
+def _verifier_api_key(x_api_key: str | None, request: Request | None = None):
+    if request and _is_same_origin(request):
+        return
     if not x_api_key or x_api_key != API_KEY:
         raise HTTPException(status_code=403, detail="Clé API invalide ou manquante.")
 

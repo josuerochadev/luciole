@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: luciole
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    envVars:
+      - key: API_KEY
+        sync: false          # à renseigner manuellement dans le dashboard
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://luciole.onrender.com

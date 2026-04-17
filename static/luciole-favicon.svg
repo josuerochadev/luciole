@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="luciole_">
+  <style>
+    @keyframes glow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .firefly-glow { animation: glow 2s ease-in-out infinite; }
+  </style>
+  <rect width="32" height="32" fill="#ffffff"/>
+  <!-- Body -->
+  <ellipse cx="16" cy="18" rx="5" ry="7" fill="#1a1a1a"/>
+  <!-- Head -->
+  <circle cx="16" cy="10" r="3.5" fill="#1a1a1a"/>
+  <!-- Antennae -->
+  <line x1="14" y1="7" x2="10" y2="3" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="18" y1="7" x2="22" y2="3" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- Glow -->
+  <circle cx="16" cy="24" r="4" fill="#991b1b" opacity="0.25" class="firefly-glow"/>
+  <circle cx="16" cy="24" r="2" fill="#991b1b" class="firefly-glow"/>
+</svg>

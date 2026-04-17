@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 70" role="img" aria-label="luciole_">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&amp;display=swap');
+    @keyframes blink-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+    .underscore { animation: blink-pulse 2s ease-in-out infinite; }
+  </style>
+  <text x="0" y="54"
+        font-family="'Zilla Slab', Georgia, serif"
+        font-weight="700"
+        font-size="58"
+        letter-spacing="-0.01em"
+        fill="#1a1a1a">luciole</text>
+  <text x="248" y="54"
+        font-family="'Zilla Slab', Georgia, serif"
+        font-weight="700"
+        font-size="58"
+        fill="#991b1b"
+        class="underscore">_</text>
+</svg>

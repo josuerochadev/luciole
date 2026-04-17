@@ -1,5 +1,5 @@
 /* ============================================================
-   pulse_ — Design System v2
+   luciole_ — Design System v2
    Direction: editorial magazine, chat-first
    ============================================================ */
 
@@ -19,7 +19,7 @@
   --pulse-secondary-soft: #e8ecf0;
 
   /* === Typography === */
-  --pulse-serif: 'Playfair Display', 'Fraunces', Georgia, 'Times New Roman', serif;
+  --pulse-serif: 'Zilla Slab', 'Roboto Slab', Georgia, 'Times New Roman', serif;
   --pulse-sans: 'Inter', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --pulse-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
 
@@ -130,7 +130,6 @@ img { max-width: 100%; display: block; }
    ============================================================ */
 
 .pulse-masthead {
-  border-bottom: var(--pulse-rule-heavy);
   padding: var(--pulse-space-6) 0 var(--pulse-space-4);
   background: var(--pulse-paper);
   position: sticky;
@@ -156,7 +155,14 @@ img { max-width: 100%; display: block; }
   transition: transform 0.2s;
 }
 .pulse-wordmark-link:hover { transform: scale(1.02); }
-.pulse-wordmark-link img { width: 120px; height: auto; }
+.pulse-wordmark {
+  font-family: var(--pulse-serif);
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: -0.01em;
+  color: var(--pulse-ink);
+  line-height: 1;
+}
 
 /* Status dot */
 .pulse-status {
@@ -656,7 +662,6 @@ body.chat-active .pulse-footer {
    ============================================================ */
 
 .pulse-footer {
-  border-top: var(--pulse-rule-heavy);
   padding: var(--pulse-space-8) 0 var(--pulse-space-6);
   margin-top: var(--pulse-space-24);
 }

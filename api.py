@@ -2,7 +2,7 @@
 API FastAPI pour l'agent de veille technologique.
 - M5E4 : containerisation Docker (POST /ask, GET /health).
 - M5E5 : monitoring + KPIs (GET /metrics, GET /metrics/recent).
-- Pulse_ : interface éditoriale HTML (GET /, GET /about).
+- Luciole_ : interface éditoriale HTML (GET /, GET /about).
 """
 from pathlib import Path
 
@@ -22,7 +22,7 @@ from monitoring import (
 
 BASE_DIR = Path(__file__).resolve().parent
 
-app = FastAPI(title="pulse_ · Tech Intelligence Agent", version="2.0.0")
+app = FastAPI(title="luciole_ · Tech Intelligence Agent", version="2.0.0")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 

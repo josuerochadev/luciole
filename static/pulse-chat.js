@@ -1,5 +1,5 @@
 /* ============================================================
-   pulse_ — Chat Logic
+   luciole_ — Chat Logic
    ============================================================ */
 
 (function () {
@@ -54,9 +54,9 @@
 
     const isAgent = role === 'agent';
     const avatarClass = isAgent ? 'pulse-message-avatar pulse-message-avatar--agent' : 'pulse-message-avatar';
-    const avatarContent = isAgent ? 'p<span style="color:var(--pulse-accent)">_</span>' : 'U';
+    const avatarContent = isAgent ? 'l<span style="color:var(--pulse-accent)">_</span>' : 'U';
     const labelClass = isAgent ? 't-eyebrow-accent' : 't-eyebrow';
-    const label = isAgent ? 'pulse_' : 'Vous';
+    const label = isAgent ? 'luciole_' : 'Vous';
 
     const rendered = isAgent ? marked.parse(content) : escapeHtml(content);
 
@@ -80,12 +80,12 @@
     const el = document.createElement('article');
     el.className = 'pulse-message pulse-message--agent';
     el.id = 'typing-indicator';
-    el.setAttribute('aria-label', 'pulse_ réfléchit');
+    el.setAttribute('aria-label', 'luciole_ réfléchit');
     el.innerHTML = `
-      <div class="pulse-message-avatar pulse-message-avatar--agent" aria-hidden="true">p<span style="color:var(--pulse-accent)">_</span></div>
+      <div class="pulse-message-avatar pulse-message-avatar--agent" aria-hidden="true">l<span style="color:var(--pulse-accent)">_</span></div>
       <div class="pulse-message-body">
         <div class="pulse-message-meta">
-          <span class="t-eyebrow-accent">pulse_</span>
+          <span class="t-eyebrow-accent">luciole_</span>
           <span class="t-meta">réflexion…</span>
         </div>
         <div class="pulse-typing" aria-hidden="true">

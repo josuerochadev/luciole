@@ -7,7 +7,7 @@ API FastAPI pour l'agent de veille technologique.
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -45,9 +45,9 @@ async def about(request: Request):
     return templates.TemplateResponse(request, "about.html", {"active_page": "about"})
 
 
-@app.get("/dashboard")
-async def dashboard_redirect():
-    return RedirectResponse(url="http://localhost:8501")
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    return templates.TemplateResponse(request, "dashboard.html", {"active_page": "dashboard"})
 
 
 @app.get("/health")

@@ -7,10 +7,13 @@
 
   const form = document.getElementById('chat-form');
   const input = document.getElementById('chat-input');
+  const formSticky = document.getElementById('chat-form-sticky');
+  const inputSticky = document.getElementById('chat-input-sticky');
   const chatZone = document.getElementById('chat-zone');
   const chatMessages = document.getElementById('chat-messages');
   const chatBottom = document.getElementById('chat-bottom');
   const headlinesSection = document.getElementById('headlines-section');
+  const newChatBtn = document.getElementById('new-chat-btn');
 
   // ── Fetch KPIs on load ──────────────────────────────────────
   async function loadMetrics() {
@@ -37,6 +40,13 @@
     return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   }
 
+  // ── Activate chat mode ────────────────────────────────────
+  function enterChatMode() {
+    document.body.classList.add('chat-active');
+    chatZone.hidden = false;
+    inputSticky.focus();
+  }
+
   // ── Create message DOM ──────────────────────────────────────
   function appendMessage({ role, content, meta }) {
     const article = document.createElement('article');
@@ -46,12 +56,12 @@
     const avatarClass = isAgent ? 'pulse-message-avatar pulse-message-avatar--agent' : 'pulse-message-avatar';
     const avatarContent = isAgent ? 'p<span style="color:var(--pulse-accent)">_</span>' : 'U';
     const labelClass = isAgent ? 't-eyebrow-accent' : 't-eyebrow';
-    const label = isAgent ? 'pulse_' : 'You';
+    const label = isAgent ? 'pulse_' : 'Vous';
 
     const rendered = isAgent ? marked.parse(content) : escapeHtml(content);
 
     article.innerHTML = `
-      <div class="${avatarClass}">${avatarContent}</div>
+      <div class="${avatarClass}" aria-hidden="true">${avatarContent}</div>
       <div class="pulse-message-body">
         <div class="pulse-message-meta">
           <span class="${labelClass}">${label}</span>
@@ -70,14 +80,15 @@
     const el = document.createElement('article');
     el.className = 'pulse-message pulse-message--agent';
     el.id = 'typing-indicator';
+    el.setAttribute('aria-label', 'pulse_ réfléchit');
     el.innerHTML = `
-      <div class="pulse-message-avatar pulse-message-avatar--agent">p<span style="color:var(--pulse-accent)">_</span></div>
+      <div class="pulse-message-avatar pulse-message-avatar--agent" aria-hidden="true">p<span style="color:var(--pulse-accent)">_</span></div>
       <div class="pulse-message-body">
         <div class="pulse-message-meta">
           <span class="t-eyebrow-accent">pulse_</span>
-          <span class="t-meta">thinking…</span>
+          <span class="t-meta">réflexion…</span>
         </div>
-        <div class="pulse-typing">
+        <div class="pulse-typing" aria-hidden="true">
           <span class="pulse-typing-dot"></span>
           <span class="pulse-typing-dot"></span>
           <span class="pulse-typing-dot"></span>
@@ -104,11 +115,11 @@
   async function submitQuery(query) {
     if (!query.trim()) return;
 
-    // Show chat zone, hide headlines
-    chatZone.hidden = false;
+    // Enter chat mode (collapse hero, show sticky input)
+    enterChatMode();
 
     // Add user message
-    appendMessage({ role: 'user', content: query, meta: timeNow() + ' · Query' });
+    appendMessage({ role: 'user', content: query, meta: timeNow() + ' · Requête' });
 
     // Typing indicator
     showTyping();
@@ -128,7 +139,7 @@
         appendMessage({
           role: 'agent',
           content: 'Erreur serveur — réessayez.',
-          meta: timeNow() + ' · ' + elapsed + 's · error',
+          meta: timeNow() + ' · ' + elapsed + 's · erreur',
         });
         return;
       }
@@ -147,18 +158,37 @@
       appendMessage({
         role: 'agent',
         content: 'Impossible de joindre le serveur. Vérifiez que l\'API tourne sur le port 8000.',
-        meta: timeNow() + ' · offline',
+        meta: timeNow() + ' · hors ligne',
       });
     }
   }
 
-  // ── Form submit ─────────────────────────────────────────────
+  // ── Form submit (hero input) ──────────────────────────────
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     const query = input.value.trim();
     if (!query) return;
     input.value = '';
     submitQuery(query);
+  });
+
+  // ── Form submit (sticky input) ────────────────────────────
+  formSticky.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const query = inputSticky.value.trim();
+    if (!query) return;
+    inputSticky.value = '';
+    submitQuery(query);
+  });
+
+  // ── New chat button ───────────────────────────────────────
+  newChatBtn.addEventListener('click', function () {
+    chatMessages.innerHTML = '';
+    chatZone.hidden = true;
+    document.body.classList.remove('chat-active');
+    input.value = '';
+    inputSticky.value = '';
+    input.focus();
   });
 
   // ── Headline card clicks ────────────────────────────────────

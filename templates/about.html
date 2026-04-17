@@ -4,9 +4,9 @@
 <section style="padding: var(--pulse-space-16) 0;">
 
   <!-- Hero -->
-  <span class="t-eyebrow-accent">About</span>
+  <span class="t-eyebrow-accent">À propos</span>
   <h1 class="t-display-md" style="margin: var(--pulse-space-4) 0 var(--pulse-space-6); max-width: 720px;">
-    pulse<span class="pulse-underscore">_</span> is a tech watch agent for teams that don't have time to read.
+    pulse<span class="pulse-underscore">_</span> est un agent de veille tech pour les équipes qui n'ont pas le temps de lire.
   </h1>
   <p class="t-body-lg" style="color: var(--pulse-muted); max-width: 600px; margin-bottom: var(--pulse-space-16);">
     Veille augmentée. Décisions éclairées.
@@ -14,58 +14,61 @@
 
   <!-- The Problem -->
   <div style="border-top: var(--pulse-rule-heavy); padding-top: var(--pulse-space-8); margin-bottom: var(--pulse-space-16);">
-    <span class="t-eyebrow" style="margin-bottom: var(--pulse-space-6); display: block;">The problem</span>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--pulse-space-8);">
-      <div>
-        <div class="pulse-kpi-value">1,200</div>
-        <span class="t-meta">ingénieurs à informer</span>
-      </div>
-      <div>
-        <div class="pulse-kpi-value">0.5h</div>
-        <span class="t-meta">de veille manuelle / jour</span>
-      </div>
-      <div>
-        <div class="pulse-kpi-value">6.8M&euro;</div>
-        <span class="t-meta">coût annuel estimé</span>
-      </div>
-    </div>
-    <p class="t-body" style="max-width: 600px; margin-top: var(--pulse-space-8); color: var(--pulse-ink-soft);">
-      Chaque ingénieur passe 30 minutes par jour à parcourir des flux RSS, newsletters, et Hacker News.
-      Multipliez par 1 200 personnes, 220 jours ouvrés, au coût moyen chargé : le total est vertigineux.
-      Et malgré cet effort, les signaux faibles passent entre les mailles.
+    <span class="t-eyebrow" style="margin-bottom: var(--pulse-space-6); display: block;">Le problème</span>
+    <p class="t-body" style="max-width: 600px; color: var(--pulse-ink-soft);">
+      Les développeurs passent du temps chaque jour à parcourir des flux RSS, newsletters et Hacker News.
+      Les signaux faibles passent entre les mailles. pulse_ automatise cette veille et la rend conversationnelle.
     </p>
   </div>
 
-  <!-- How it works -->
+  <!-- How it works — Step cards -->
   <div style="border-top: var(--pulse-rule-thin); padding-top: var(--pulse-space-8); margin-bottom: var(--pulse-space-16);">
-    <span class="t-eyebrow" style="margin-bottom: var(--pulse-space-6); display: block;">How it works</span>
-    <h2 class="t-headline-md" style="margin-bottom: var(--pulse-space-8);">7 couches, un agent.</h2>
-    <ol class="t-body" style="max-width: 600px; padding-left: var(--pulse-space-6); color: var(--pulse-ink-soft);">
-      <li style="margin-bottom: var(--pulse-space-4);"><strong>Ingestion RSS</strong> — 12 sources tech en continu (AWS, K8s, cybersécurité, IA…)</li>
-      <li style="margin-bottom: var(--pulse-space-4);"><strong>Vectorisation</strong> — Embeddings text-embedding-3-small, index numpy maison</li>
-      <li style="margin-bottom: var(--pulse-space-4);"><strong>Agent ReAct</strong> — Boucle Reason → Act → Observe avec max 2 itérations</li>
-      <li style="margin-bottom: var(--pulse-space-4);"><strong>6 outils</strong> — RAG articles, recherche web, base SQL, transcription audio, vision, email</li>
-      <li style="margin-bottom: var(--pulse-space-4);"><strong>Sécurité</strong> — Validation SQL, filtrage RGPD, masquage données sensibles</li>
-      <li style="margin-bottom: var(--pulse-space-4);"><strong>Monitoring</strong> — Latence, tokens, coûts, taux d'erreur temps réel</li>
-      <li style="margin-bottom: var(--pulse-space-4);"><strong>Observabilité</strong> — Tracing Langfuse pour chaque span de l'agent</li>
-    </ol>
-  </div>
+    <span class="t-eyebrow" style="margin-bottom: var(--pulse-space-4); display: block;">Comment ça marche</span>
+    <h2 class="t-headline-md" style="margin-bottom: 0;">7 couches, un agent.</h2>
 
-  <!-- Team -->
-  <div style="border-top: var(--pulse-rule-thin); padding-top: var(--pulse-space-8); margin-bottom: var(--pulse-space-16);">
-    <span class="t-eyebrow" style="margin-bottom: var(--pulse-space-6); display: block;">The team</span>
-    <div style="display: flex; gap: var(--pulse-space-8); flex-wrap: wrap;">
-      <span class="t-meta" style="font-size: var(--pulse-text-sm);">Alexis Dubus</span>
-      <span class="t-meta" style="font-size: var(--pulse-text-sm);">Josué X. Rocha</span>
-      <span class="t-meta" style="font-size: var(--pulse-text-sm);">Zhengfeng Ding</span>
-      <span class="t-meta" style="font-size: var(--pulse-text-sm);">Stéphanie Consoli</span>
+    <div class="pulse-steps">
+      <div class="pulse-step">
+        <div class="pulse-step-number">01</div>
+        <div class="pulse-step-title">Ingestion RSS</div>
+        <div class="pulse-step-desc">12 sources tech en continu — AWS, K8s, cybersécurité, IA</div>
+      </div>
+      <div class="pulse-step">
+        <div class="pulse-step-number">02</div>
+        <div class="pulse-step-title">Vectorisation</div>
+        <div class="pulse-step-desc">Embeddings text-embedding-3-small, index numpy maison</div>
+      </div>
+      <div class="pulse-step">
+        <div class="pulse-step-number">03</div>
+        <div class="pulse-step-title">Agent ReAct</div>
+        <div class="pulse-step-desc">Boucle Reason → Act → Observe, max 2 itérations</div>
+      </div>
+      <div class="pulse-step">
+        <div class="pulse-step-number">04</div>
+        <div class="pulse-step-title">6 outils</div>
+        <div class="pulse-step-desc">RAG articles, recherche web, base SQL, transcription audio, vision, email</div>
+      </div>
+      <div class="pulse-step">
+        <div class="pulse-step-number">05</div>
+        <div class="pulse-step-title">Sécurité</div>
+        <div class="pulse-step-desc">Validation SQL, filtrage RGPD, masquage données sensibles</div>
+      </div>
+      <div class="pulse-step">
+        <div class="pulse-step-number">06</div>
+        <div class="pulse-step-title">Monitoring</div>
+        <div class="pulse-step-desc">Latence, tokens, coûts, taux d'erreur temps réel</div>
+      </div>
+      <div class="pulse-step" style="grid-column: 1 / -1; text-align: center;">
+        <div class="pulse-step-number" style="font-size: var(--pulse-text-3xl);">07</div>
+        <div class="pulse-step-title">Observabilité</div>
+        <div class="pulse-step-desc">Tracing Langfuse pour chaque span de l'agent</div>
+      </div>
     </div>
   </div>
 
   <!-- CTA -->
   <div style="border-top: var(--pulse-rule-heavy); padding-top: var(--pulse-space-8);">
-    <a href="/" style="font-family: var(--pulse-serif); font-weight: 700; font-size: var(--pulse-text-xl); color: var(--pulse-ink); text-decoration: none; border-bottom: 2px solid var(--pulse-accent);">
-      Try pulse_ &rarr;
+    <a href="/" class="pulse-cta">
+      Essayer pulse_ <span aria-hidden="true">&rarr;</span>
     </a>
   </div>
 

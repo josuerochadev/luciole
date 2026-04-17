@@ -1,74 +1,69 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- Hero Editorial -->
-<section class="pulse-hero">
-  <div class="pulse-hero-main">
-    <span class="t-eyebrow-accent">Live · Conversational</span>
-    <h1 class="pulse-hero-title">
-      Ask anything.<br>
-      pulse<span class="pulse-underscore">_</span> finds the signal,<br>
-      you skip the scroll.
-    </h1>
-    <p class="pulse-hero-subtitle">
-      Agent IA de veille technologique. Interrogez vos sources, synthétisez l'actualité tech,
-      analysez les tendances — en une conversation.
-    </p>
-    <form class="pulse-chat-input" id="chat-form">
-      <input type="text"
-             class="pulse-input"
-             id="chat-input"
-             placeholder="Ask pulse_ about tech, AI, tools, trends…"
-             autocomplete="off"
-             autofocus>
-      <button type="submit" class="pulse-submit">
-        Ask <span class="pulse-submit-arrow">&rarr;</span>
-      </button>
-    </form>
-  </div>
-
-  <aside class="pulse-kpi-stack">
-    <div class="pulse-kpi">
-      <span class="t-eyebrow">Queries today</span>
-      <div class="pulse-kpi-value" id="kpi-queries">&mdash;</div>
-      <span class="t-meta">total requests</span>
-    </div>
-    <div class="pulse-kpi">
-      <span class="t-eyebrow">Avg latency</span>
-      <div class="pulse-kpi-value" id="kpi-latency">&mdash;</div>
-      <span class="t-meta">milliseconds</span>
-    </div>
-    <div class="pulse-kpi">
-      <span class="t-eyebrow">Error rate</span>
-      <div class="pulse-kpi-value" id="kpi-errors">&mdash;</div>
-      <span class="t-meta">percentage</span>
-    </div>
-  </aside>
+<!-- Hero — Centered, chat-first -->
+<section class="pulse-hero" id="hero-section">
+  <span class="t-eyebrow-accent pulse-hero-eyebrow">En direct · Conversationnel</span>
+  <h1 class="pulse-hero-title">
+    Le signal dans le bruit<span class="pulse-underscore">_</span>
+  </h1>
+  <p class="pulse-hero-subtitle">
+    Interrogez vos sources, synthétisez l'actualité tech, analysez les tendances — en une conversation.
+  </p>
+  <form class="pulse-chat-input" id="chat-form">
+    <label for="chat-input" class="sr-only">Posez votre question</label>
+    <input type="text"
+           class="pulse-input"
+           id="chat-input"
+           placeholder="Posez une question à pulse_ : tech, IA, outils, tendances…"
+           autocomplete="off"
+           autofocus>
+    <button type="submit" class="pulse-submit" aria-label="Envoyer">
+      Envoyer <span class="pulse-submit-arrow" aria-hidden="true">&rarr;</span>
+    </button>
+  </form>
 </section>
 
-<!-- Headline Cards -->
-<section class="pulse-headlines" id="headlines-section">
-  <button class="pulse-headline-card" data-prompt="Quelles sont les dernières avancées en IA agentique cette semaine ?">
-    <span class="t-eyebrow-accent">RAG · Search</span>
+<!-- Headline Cards — Magazine layout -->
+<section class="pulse-headlines" id="headlines-section" aria-label="Questions suggérées">
+  <button class="pulse-headline-card" data-prompt="Quelles sont les dernières avancées en IA agentique cette semaine ?" aria-label="Poser la question : avancées en IA agentique">
+    <span class="t-eyebrow-accent">RAG · Recherche</span>
     <h3 class="t-headline-sm">Quelles sont les dernières avancées en IA agentique ?</h3>
-    <span class="pulse-arrow">&rarr;</span>
+    <span class="pulse-arrow" aria-hidden="true">&rarr;</span>
   </button>
-  <button class="pulse-headline-card" data-prompt="Fais-moi un briefing des actualités cloud et DevOps du moment.">
-    <span class="t-eyebrow-accent">Web · Summary</span>
-    <h3 class="t-headline-sm">Briefing actualités cloud et DevOps</h3>
-    <span class="pulse-arrow">&rarr;</span>
+  <button class="pulse-headline-card" data-prompt="Fais-moi un briefing des actualités cloud et DevOps du moment." aria-label="Poser la question : briefing cloud et DevOps">
+    <span class="t-eyebrow-accent">Web · Synthèse</span>
+    <h3 class="t-headline-sm">Briefing cloud &amp; DevOps</h3>
+    <span class="pulse-arrow" aria-hidden="true">&rarr;</span>
   </button>
-  <button class="pulse-headline-card" data-prompt="Quelles sont les tendances cybersécurité à surveiller en 2026 ?">
-    <span class="t-eyebrow-accent">Trends · Analysis</span>
-    <h3 class="t-headline-sm">Tendances cybersécurité à surveiller</h3>
-    <span class="pulse-arrow">&rarr;</span>
+  <button class="pulse-headline-card" data-prompt="Quelles sont les tendances cybersécurité à surveiller en 2026 ?" aria-label="Poser la question : tendances cybersécurité">
+    <span class="t-eyebrow-accent">Tendances · Analyse</span>
+    <h3 class="t-headline-sm">Tendances cybersécurité 2026</h3>
+    <span class="pulse-arrow" aria-hidden="true">&rarr;</span>
   </button>
 </section>
 
 <!-- Chat Zone -->
-<section class="pulse-chat-zone" id="chat-zone" hidden>
+<section class="pulse-chat-zone" id="chat-zone" hidden aria-live="polite">
+  <div class="pulse-chat-header">
+    <span class="t-eyebrow-accent">Conversation</span>
+    <button class="pulse-new-chat" id="new-chat-btn" aria-label="Nouvelle conversation">
+      Nouveau chat <span aria-hidden="true">+</span>
+    </button>
+  </div>
   <div id="chat-messages"></div>
   <div id="chat-bottom"></div>
+  <form class="pulse-chat-input pulse-chat-input--sticky" id="chat-form-sticky">
+    <label for="chat-input-sticky" class="sr-only">Posez votre question</label>
+    <input type="text"
+           class="pulse-input"
+           id="chat-input-sticky"
+           placeholder="Posez une question de suivi…"
+           autocomplete="off">
+    <button type="submit" class="pulse-submit" aria-label="Envoyer">
+      Envoyer <span class="pulse-submit-arrow" aria-hidden="true">&rarr;</span>
+    </button>
+  </form>
 </section>
 {% endblock %}
 

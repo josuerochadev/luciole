@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>pulse_ · The signal in the noise</title>
+  <title>pulse_ · Le signal dans le bruit</title>
 
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/static/pulse-favicon.svg">
 
   <!-- OpenGraph -->
-  <meta property="og:title" content="pulse_ · The signal in the noise">
-  <meta property="og:description" content="Agent IA de veille technologique conversationnel. Tech intelligence, daily.">
+  <meta property="og:title" content="pulse_ · Le signal dans le bruit">
+  <meta property="og:description" content="Agent IA de veille technologique conversationnel.">
   <meta property="og:image" content="/static/pulse-wordmark.svg">
   <meta property="og:type" content="website">
 
@@ -29,16 +29,19 @@
   <!-- Masthead -->
   <header class="pulse-masthead">
     <div class="pulse-masthead-row">
-      <span class="t-meta">Vol. 01 — N°042</span>
+      <span class="t-meta pulse-status" id="api-status">
+        <span class="pulse-status-dot" id="status-dot"></span>
+        <span id="status-text">En ligne</span>
+      </span>
       <a href="/" class="pulse-wordmark-link">
         <img src="/static/pulse-wordmark.svg" alt="pulse_" width="120">
       </a>
       <span class="t-meta" id="today-date"></span>
     </div>
-    <nav class="pulse-nav">
+    <nav class="pulse-nav" aria-label="Navigation principale">
       <a href="/" {% if active_page == "chat" %}class="active"{% endif %}>Chat</a>
-      <a href="/dashboard" {% if active_page == "dashboard" %}class="active"{% endif %}>Dashboard</a>
-      <a href="/about" {% if active_page == "about" %}class="active"{% endif %}>About</a>
+      <a href="/dashboard" {% if active_page == "dashboard" %}class="active"{% endif %}>Tableau de bord</a>
+      <a href="/about" {% if active_page == "about" %}class="active"{% endif %}>À propos</a>
     </nav>
   </header>
 
@@ -50,18 +53,37 @@
   <!-- Footer -->
   <footer class="pulse-footer">
     <div class="pulse-footer-row">
-      <span class="t-meta">pulse_ · AJC Formation · 2026</span>
-      <span class="t-meta">v1.0.0 · ReAct Agent · gpt-4o-mini</span>
-      <span class="t-meta"><a href="https://github.com/josuerochadev/formation-ia">GitHub</a></span>
+      <div class="pulse-footer-col">
+        <span class="pulse-footer-label">Projet</span>
+        <span class="t-meta">pulse_ · AJC Formation · 2026</span>
+      </div>
+      <div class="pulse-footer-col">
+        <span class="pulse-footer-label">Stack</span>
+        <span class="t-meta">ReAct Agent · gpt-4o-mini · FastAPI</span>
+      </div>
+      <div class="pulse-footer-col">
+        <span class="pulse-footer-label">Source</span>
+        <span class="t-meta"><a href="https://github.com/josuerochadev/formation-ia">GitHub</a></span>
+      </div>
     </div>
   </footer>
 
-  <!-- Date dynamique -->
+  <!-- Date + API status -->
   <script>
     document.getElementById('today-date').textContent =
-      new Date().toLocaleDateString('en-US', {
+      new Date().toLocaleDateString('fr-FR', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
       });
+
+    // Check API health
+    fetch('/health').then(r => {
+      if (!r.ok) throw new Error();
+    }).catch(() => {
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      if (dot) dot.classList.add('pulse-status-dot--offline');
+      if (text) text.textContent = 'Hors ligne';
+    });
   </script>
 
   {% block scripts %}{% endblock %}

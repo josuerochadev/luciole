@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+
+{% block head %}
+<script src="https://cdn.plot.ly/plotly-2.35.0.min.js" charset="utf-8"></script>
+<style>
+  /* Dashboard-specific styles */
+  .dash-section {
+    font-family: var(--pulse-sans);
+    font-size: var(--pulse-text-xs);
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--pulse-muted);
+    padding-bottom: var(--pulse-space-3);
+    border-bottom: var(--pulse-rule-thin);
+    margin: var(--pulse-space-12) 0 var(--pulse-space-6);
+  }
+  .dash-section--accent {
+    color: var(--pulse-accent);
+    margin-top: var(--pulse-space-8);
+  }
+
+  .dash-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--pulse-space-6);
+  }
+
+  .dash-kpi {
+    padding: var(--pulse-space-6) 0;
+    border-top: var(--pulse-rule-thin);
+  }
+  .dash-kpi-label {
+    font-family: var(--pulse-sans);
+    font-size: var(--pulse-text-xs);
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--pulse-muted);
+  }
+  .dash-kpi-value {
+    font-family: var(--pulse-serif);
+    font-weight: 900;
+    font-size: var(--pulse-text-3xl);
+    line-height: 1.1;
+    color: var(--pulse-ink);
+    margin: var(--pulse-space-2) 0 var(--pulse-space-1);
+  }
+  .dash-kpi-sub {
+    font-family: var(--pulse-sans);
+    font-size: var(--pulse-text-xs);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--pulse-muted);
+  }
+
+  /* Health bars */
+  .dash-health {
+    padding: var(--pulse-space-4) 0;
+    border-top: var(--pulse-rule-thin);
+  }
+  .dash-health-row {
+    display: flex;
+    align-items: center;
+    gap: var(--pulse-space-4);
+  }
+  .dash-health-label {
+    font-family: var(--pulse-sans);
+    font-size: var(--pulse-text-xs);
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--pulse-muted);
+    min-width: 140px;
+  }
+  .dash-health-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--pulse-rule);
+    overflow: hidden;
+  }
+  .dash-health-fill {
+    height: 100%;
+    transition: width 0.6s ease;
+  }
+  .dash-health-fill.ok   { background: var(--pulse-ink); }
+  .dash-health-fill.warn { background: var(--pulse-accent); }
+  .dash-health-fill.bad  { background: var(--pulse-accent); }
+  .dash-health-pct {
+    font-family: var(--pulse-serif);
+    font-weight: 700;
+    font-size: var(--pulse-text-lg);
+    color: var(--pulse-ink);
+    min-width: 60px;
+    text-align: right;
+  }
+
+  /* Controls */
+  .dash-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--pulse-space-4);
+    margin-bottom: var(--pulse-space-6);
+  }
+  .dash-btn {
+    font-family: var(--pulse-sans);
+    font-weight: 500;
+    font-size: var(--pulse-text-xs);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--pulse-ink);
+    background: transparent;
+    color: var(--pulse-ink);
+    padding: var(--pulse-space-2) var(--pulse-space-4);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .dash-btn:hover {
+    background: var(--pulse-ink);
+    color: var(--pulse-paper);
+  }
+  .dash-auto-label {
+    font-family: var(--pulse-sans);
+    font-size: var(--pulse-text-sm);
+    color: var(--pulse-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--pulse-space-2);
+    cursor: pointer;
+  }
+
+  /* Chart labels */
+  .dash-chart-label {
+    font-family: var(--pulse-sans);
+    font-size: var(--pulse-text-xs);
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--pulse-muted);
+    margin-bottom: var(--pulse-space-3);
+    margin-top: var(--pulse-space-8);
+  }
+
+  /* Query log table */
+  .dash-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--pulse-sans);
+    font-size: var(--pulse-text-sm);
+    margin-top: var(--pulse-space-3);
+  }
+  .dash-table th {
+    font-size: var(--pulse-text-xs);
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--pulse-muted);
+    text-align: left;
+    padding: var(--pulse-space-3) var(--pulse-space-4);
+    border-bottom: var(--pulse-rule-medium);
+  }
+  .dash-table td {
+    padding: var(--pulse-space-3) var(--pulse-space-4);
+    border-bottom: var(--pulse-rule-thin);
+    color: var(--pulse-ink-soft);
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dash-table tr:hover td {
+    background: var(--pulse-paper-alt);
+  }
+
+  /* Empty state */
+  .dash-empty {
+    text-align: center;
+    padding: var(--pulse-space-16) var(--pulse-space-8);
+  }
+  .dash-empty h3 {
+    font-family: var(--pulse-serif);
+    font-weight: 700;
+    font-size: var(--pulse-text-xl);
+    color: var(--pulse-ink);
+    margin-bottom: var(--pulse-space-2);
+  }
+  .dash-empty p {
+    color: var(--pulse-muted);
+  }
+  .dash-empty code {
+    font-family: var(--pulse-mono);
+    font-size: var(--pulse-text-sm);
+    background: var(--pulse-paper-alt);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  @media (max-width: 768px) {
+    .dash-kpis { grid-template-columns: repeat(2, 1fr); }
+    .dash-health-label { min-width: 100px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dash-section dash-section--accent">Tableau de bord · Monitoring</div>
+
+<div class="dash-controls">
+  <button class="dash-btn" id="refresh-btn">Actualiser</button>
+  <label class="dash-auto-label">
+    <input type="checkbox" id="auto-refresh"> Actualisation auto (10s)
+  </label>
+</div>
+
+<!-- Placeholder for content loaded via JS -->
+<div id="dash-content">
+  <div class="dash-empty">
+    <h3>Chargement…</h3>
+    <p>Récupération des métriques depuis l'API.</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  const content = document.getElementById('dash-content');
+  const refreshBtn = document.getElementById('refresh-btn');
+  const autoCheckbox = document.getElementById('auto-refresh');
+  let autoTimer = null;
+
+  // ── Plotly editorial theme ──────────────────────────────
+  const plotlyLayout = {
+    paper_bgcolor: '#faf8f3',
+    plot_bgcolor: '#faf8f3',
+    font: { family: 'Inter, sans-serif', size: 11, color: '#6b6b6b' },
+    margin: { l: 40, r: 16, t: 10, b: 30 },
+    xaxis: {
+      gridcolor: '#d9d6d0', zerolinecolor: '#d9d6d0',
+      showgrid: true, tickfont: { family: 'Inter', size: 10, color: '#6b6b6b' }
+    },
+    yaxis: {
+      gridcolor: '#d9d6d0', zerolinecolor: '#d9d6d0',
+      showgrid: true, tickfont: { family: 'Inter', size: 10, color: '#6b6b6b' }
+    },
+    hoverlabel: {
+      bgcolor: '#ffffff', bordercolor: '#1a1a1a',
+      font: { size: 11, family: 'JetBrains Mono, monospace' }
+    }
+  };
+  const plotlyConfig = { displaylogo: false, displayModeBar: false };
+
+  // ── Health bar helper ───────────────────────────────────
+  function healthBar(label, value, thresholds) {
+    thresholds = thresholds || [0, 0.05];
+    const pct = Math.min(value * 100, 100);
+    const barW = pct === 0 ? 0 : Math.max(3, pct);
+    let cls = 'ok';
+    if (value > thresholds[1]) cls = 'bad';
+    else if (value > thresholds[0]) cls = 'warn';
+
+    return '<div class="dash-health"><div class="dash-health-row">' +
+      '<span class="dash-health-label">' + label + '</span>' +
+      '<div class="dash-health-bar"><div class="dash-health-fill ' + cls + '" style="width:' + barW + '%"></div></div>' +
+      '<span class="dash-health-pct">' + pct.toFixed(1) + '%</span>' +
+      '</div></div>';
+  }
+
+  // ── KPI helper ──────────────────────────────────────────
+  function kpi(label, value, sub) {
+    return '<div class="dash-kpi">' +
+      '<div class="dash-kpi-label">' + label + '</div>' +
+      '<div class="dash-kpi-value">' + value + '</div>' +
+      '<div class="dash-kpi-sub">' + (sub || '') + '</div>' +
+      '</div>';
+  }
+
+  // ── Escape HTML ─────────────────────────────────────────
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // ── Load dashboard ──────────────────────────────────────
+  async function loadDashboard() {
+    let metrics, records;
+
+    try {
+      const [mRes, rRes] = await Promise.all([
+        fetch('/metrics'),
+        fetch('/metrics/recent?limit=50')
+      ]);
+      if (!mRes.ok) throw new Error('API error');
+      metrics = await mRes.json();
+      records = (await rRes.json()).records || [];
+    } catch {
+      content.innerHTML =
+        '<div class="dash-empty">' +
+        '<h3>API indisponible</h3>' +
+        '<p>Lancez l\'API avec <code>uvicorn api:app --reload</code></p>' +
+        '</div>';
+      return;
+    }
+
+    if (metrics.total_requests === 0) {
+      content.innerHTML =
+        '<div class="dash-empty">' +
+        '<h3>En attente de données</h3>' +
+        '<p>Posez d\'abord une question à pulse_.</p>' +
+        '</div>';
+      return;
+    }
+
+    // ── Build HTML ──────────────────────────────────────
+    let html = '';
+
+    // KPIs row 1
+    html += '<div class="dash-section">Performance</div>';
+    html += '<div class="dash-kpis">';
+    html += kpi('Requêtes', metrics.total_requests.toLocaleString(), 'total');
+    html += kpi('Latence moy.', Math.round(metrics.avg_duration_ms) + 'ms', 'millisecondes');
+    html += kpi('Latence p95', Math.round(metrics.p95_duration_ms) + 'ms', 'millisecondes');
+    html += kpi('Modèle', metrics.model || 'gpt-4o-mini', 'OpenAI');
+    html += '</div>';
+
+    // KPIs row 2
+    html += '<div class="dash-kpis" style="margin-top: var(--pulse-space-2);">';
+    html += kpi('Tokens totaux', metrics.total_tokens.toLocaleString(), 'consommés');
+    html += kpi('Tokens / req', Math.round(metrics.avg_tokens_per_request).toLocaleString(), 'moyenne');
+    html += kpi('Coût total', '$' + metrics.total_cost_usd.toFixed(4), 'USD');
+    html += kpi('Coût / req', '$' + metrics.avg_cost_per_request_usd.toFixed(5), 'USD');
+    html += '</div>';
+
+    // Health
+    html += '<div class="dash-section">Santé</div>';
+    html += healthBar('Taux d\'erreur', metrics.error_rate);
+    html += healthBar('Taux de fallback', metrics.fallback_rate, [0, 0.10]);
+
+    // Charts
+    if (records.length > 1) {
+      html += '<div class="dash-section">Requêtes récentes</div>';
+      html += '<div class="dash-chart-label">Latence par requête (ms)</div>';
+      html += '<div id="chart-latency"></div>';
+      html += '<div class="dash-chart-label">Tokens par requête</div>';
+      html += '<div id="chart-tokens"></div>';
+    }
+
+    // Table
+    if (records.length > 0) {
+      html += '<div class="dash-chart-label">Journal des requêtes</div>';
+      html += '<table class="dash-table"><thead><tr>' +
+        '<th>Heure</th><th>Question</th><th>Latence</th><th>Tokens</th><th>Coût</th>' +
+        '</tr></thead><tbody>';
+
+      const sorted = records.slice().reverse();
+      for (const r of sorted) {
+        const ts = r.timestamp ? r.timestamp.split('T').pop().substring(0, 8) : '—';
+        html += '<tr>' +
+          '<td>' + esc(ts) + '</td>' +
+          '<td title="' + esc(r.question || '') + '">' + esc(r.question || '—') + '</td>' +
+          '<td>' + (r.duration_ms != null ? Math.round(r.duration_ms) + 'ms' : '—') + '</td>' +
+          '<td>' + (r.total_tokens != null ? r.total_tokens.toLocaleString() : '—') + '</td>' +
+          '<td>' + (r.cost_usd != null ? '$' + r.cost_usd.toFixed(5) : '—') + '</td>' +
+          '</tr>';
+      }
+      html += '</tbody></table>';
+    }
+
+    content.innerHTML = html;
+
+    // ── Render Plotly charts ─────────────────────────────
+    if (records.length > 1) {
+      const durations = records.map(r => r.duration_ms || 0);
+      const tokens = records.map(r => r.total_tokens || 0);
+
+      Plotly.newPlot('chart-latency', [{
+        y: durations, mode: 'lines', fill: 'tozeroy',
+        line: { color: '#1a1a1a', width: 1.5, shape: 'spline' },
+        fillcolor: 'rgba(26,26,26,0.08)',
+        hovertemplate: '<b>%{y:.0f} ms</b><extra></extra>'
+      }], { ...plotlyLayout, height: 200, showlegend: false }, plotlyConfig);
+
+      Plotly.newPlot('chart-tokens', [{
+        y: tokens, type: 'bar',
+        marker: { color: '#991b1b', line: { width: 0 } },
+        opacity: 0.85,
+        hovertemplate: '<b>%{y:,} tokens</b><extra></extra>'
+      }], { ...plotlyLayout, height: 160, showlegend: false }, plotlyConfig);
+    }
+  }
+
+  // ── Events ──────────────────────────────────────────────
+  refreshBtn.addEventListener('click', loadDashboard);
+
+  autoCheckbox.addEventListener('change', function () {
+    if (autoCheckbox.checked) {
+      autoTimer = setInterval(loadDashboard, 10000);
+    } else {
+      clearInterval(autoTimer);
+      autoTimer = null;
+    }
+  });
+
+  // Initial load
+  loadDashboard();
+})();
+</script>
+{% endblock %}

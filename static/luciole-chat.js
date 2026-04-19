@@ -50,11 +50,11 @@
   // ── Create message DOM ──────────────────────────────────────
   function appendMessage({ role, content, meta }) {
     const article = document.createElement('article');
-    article.className = 'pulse-message pulse-message--' + role;
+    article.className = 'luciole-message luciole-message--' + role;
 
     const isAgent = role === 'agent';
-    const avatarClass = isAgent ? 'pulse-message-avatar pulse-message-avatar--agent' : 'pulse-message-avatar';
-    const avatarContent = isAgent ? 'l<span style="color:var(--pulse-accent)">_</span>' : 'U';
+    const avatarClass = isAgent ? 'luciole-message-avatar luciole-message-avatar--agent' : 'luciole-message-avatar';
+    const avatarContent = isAgent ? 'l<span style="color:var(--luciole-accent)">_</span>' : 'U';
     const labelClass = isAgent ? 't-eyebrow-accent' : 't-eyebrow';
     const label = isAgent ? 'luciole_' : 'Vous';
 
@@ -62,12 +62,12 @@
 
     article.innerHTML = `
       <div class="${avatarClass}" aria-hidden="true">${avatarContent}</div>
-      <div class="pulse-message-body">
-        <div class="pulse-message-meta">
+      <div class="luciole-message-body">
+        <div class="luciole-message-meta">
           <span class="${labelClass}">${label}</span>
           <span class="t-meta">${meta}</span>
         </div>
-        <div class="pulse-message-content t-body">${rendered}</div>
+        <div class="luciole-message-content t-body">${rendered}</div>
       </div>
     `;
 
@@ -78,20 +78,20 @@
   // ── Typing indicator ───────────────────────────────────────
   function showTyping() {
     const el = document.createElement('article');
-    el.className = 'pulse-message pulse-message--agent';
+    el.className = 'luciole-message luciole-message--agent';
     el.id = 'typing-indicator';
     el.setAttribute('aria-label', 'luciole_ réfléchit');
     el.innerHTML = `
-      <div class="pulse-message-avatar pulse-message-avatar--agent" aria-hidden="true">l<span style="color:var(--pulse-accent)">_</span></div>
-      <div class="pulse-message-body">
-        <div class="pulse-message-meta">
+      <div class="luciole-message-avatar luciole-message-avatar--agent" aria-hidden="true">l<span style="color:var(--luciole-accent)">_</span></div>
+      <div class="luciole-message-body">
+        <div class="luciole-message-meta">
           <span class="t-eyebrow-accent">luciole_</span>
           <span class="t-meta">réflexion…</span>
         </div>
-        <div class="pulse-typing" aria-hidden="true">
-          <span class="pulse-typing-dot"></span>
-          <span class="pulse-typing-dot"></span>
-          <span class="pulse-typing-dot"></span>
+        <div class="luciole-typing" aria-hidden="true">
+          <span class="luciole-typing-dot"></span>
+          <span class="luciole-typing-dot"></span>
+          <span class="luciole-typing-dot"></span>
         </div>
       </div>
     `;
@@ -192,7 +192,7 @@
   });
 
   // ── Headline card clicks ────────────────────────────────────
-  document.querySelectorAll('.pulse-headline-card').forEach(function (card) {
+  document.querySelectorAll('.luciole-headline-card').forEach(function (card) {
     card.addEventListener('click', function () {
       const prompt = card.getAttribute('data-prompt');
       if (prompt) {

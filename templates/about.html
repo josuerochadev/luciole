@@ -1,73 +1,73 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section style="padding: var(--pulse-space-16) 0;">
+<section style="padding: var(--luciole-space-16) 0;">
 
   <!-- Hero -->
   <span class="t-eyebrow-accent">À propos</span>
-  <h1 class="t-display-md" style="margin: var(--pulse-space-4) 0 var(--pulse-space-6);">
-    luciole<span class="pulse-underscore">_</span> est un agent de veille tech pour les équipes qui n'ont pas le temps de lire.
+  <h1 class="t-display-md" style="margin: var(--luciole-space-4) 0 var(--luciole-space-6);">
+    luciole<span class="luciole-underscore">_</span> est un agent de veille tech pour les équipes qui n'ont pas le temps de lire.
   </h1>
-  <p class="t-body-lg" style="color: var(--pulse-muted); margin-bottom: var(--pulse-space-16);">
+  <p class="t-body-lg" style="color: var(--luciole-muted); margin-bottom: var(--luciole-space-16);">
     Veille augmentée. Décisions éclairées.
   </p>
 
   <!-- The Problem -->
-  <div style="padding-top: var(--pulse-space-8); margin-bottom: var(--pulse-space-16);">
-    <span class="t-eyebrow" style="margin-bottom: var(--pulse-space-6); display: block;">Le problème</span>
-    <p class="t-body" style="color: var(--pulse-ink-soft);">
+  <div style="padding-top: var(--luciole-space-8); margin-bottom: var(--luciole-space-16);">
+    <span class="t-eyebrow" style="margin-bottom: var(--luciole-space-6); display: block;">Le problème</span>
+    <p class="t-body" style="color: var(--luciole-ink-soft);">
       Les développeurs passent du temps chaque jour à parcourir des flux RSS, newsletters et Hacker News.
       Les signaux faibles passent entre les mailles. luciole_ automatise cette veille et la rend conversationnelle.
     </p>
   </div>
 
   <!-- How it works — Step cards -->
-  <div style="padding-top: var(--pulse-space-8); margin-bottom: var(--pulse-space-16);">
-    <span class="t-eyebrow" style="margin-bottom: var(--pulse-space-4); display: block;">Comment ça marche</span>
+  <div style="padding-top: var(--luciole-space-8); margin-bottom: var(--luciole-space-16);">
+    <span class="t-eyebrow" style="margin-bottom: var(--luciole-space-4); display: block;">Comment ça marche</span>
     <h2 class="t-headline-md" style="margin-bottom: 0;">7 couches, un agent.</h2>
 
-    <div class="pulse-steps">
-      <div class="pulse-step">
-        <div class="pulse-step-number">01</div>
-        <div class="pulse-step-title">Ingestion RSS</div>
-        <div class="pulse-step-desc">12 sources tech en continu — AWS, K8s, cybersécurité, IA</div>
+    <div class="luciole-steps">
+      <div class="luciole-step">
+        <div class="luciole-step-number">01</div>
+        <div class="luciole-step-title">Ingestion RSS</div>
+        <div class="luciole-step-desc">12 sources tech en continu — AWS, K8s, cybersécurité, IA</div>
       </div>
-      <div class="pulse-step">
-        <div class="pulse-step-number">02</div>
-        <div class="pulse-step-title">Vectorisation</div>
-        <div class="pulse-step-desc">Embeddings text-embedding-3-small, index numpy maison</div>
+      <div class="luciole-step">
+        <div class="luciole-step-number">02</div>
+        <div class="luciole-step-title">Vectorisation</div>
+        <div class="luciole-step-desc">Embeddings text-embedding-3-small, index numpy maison</div>
       </div>
-      <div class="pulse-step">
-        <div class="pulse-step-number">03</div>
-        <div class="pulse-step-title">Agent ReAct</div>
-        <div class="pulse-step-desc">Boucle Reason → Act → Observe, max 2 itérations</div>
+      <div class="luciole-step">
+        <div class="luciole-step-number">03</div>
+        <div class="luciole-step-title">Agent ReAct</div>
+        <div class="luciole-step-desc">Boucle Reason → Act → Observe, max 2 itérations</div>
       </div>
-      <div class="pulse-step">
-        <div class="pulse-step-number">04</div>
-        <div class="pulse-step-title">6 outils</div>
-        <div class="pulse-step-desc">RAG articles, recherche web, base SQL, transcription audio, vision, email</div>
+      <div class="luciole-step">
+        <div class="luciole-step-number">04</div>
+        <div class="luciole-step-title">6 outils</div>
+        <div class="luciole-step-desc">RAG articles, recherche web, base SQL, transcription audio, vision, email</div>
       </div>
-      <div class="pulse-step">
-        <div class="pulse-step-number">05</div>
-        <div class="pulse-step-title">Sécurité</div>
-        <div class="pulse-step-desc">Validation SQL, filtrage RGPD, masquage données sensibles</div>
+      <div class="luciole-step">
+        <div class="luciole-step-number">05</div>
+        <div class="luciole-step-title">Sécurité</div>
+        <div class="luciole-step-desc">Validation SQL, filtrage RGPD, masquage données sensibles</div>
       </div>
-      <div class="pulse-step">
-        <div class="pulse-step-number">06</div>
-        <div class="pulse-step-title">Monitoring</div>
-        <div class="pulse-step-desc">Latence, tokens, coûts, taux d'erreur temps réel</div>
+      <div class="luciole-step">
+        <div class="luciole-step-number">06</div>
+        <div class="luciole-step-title">Monitoring</div>
+        <div class="luciole-step-desc">Latence, tokens, coûts, taux d'erreur temps réel</div>
       </div>
-      <div class="pulse-step" style="grid-column: 1 / -1; text-align: center;">
-        <div class="pulse-step-number" style="font-size: var(--pulse-text-3xl);">07</div>
-        <div class="pulse-step-title">Observabilité</div>
-        <div class="pulse-step-desc">Tracing Langfuse pour chaque span de l'agent</div>
+      <div class="luciole-step" style="grid-column: 1 / -1; text-align: center;">
+        <div class="luciole-step-number" style="font-size: var(--luciole-text-3xl);">07</div>
+        <div class="luciole-step-title">Observabilité</div>
+        <div class="luciole-step-desc">Tracing Langfuse pour chaque span de l'agent</div>
       </div>
     </div>
   </div>
 
   <!-- CTA -->
-  <div style="padding-top: var(--pulse-space-8); text-align: center;">
-    <a href="/" class="pulse-cta">
+  <div style="padding-top: var(--luciole-space-8); text-align: center;">
+    <a href="/" class="luciole-cta">
       Essayer luciole_ <span aria-hidden="true">&rarr;</span>
     </a>
   </div>

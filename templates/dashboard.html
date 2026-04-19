@@ -5,92 +5,92 @@
 <style>
   /* Dashboard-specific styles */
   .dash-section {
-    font-family: var(--pulse-sans);
-    font-size: var(--pulse-text-xs);
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-xs);
     font-weight: 500;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--pulse-muted);
-    padding-bottom: var(--pulse-space-3);
-    border-bottom: var(--pulse-rule-thin);
-    margin: var(--pulse-space-12) 0 var(--pulse-space-6);
+    color: var(--luciole-muted);
+    padding-bottom: var(--luciole-space-3);
+    border-bottom: var(--luciole-rule-thin);
+    margin: var(--luciole-space-12) 0 var(--luciole-space-6);
   }
   .dash-section--accent {
-    color: var(--pulse-accent);
-    margin-top: var(--pulse-space-8);
+    color: var(--luciole-accent);
+    margin-top: var(--luciole-space-8);
   }
 
   .dash-kpis {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: var(--pulse-space-6);
+    gap: var(--luciole-space-6);
   }
 
   .dash-kpi {
-    padding: var(--pulse-space-6) 0;
-    border-top: var(--pulse-rule-thin);
+    padding: var(--luciole-space-6) 0;
+    border-top: var(--luciole-rule-thin);
   }
   .dash-kpi-label {
-    font-family: var(--pulse-sans);
-    font-size: var(--pulse-text-xs);
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-xs);
     font-weight: 500;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--pulse-muted);
+    color: var(--luciole-muted);
   }
   .dash-kpi-value {
-    font-family: var(--pulse-serif);
+    font-family: var(--luciole-serif);
     font-weight: 900;
-    font-size: var(--pulse-text-3xl);
+    font-size: var(--luciole-text-3xl);
     line-height: 1.1;
-    color: var(--pulse-ink);
-    margin: var(--pulse-space-2) 0 var(--pulse-space-1);
+    color: var(--luciole-ink);
+    margin: var(--luciole-space-2) 0 var(--luciole-space-1);
   }
   .dash-kpi-sub {
-    font-family: var(--pulse-sans);
-    font-size: var(--pulse-text-xs);
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-xs);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--pulse-muted);
+    color: var(--luciole-muted);
   }
 
   /* Health bars */
   .dash-health {
-    padding: var(--pulse-space-4) 0;
-    border-top: var(--pulse-rule-thin);
+    padding: var(--luciole-space-4) 0;
+    border-top: var(--luciole-rule-thin);
   }
   .dash-health-row {
     display: flex;
     align-items: center;
-    gap: var(--pulse-space-4);
+    gap: var(--luciole-space-4);
   }
   .dash-health-label {
-    font-family: var(--pulse-sans);
-    font-size: var(--pulse-text-xs);
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-xs);
     font-weight: 500;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--pulse-muted);
+    color: var(--luciole-muted);
     min-width: 140px;
   }
   .dash-health-bar {
     flex: 1;
     height: 4px;
-    background: var(--pulse-rule);
+    background: var(--luciole-rule);
     overflow: hidden;
   }
   .dash-health-fill {
     height: 100%;
     transition: width 0.6s ease;
   }
-  .dash-health-fill.ok   { background: var(--pulse-ink); }
-  .dash-health-fill.warn { background: var(--pulse-accent); }
-  .dash-health-fill.bad  { background: var(--pulse-accent); }
+  .dash-health-fill.ok   { background: var(--luciole-ink); }
+  .dash-health-fill.warn { background: var(--luciole-accent); }
+  .dash-health-fill.bad  { background: var(--luciole-accent); }
   .dash-health-pct {
-    font-family: var(--pulse-serif);
+    font-family: var(--luciole-serif);
     font-weight: 700;
-    font-size: var(--pulse-text-lg);
-    color: var(--pulse-ink);
+    font-size: var(--luciole-text-lg);
+    color: var(--luciole-ink);
     min-width: 60px;
     text-align: right;
   }
@@ -99,99 +99,99 @@
   .dash-controls {
     display: flex;
     align-items: center;
-    gap: var(--pulse-space-4);
-    margin-bottom: var(--pulse-space-6);
+    gap: var(--luciole-space-4);
+    margin-bottom: var(--luciole-space-6);
   }
   .dash-btn {
-    font-family: var(--pulse-sans);
+    font-family: var(--luciole-sans);
     font-weight: 500;
-    font-size: var(--pulse-text-xs);
+    font-size: var(--luciole-text-xs);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    border: 1px solid var(--pulse-ink);
+    border: 1px solid var(--luciole-ink);
     background: transparent;
-    color: var(--pulse-ink);
-    padding: var(--pulse-space-2) var(--pulse-space-4);
+    color: var(--luciole-ink);
+    padding: var(--luciole-space-2) var(--luciole-space-4);
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s;
   }
   .dash-btn:hover {
-    background: var(--pulse-ink);
-    color: var(--pulse-paper);
+    background: var(--luciole-ink);
+    color: var(--luciole-paper);
   }
   .dash-auto-label {
-    font-family: var(--pulse-sans);
-    font-size: var(--pulse-text-sm);
-    color: var(--pulse-muted);
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-sm);
+    color: var(--luciole-muted);
     display: flex;
     align-items: center;
-    gap: var(--pulse-space-2);
+    gap: var(--luciole-space-2);
     cursor: pointer;
   }
 
   /* Chart labels */
   .dash-chart-label {
-    font-family: var(--pulse-sans);
-    font-size: var(--pulse-text-xs);
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-xs);
     font-weight: 500;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--pulse-muted);
-    margin-bottom: var(--pulse-space-3);
-    margin-top: var(--pulse-space-8);
+    color: var(--luciole-muted);
+    margin-bottom: var(--luciole-space-3);
+    margin-top: var(--luciole-space-8);
   }
 
   /* Query log table */
   .dash-table {
     width: 100%;
     border-collapse: collapse;
-    font-family: var(--pulse-sans);
-    font-size: var(--pulse-text-sm);
-    margin-top: var(--pulse-space-3);
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-sm);
+    margin-top: var(--luciole-space-3);
   }
   .dash-table th {
-    font-size: var(--pulse-text-xs);
+    font-size: var(--luciole-text-xs);
     font-weight: 500;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--pulse-muted);
+    color: var(--luciole-muted);
     text-align: left;
-    padding: var(--pulse-space-3) var(--pulse-space-4);
-    border-bottom: var(--pulse-rule-medium);
+    padding: var(--luciole-space-3) var(--luciole-space-4);
+    border-bottom: var(--luciole-rule-medium);
   }
   .dash-table td {
-    padding: var(--pulse-space-3) var(--pulse-space-4);
-    border-bottom: var(--pulse-rule-thin);
-    color: var(--pulse-ink-soft);
+    padding: var(--luciole-space-3) var(--luciole-space-4);
+    border-bottom: var(--luciole-rule-thin);
+    color: var(--luciole-ink-soft);
     max-width: 400px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .dash-table tr:hover td {
-    background: var(--pulse-paper-alt);
+    background: var(--luciole-paper-alt);
   }
 
   /* Empty state */
   .dash-empty {
     text-align: center;
-    padding: var(--pulse-space-16) var(--pulse-space-8);
+    padding: var(--luciole-space-16) var(--luciole-space-8);
   }
   .dash-empty h3 {
-    font-family: var(--pulse-serif);
+    font-family: var(--luciole-serif);
     font-weight: 700;
-    font-size: var(--pulse-text-xl);
-    color: var(--pulse-ink);
-    margin-bottom: var(--pulse-space-2);
+    font-size: var(--luciole-text-xl);
+    color: var(--luciole-ink);
+    margin-bottom: var(--luciole-space-2);
   }
   .dash-empty p {
-    color: var(--pulse-muted);
+    color: var(--luciole-muted);
   }
   .dash-empty code {
-    font-family: var(--pulse-mono);
-    font-size: var(--pulse-text-sm);
-    background: var(--pulse-paper-alt);
+    font-family: var(--luciole-mono);
+    font-size: var(--luciole-text-sm);
+    background: var(--luciole-paper-alt);
     padding: 2px 6px;
     border-radius: 3px;
   }
@@ -328,7 +328,7 @@
     html += '</div>';
 
     // KPIs row 2
-    html += '<div class="dash-kpis" style="margin-top: var(--pulse-space-2);">';
+    html += '<div class="dash-kpis" style="margin-top: var(--luciole-space-2);">';
     html += kpi('Tokens totaux', metrics.total_tokens.toLocaleString(), 'consommés');
     html += kpi('Tokens / req', Math.round(metrics.avg_tokens_per_request).toLocaleString(), 'moyenne');
     html += kpi('Coût total', '$' + metrics.total_cost_usd.toFixed(4), 'USD');

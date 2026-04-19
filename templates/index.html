@@ -2,66 +2,66 @@
 
 {% block content %}
 <!-- Hero — Centered, chat-first -->
-<section class="pulse-hero" id="hero-section">
-  <span class="t-eyebrow-accent pulse-hero-eyebrow">En direct · Conversationnel</span>
-  <h1 class="pulse-hero-title">
-    La lumière dans le bruit<span class="pulse-underscore">_</span>
+<section class="luciole-hero" id="hero-section">
+  <span class="t-eyebrow-accent luciole-hero-eyebrow">En direct · Conversationnel</span>
+  <h1 class="luciole-hero-title">
+    La lumière dans le bruit<span class="luciole-underscore">_</span>
   </h1>
-  <p class="pulse-hero-subtitle">
+  <p class="luciole-hero-subtitle">
     Interrogez vos sources, synthétisez l'actualité tech, analysez les tendances — en une conversation.
   </p>
-  <form class="pulse-chat-input" id="chat-form">
+  <form class="luciole-chat-input" id="chat-form">
     <label for="chat-input" class="sr-only">Posez votre question</label>
     <input type="text"
-           class="pulse-input"
+           class="luciole-input"
            id="chat-input"
            placeholder="Posez une question à luciole_ : tech, IA, outils, tendances…"
            autocomplete="off"
            autofocus>
-    <button type="submit" class="pulse-submit" aria-label="Envoyer">
-      Envoyer <span class="pulse-submit-arrow" aria-hidden="true">&rarr;</span>
+    <button type="submit" class="luciole-submit" aria-label="Envoyer">
+      Envoyer <span class="luciole-submit-arrow" aria-hidden="true">&rarr;</span>
     </button>
   </form>
 </section>
 
 <!-- Headline Cards — Magazine layout -->
-<section class="pulse-headlines" id="headlines-section" aria-label="Questions suggérées">
-  <button class="pulse-headline-card" data-prompt="Quelles sont les dernières avancées en IA agentique cette semaine ?" aria-label="Poser la question : avancées en IA agentique">
+<section class="luciole-headlines" id="headlines-section" aria-label="Questions suggérées">
+  <button class="luciole-headline-card" data-prompt="Quelles sont les dernières avancées en IA agentique cette semaine ?" aria-label="Poser la question : avancées en IA agentique">
     <span class="t-eyebrow-accent">RAG · Recherche</span>
     <h3 class="t-headline-sm">Quelles sont les dernières avancées en IA agentique ?</h3>
-    <span class="pulse-arrow" aria-hidden="true">&rarr;</span>
+    <span class="luciole-arrow" aria-hidden="true">&rarr;</span>
   </button>
-  <button class="pulse-headline-card" data-prompt="Fais-moi un briefing des actualités cloud et DevOps du moment." aria-label="Poser la question : briefing cloud et DevOps">
+  <button class="luciole-headline-card" data-prompt="Fais-moi un briefing des actualités cloud et DevOps du moment." aria-label="Poser la question : briefing cloud et DevOps">
     <span class="t-eyebrow-accent">Web · Synthèse</span>
     <h3 class="t-headline-sm">Briefing cloud &amp; DevOps</h3>
-    <span class="pulse-arrow" aria-hidden="true">&rarr;</span>
+    <span class="luciole-arrow" aria-hidden="true">&rarr;</span>
   </button>
-  <button class="pulse-headline-card" data-prompt="Quelles sont les tendances cybersécurité à surveiller en 2026 ?" aria-label="Poser la question : tendances cybersécurité">
+  <button class="luciole-headline-card" data-prompt="Quelles sont les tendances cybersécurité à surveiller en 2026 ?" aria-label="Poser la question : tendances cybersécurité">
     <span class="t-eyebrow-accent">Tendances · Analyse</span>
     <h3 class="t-headline-sm">Tendances cybersécurité 2026</h3>
-    <span class="pulse-arrow" aria-hidden="true">&rarr;</span>
+    <span class="luciole-arrow" aria-hidden="true">&rarr;</span>
   </button>
 </section>
 
 <!-- Chat Zone -->
-<section class="pulse-chat-zone" id="chat-zone" hidden aria-live="polite">
-  <div class="pulse-chat-header">
+<section class="luciole-chat-zone" id="chat-zone" hidden aria-live="polite">
+  <div class="luciole-chat-header">
     <span class="t-eyebrow-accent">Conversation</span>
-    <button class="pulse-new-chat" id="new-chat-btn" aria-label="Nouvelle conversation">
+    <button class="luciole-new-chat" id="new-chat-btn" aria-label="Nouvelle conversation">
       Nouveau chat <span aria-hidden="true">+</span>
     </button>
   </div>
   <div id="chat-messages"></div>
   <div id="chat-bottom"></div>
-  <form class="pulse-chat-input pulse-chat-input--sticky" id="chat-form-sticky">
+  <form class="luciole-chat-input luciole-chat-input--sticky" id="chat-form-sticky">
     <label for="chat-input-sticky" class="sr-only">Posez votre question</label>
     <input type="text"
-           class="pulse-input"
+           class="luciole-input"
            id="chat-input-sticky"
            placeholder="Posez une question de suivi…"
            autocomplete="off">
-    <button type="submit" class="pulse-submit" aria-label="Envoyer">
-      Envoyer <span class="pulse-submit-arrow" aria-hidden="true">&rarr;</span>
+    <button type="submit" class="luciole-submit" aria-label="Envoyer">
+      Envoyer <span class="luciole-submit-arrow" aria-hidden="true">&rarr;</span>
     </button>
   </form>
 </section>
@@ -69,5 +69,5 @@
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="/static/pulse-chat.js"></script>
+<script src="/static/luciole-chat.js"></script>
 {% endblock %}

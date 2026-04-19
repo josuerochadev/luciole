@@ -20,25 +20,25 @@
   <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 
   <!-- Design System -->
-  <link rel="stylesheet" href="/static/pulse.css">
+  <link rel="stylesheet" href="/static/luciole.css">
 
   {% block head %}{% endblock %}
 </head>
 <body>
 
   <!-- Masthead -->
-  <header class="pulse-masthead">
-    <div class="pulse-masthead-row">
-      <span class="t-meta pulse-status" id="api-status">
-        <span class="pulse-status-dot" id="status-dot"></span>
+  <header class="luciole-masthead">
+    <div class="luciole-masthead-row">
+      <span class="t-meta luciole-status" id="api-status">
+        <span class="luciole-status-dot" id="status-dot"></span>
         <span id="status-text">En ligne</span>
       </span>
-      <a href="/" class="pulse-wordmark-link" aria-label="luciole_">
-        <span class="pulse-wordmark">luciole<span class="pulse-underscore">_</span></span>
+      <a href="/" class="luciole-wordmark-link" aria-label="luciole_">
+        <span class="luciole-wordmark">luciole<span class="luciole-underscore">_</span></span>
       </a>
       <span class="t-meta" id="today-date"></span>
     </div>
-    <nav class="pulse-nav" aria-label="Navigation principale">
+    <nav class="luciole-nav" aria-label="Navigation principale">
       <a href="/" {% if active_page == "chat" %}class="active"{% endif %}>Chat</a>
       <a href="/digest-page" {% if active_page == "digest" %}class="active"{% endif %}>Digest</a>
       <a href="/dashboard" {% if active_page == "dashboard" %}class="active"{% endif %}>Tableau de bord</a>
@@ -47,23 +47,23 @@
   </header>
 
   <!-- Content -->
-  <main class="pulse-container">
+  <main class="luciole-container">
     {% block content %}{% endblock %}
   </main>
 
   <!-- Footer -->
-  <footer class="pulse-footer">
-    <div class="pulse-footer-row">
-      <div class="pulse-footer-col">
-        <span class="pulse-footer-label">Projet</span>
+  <footer class="luciole-footer">
+    <div class="luciole-footer-row">
+      <div class="luciole-footer-col">
+        <span class="luciole-footer-label">Projet</span>
         <span class="t-meta">luciole_ · AJC Formation · 2026</span>
       </div>
-      <div class="pulse-footer-col">
-        <span class="pulse-footer-label">Stack</span>
+      <div class="luciole-footer-col">
+        <span class="luciole-footer-label">Stack</span>
         <span class="t-meta">ReAct Agent · gpt-4o-mini · FastAPI</span>
       </div>
-      <div class="pulse-footer-col">
-        <span class="pulse-footer-label">Source</span>
+      <div class="luciole-footer-col">
+        <span class="luciole-footer-label">Source</span>
         <span class="t-meta"><a href="https://github.com/josuerochadev/formation-ia">GitHub</a></span>
       </div>
     </div>
@@ -82,7 +82,7 @@
     }).catch(() => {
       const dot = document.getElementById('status-dot');
       const text = document.getElementById('status-text');
-      if (dot) dot.classList.add('pulse-status-dot--offline');
+      if (dot) dot.classList.add('luciole-status-dot--offline');
       if (text) text.textContent = 'Hors ligne';
     });
   </script>

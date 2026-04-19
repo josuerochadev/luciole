@@ -1,0 +1,816 @@
+/* ============================================================
+   luciole_ — Design System v2
+   Direction: editorial magazine, chat-first
+   ============================================================ */
+
+:root {
+  /* === Colors === */
+  --luciole-ink: #1a1a1a;
+  --luciole-ink-soft: #2d2d2d;
+  --luciole-muted: #6b6b6b;
+  --luciole-rule: #d9d6d0;
+  --luciole-paper: #faf8f3;
+  --luciole-paper-alt: #f2efe8;
+  --luciole-white: #ffffff;
+  --luciole-accent: #991b1b;
+  --luciole-accent-dark: #7f1515;
+  --luciole-accent-soft: #fef2f2;
+  --luciole-secondary: #8b9daf;
+  --luciole-secondary-soft: #e8ecf0;
+
+  /* === Typography === */
+  --luciole-serif: 'Zilla Slab', 'Roboto Slab', Georgia, 'Times New Roman', serif;
+  --luciole-sans: 'Inter', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --luciole-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+
+  /* === Type scale === */
+  --luciole-text-xs: 12px;
+  --luciole-text-sm: 14px;
+  --luciole-text-base: 16px;
+  --luciole-text-lg: 18px;
+  --luciole-text-xl: 22px;
+  --luciole-text-2xl: 28px;
+  --luciole-text-3xl: 36px;
+  --luciole-text-4xl: 48px;
+  --luciole-text-5xl: 72px;
+  --luciole-text-6xl: 96px;
+
+  /* === Spacing === */
+  --luciole-space-1: 4px;
+  --luciole-space-2: 8px;
+  --luciole-space-3: 12px;
+  --luciole-space-4: 16px;
+  --luciole-space-6: 24px;
+  --luciole-space-8: 32px;
+  --luciole-space-12: 48px;
+  --luciole-space-16: 64px;
+  --luciole-space-24: 96px;
+
+  /* === Layout === */
+  --luciole-max-width: 1240px;
+  --luciole-gutter: 32px;
+
+  /* === Borders === */
+  --luciole-rule-thin: 0.5px solid var(--luciole-rule);
+  --luciole-rule-medium: 1px solid var(--luciole-rule);
+  --luciole-rule-heavy: 3px solid var(--luciole-ink);
+
+  /* === Shadows === */
+  --luciole-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --luciole-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --luciole-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--luciole-sans);
+  font-weight: 400;
+  font-size: var(--luciole-text-base);
+  line-height: 1.6;
+  color: var(--luciole-ink-soft);
+  background-color: var(--luciole-paper);
+  min-height: 100vh;
+}
+
+a {
+  color: var(--luciole-ink);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+a:hover { color: var(--luciole-accent); }
+
+img { max-width: 100%; display: block; }
+
+/* ============================================================
+   Typography Utility Classes
+   ============================================================ */
+
+.t-display-xl  { font-family: var(--luciole-serif); font-weight: 900; font-size: var(--luciole-text-6xl); line-height: 0.95; letter-spacing: -0.03em; color: var(--luciole-ink); }
+.t-display-lg  { font-family: var(--luciole-serif); font-weight: 900; font-size: var(--luciole-text-5xl); line-height: 1.0;  letter-spacing: -0.03em; color: var(--luciole-ink); }
+.t-display-md  { font-family: var(--luciole-serif); font-weight: 700; font-size: var(--luciole-text-4xl); line-height: 1.05; letter-spacing: -0.02em; color: var(--luciole-ink); }
+
+.t-headline-lg { font-family: var(--luciole-serif); font-weight: 700; font-size: var(--luciole-text-3xl); line-height: 1.1;  letter-spacing: -0.02em; color: var(--luciole-ink); }
+.t-headline-md { font-family: var(--luciole-serif); font-weight: 700; font-size: var(--luciole-text-2xl); line-height: 1.15; letter-spacing: -0.01em; color: var(--luciole-ink); }
+.t-headline-sm { font-family: var(--luciole-serif); font-weight: 700; font-size: var(--luciole-text-xl);  line-height: 1.2;  letter-spacing: -0.01em; color: var(--luciole-ink); }
+
+.t-body-lg     { font-family: var(--luciole-sans);  font-weight: 400; font-size: var(--luciole-text-lg);  line-height: 1.6; }
+.t-body        { font-family: var(--luciole-sans);  font-weight: 400; font-size: var(--luciole-text-base); line-height: 1.6; }
+.t-body-sm     { font-family: var(--luciole-sans);  font-weight: 400; font-size: var(--luciole-text-sm);  line-height: 1.5; }
+
+.t-eyebrow     { font-family: var(--luciole-sans); font-weight: 500; font-size: var(--luciole-text-xs); letter-spacing: 0.2em; text-transform: uppercase; color: var(--luciole-muted); }
+.t-eyebrow-accent { font-family: var(--luciole-sans); font-weight: 500; font-size: var(--luciole-text-xs); letter-spacing: 0.2em; text-transform: uppercase; color: var(--luciole-accent); }
+
+.t-meta        { font-family: var(--luciole-sans); font-weight: 400; font-size: var(--luciole-text-xs); letter-spacing: 0.1em; text-transform: uppercase; color: var(--luciole-muted); }
+.t-mono        { font-family: var(--luciole-mono); font-weight: 400; font-size: var(--luciole-text-sm); }
+
+/* ============================================================
+   Layout
+   ============================================================ */
+
+.luciole-container {
+  max-width: var(--luciole-max-width);
+  margin: 0 auto;
+  padding: 0 var(--luciole-gutter);
+}
+
+/* ============================================================
+   Masthead
+   ============================================================ */
+
+.luciole-masthead {
+  padding: var(--luciole-space-6) 0 var(--luciole-space-4);
+  background: var(--luciole-paper);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.luciole-masthead-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--luciole-space-6);
+  padding: 0 var(--luciole-gutter);
+  max-width: var(--luciole-max-width);
+  margin: 0 auto;
+}
+
+.luciole-masthead-row .t-meta:last-child { text-align: right; }
+
+.luciole-wordmark-link {
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s;
+}
+.luciole-wordmark-link:hover { transform: scale(1.02); }
+.luciole-wordmark {
+  font-family: var(--luciole-serif);
+  font-weight: 700;
+  font-size: 32px;
+  letter-spacing: -0.01em;
+  color: var(--luciole-ink);
+  line-height: 1;
+}
+
+/* Status dot */
+.luciole-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.luciole-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+}
+.luciole-status-dot--offline {
+  background: var(--luciole-accent);
+  box-shadow: 0 0 6px rgba(153, 27, 27, 0.4);
+}
+
+.luciole-nav {
+  display: flex;
+  justify-content: center;
+  gap: var(--luciole-space-8);
+  padding: var(--luciole-space-3) 0 0;
+  border-top: var(--luciole-rule-thin);
+  margin-top: var(--luciole-space-4);
+  max-width: var(--luciole-max-width);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.luciole-nav a {
+  font-family: var(--luciole-sans);
+  font-size: var(--luciole-text-sm);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--luciole-ink);
+  text-decoration: none;
+  padding-bottom: 4px;
+  position: relative;
+  transition: color 0.2s;
+}
+.luciole-nav a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--luciole-accent);
+  transition: width 0.2s ease;
+}
+.luciole-nav a:hover::after,
+.luciole-nav a.active::after { width: 100%; }
+
+/* ============================================================
+   Hero — Centered, chat-first
+   ============================================================ */
+
+.luciole-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--luciole-space-24) 0 var(--luciole-space-12);
+  min-height: 50vh;
+  transition: all 0.4s ease;
+}
+
+.luciole-hero-eyebrow {
+  margin-bottom: var(--luciole-space-6);
+}
+
+.luciole-hero-title {
+  font-family: var(--luciole-serif);
+  font-weight: 900;
+  font-size: clamp(32px, 5vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--luciole-ink);
+  margin-bottom: var(--luciole-space-6);
+  max-width: 720px;
+}
+
+.luciole-hero-subtitle {
+  font-family: var(--luciole-sans);
+  font-weight: 400;
+  font-size: var(--luciole-text-lg);
+  line-height: 1.6;
+  color: var(--luciole-muted);
+  margin-bottom: var(--luciole-space-12);
+  max-width: 520px;
+}
+
+/* ============================================================
+   Chat Input — Search bar style
+   ============================================================ */
+
+.luciole-chat-input {
+  display: flex;
+  align-items: stretch;
+  background: var(--luciole-paper-alt);
+  border: 1px solid var(--luciole-rule);
+  border-radius: 8px;
+  padding: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  width: 100%;
+  max-width: 720px;
+}
+.luciole-chat-input:focus-within {
+  border-color: var(--luciole-accent);
+  box-shadow: var(--luciole-shadow-md), 0 0 0 3px var(--luciole-accent-soft);
+  background: var(--luciole-white);
+  transform: scale(1.01);
+}
+
+.luciole-input {
+  flex: 1;
+  font-family: var(--luciole-sans);
+  font-size: var(--luciole-text-lg);
+  padding: var(--luciole-space-4) var(--luciole-space-6);
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--luciole-ink);
+  min-width: 0;
+}
+.luciole-input::placeholder {
+  color: var(--luciole-muted);
+  font-style: italic;
+}
+
+.luciole-submit {
+  font-family: var(--luciole-sans);
+  font-weight: 600;
+  font-size: var(--luciole-text-sm);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--luciole-white);
+  background: var(--luciole-ink);
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  padding: 0 var(--luciole-space-8);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.luciole-submit:hover {
+  background: var(--luciole-accent);
+}
+.luciole-submit:active { transform: scale(0.97); }
+
+.luciole-submit-arrow {
+  margin-left: var(--luciole-space-2);
+  transition: transform 0.2s;
+}
+.luciole-submit:hover .luciole-submit-arrow { transform: translateX(3px); }
+
+/* ============================================================
+   Headline Cards — Magazine layout with cards
+   ============================================================ */
+
+.luciole-headlines {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: var(--luciole-space-6);
+  padding: var(--luciole-space-8) 0 var(--luciole-space-16);
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.luciole-headline-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--luciole-space-3);
+  padding: var(--luciole-space-6) var(--luciole-space-6);
+  background: var(--luciole-white);
+  border: 1px solid var(--luciole-rule);
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+}
+.luciole-headline-card:first-child {
+  grid-row: 1 / 3;
+  justify-content: center;
+}
+.luciole-headline-card:first-child .t-headline-sm {
+  font-size: var(--luciole-text-2xl);
+}
+
+.luciole-headline-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--luciole-shadow-md);
+  border-color: var(--luciole-secondary);
+}
+.luciole-headline-card:hover .luciole-arrow {
+  color: var(--luciole-accent);
+  transform: translateX(4px);
+}
+
+.luciole-headline-card .t-eyebrow-accent {
+  color: var(--luciole-secondary);
+  font-size: 10px;
+}
+
+.luciole-headline-card .t-headline-sm {
+  font-size: var(--luciole-text-lg);
+}
+
+.luciole-arrow {
+  font-family: var(--luciole-sans);
+  font-size: var(--luciole-text-lg);
+  color: var(--luciole-muted);
+  margin-top: auto;
+  padding-top: var(--luciole-space-2);
+  transition: all 0.2s;
+}
+
+/* ============================================================
+   Chat Zone
+   ============================================================ */
+
+.luciole-chat-zone {
+  padding: var(--luciole-space-6) 0 var(--luciole-space-16);
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.luciole-chat-zone[hidden] { display: none; }
+
+/* Chat header */
+.luciole-chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--luciole-space-4);
+  border-bottom: var(--luciole-rule-thin);
+  margin-bottom: var(--luciole-space-6);
+}
+
+.luciole-new-chat {
+  font-family: var(--luciole-sans);
+  font-weight: 500;
+  font-size: var(--luciole-text-xs);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--luciole-muted);
+  background: transparent;
+  border: 1px solid var(--luciole-rule);
+  border-radius: 4px;
+  padding: var(--luciole-space-2) var(--luciole-space-4);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.luciole-new-chat:hover {
+  color: var(--luciole-ink);
+  border-color: var(--luciole-ink);
+  background: var(--luciole-paper-alt);
+}
+
+/* ============================================================
+   Chat Messages
+   ============================================================ */
+
+.luciole-message {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: var(--luciole-space-4);
+  padding: var(--luciole-space-6);
+  border-radius: 6px;
+  margin-bottom: var(--luciole-space-3);
+  animation: luciole-fade-in 0.3s ease-out backwards;
+}
+
+/* Staggered animation */
+.luciole-message:nth-child(1) { animation-delay: 0s; }
+.luciole-message:nth-child(2) { animation-delay: 0.05s; }
+.luciole-message:nth-child(3) { animation-delay: 0.1s; }
+
+@keyframes luciole-fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* User message — transparent */
+.luciole-message--user {
+  background: transparent;
+}
+
+/* Agent message — white card with accent border */
+.luciole-message--agent {
+  background: var(--luciole-white);
+  border: 1px solid var(--luciole-rule);
+  border-left: 3px solid var(--luciole-accent);
+}
+
+.luciole-message-avatar {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--luciole-rule);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--luciole-serif);
+  font-weight: 700;
+  font-size: var(--luciole-text-sm);
+  background: var(--luciole-paper);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.luciole-message-avatar--agent {
+  background: var(--luciole-ink);
+  color: var(--luciole-white);
+  border-color: var(--luciole-ink);
+}
+
+.luciole-message-meta {
+  display: flex;
+  gap: var(--luciole-space-3);
+  align-items: baseline;
+  margin-bottom: var(--luciole-space-2);
+}
+
+.luciole-message-content {
+  color: var(--luciole-ink-soft);
+}
+.luciole-message-content p { margin-bottom: var(--luciole-space-3); }
+.luciole-message-content p:last-child { margin-bottom: 0; }
+.luciole-message-content ul,
+.luciole-message-content ol {
+  margin: var(--luciole-space-3) 0;
+  padding-left: var(--luciole-space-6);
+}
+.luciole-message-content li { margin-bottom: var(--luciole-space-1); }
+.luciole-message-content code {
+  font-family: var(--luciole-mono);
+  font-size: var(--luciole-text-sm);
+  background: var(--luciole-paper-alt);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.luciole-message-content pre {
+  background: var(--luciole-ink);
+  color: var(--luciole-paper);
+  padding: var(--luciole-space-4);
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: var(--luciole-space-4) 0;
+}
+.luciole-message-content pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+.luciole-message-content a {
+  color: var(--luciole-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.luciole-message-content strong { color: var(--luciole-ink); }
+
+/* Typing indicator */
+.luciole-typing {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: var(--luciole-space-2) 0;
+}
+.luciole-typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--luciole-accent);
+  animation: luciole-dot 1.4s ease-in-out infinite;
+}
+.luciole-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.luciole-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes luciole-dot {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* Sticky chat input at bottom */
+.luciole-chat-input--sticky {
+  position: sticky;
+  bottom: var(--luciole-space-4);
+  margin-top: var(--luciole-space-6);
+  z-index: 10;
+  max-width: 100%;
+  box-shadow: var(--luciole-shadow-md);
+}
+
+/* ============================================================
+   Chat Active State — minimal hero
+   ============================================================ */
+
+body.chat-active .luciole-hero {
+  padding: var(--luciole-space-4) 0;
+  min-height: auto;
+}
+
+body.chat-active .luciole-hero-title,
+body.chat-active .luciole-hero-subtitle,
+body.chat-active .luciole-hero-eyebrow {
+  display: none;
+}
+
+body.chat-active #chat-form {
+  display: none;
+}
+
+body.chat-active .luciole-headlines {
+  display: none;
+}
+
+body.chat-active .luciole-footer {
+  margin-top: var(--luciole-space-8);
+}
+
+/* ============================================================
+   About — Step cards
+   ============================================================ */
+
+.luciole-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--luciole-space-6);
+  margin-top: var(--luciole-space-8);
+}
+
+.luciole-step {
+  padding: var(--luciole-space-6);
+  border-top: var(--luciole-rule-thin);
+}
+
+.luciole-step-number {
+  font-family: var(--luciole-serif);
+  font-weight: 900;
+  font-size: var(--luciole-text-4xl);
+  color: var(--luciole-accent);
+  line-height: 1;
+  margin-bottom: var(--luciole-space-3);
+  opacity: 0.3;
+}
+
+.luciole-step-title {
+  font-family: var(--luciole-sans);
+  font-weight: 600;
+  font-size: var(--luciole-text-base);
+  color: var(--luciole-ink);
+  margin-bottom: var(--luciole-space-2);
+}
+
+.luciole-step-desc {
+  font-family: var(--luciole-sans);
+  font-size: var(--luciole-text-sm);
+  color: var(--luciole-muted);
+  line-height: 1.5;
+}
+
+/* CTA button */
+.luciole-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--luciole-space-3);
+  font-family: var(--luciole-sans);
+  font-weight: 600;
+  font-size: var(--luciole-text-base);
+  letter-spacing: 0.05em;
+  color: var(--luciole-white);
+  background: var(--luciole-ink);
+  border: none;
+  border-radius: 6px;
+  padding: var(--luciole-space-4) var(--luciole-space-8);
+  text-decoration: none;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+.luciole-cta:hover {
+  background: var(--luciole-accent);
+  color: var(--luciole-white);
+  transform: translateY(-2px);
+  box-shadow: var(--luciole-shadow-md);
+}
+.luciole-cta:active { transform: translateY(0); }
+
+/* ============================================================
+   Footer — 3 columns
+   ============================================================ */
+
+.luciole-footer {
+  padding: var(--luciole-space-8) 0 var(--luciole-space-6);
+  margin-top: var(--luciole-space-24);
+}
+
+.luciole-footer-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--luciole-space-8);
+  max-width: var(--luciole-max-width);
+  margin: 0 auto;
+  padding: 0 var(--luciole-gutter);
+}
+
+.luciole-footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--luciole-space-1);
+}
+.luciole-footer-col:nth-child(2) { text-align: center; }
+.luciole-footer-col:last-child { text-align: right; }
+
+.luciole-footer-label {
+  font-family: var(--luciole-sans);
+  font-weight: 500;
+  font-size: var(--luciole-text-xs);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--luciole-ink);
+  margin-bottom: var(--luciole-space-1);
+}
+
+.luciole-footer a {
+  color: var(--luciole-muted);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s;
+}
+.luciole-footer a:hover {
+  border-bottom-color: var(--luciole-accent);
+  color: var(--luciole-ink);
+}
+
+/* ============================================================
+   Underscore pulsing animation
+   ============================================================ */
+
+.luciole-underscore {
+  color: var(--luciole-accent);
+  animation: blink-luciole 2s ease-in-out infinite;
+}
+
+@keyframes blink-luciole {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.15; }
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+
+@media (max-width: 1024px) {
+  .luciole-hero {
+    padding: var(--luciole-space-16) 0 var(--luciole-space-8);
+    min-height: 40vh;
+  }
+  .luciole-hero-title {
+    font-size: clamp(28px, 6vw, 48px);
+  }
+  .luciole-steps {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --luciole-gutter: 16px;
+  }
+  .luciole-masthead-row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: var(--luciole-space-2);
+  }
+  .luciole-masthead-row .t-meta { display: none; }
+  .luciole-nav { gap: var(--luciole-space-6); }
+  .luciole-hero {
+    padding: var(--luciole-space-12) 0 var(--luciole-space-6);
+    min-height: auto;
+  }
+  .luciole-hero-title {
+    font-size: clamp(24px, 8vw, 40px);
+  }
+  .luciole-headlines {
+    grid-template-columns: 1fr;
+  }
+  .luciole-headline-card:first-child {
+    grid-row: auto;
+  }
+  .luciole-headline-card:first-child .t-headline-sm {
+    font-size: var(--luciole-text-lg);
+  }
+  .luciole-steps {
+    grid-template-columns: 1fr;
+  }
+  .luciole-footer-row {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: var(--luciole-space-6);
+  }
+  .luciole-footer-col,
+  .luciole-footer-col:nth-child(2),
+  .luciole-footer-col:last-child {
+    text-align: center;
+  }
+}
+
+/* ============================================================
+   Accessibility
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .luciole-chat-input:focus-within {
+    transform: none;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--luciole-accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--luciole-accent);
+  color: var(--luciole-white);
+}
+
+/* Screen-reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

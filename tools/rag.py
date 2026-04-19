@@ -30,6 +30,12 @@ try:
 except ImportError:
     HAS_BM25 = False
 
+try:
+    import cohere
+    HAS_COHERE = bool(os.getenv("COHERE_API_KEY"))
+except ImportError:
+    HAS_COHERE = False
+
 logger = logging.getLogger(__name__)
 
 EMBEDDINGS_FILE = os.path.join(DATA_DIR, "embeddings.json")
@@ -369,6 +375,7 @@ def rechercher_articles(
     pertinence_min: int | None = None,
     avec_fraicheur: bool = True,
     hyde: bool = True,
+    rerank: bool = True,
 ) -> list[dict]:
     """
     Recherche sémantique avec filtrage, score hybride, chunking et HyDE.
@@ -381,6 +388,7 @@ def rechercher_articles(
         pertinence_min: Filtre sur le score de pertinence LLM (ex: 7).
         avec_fraicheur: Si True, intègre un score de fraîcheur au classement.
         hyde:           Si True, utilise HyDE pour enrichir la requête.
+        rerank:         Si True et Cohere disponible, re-rank les résultats.
 
     Returns:
         Liste de dicts triés par score hybride décroissant, dédupliqués par article.
@@ -516,8 +524,60 @@ def rechercher_articles(
     # Trier par score final décroissant
     resultats.sort(key=lambda r: r["score_final"], reverse=True)
 
+    # --- Re-ranking Cohere (M6E4) ---
+    if rerank and HAS_COHERE and len(resultats) > 1:
+        # Récupérer plus de résultats pour le re-ranking, puis affiner
+        resultats = rerank_cohere(query, resultats, top_n=n)
+
     logger.info(f"[RAG] {len(resultats)} article(s) retourné(s) (seuil={SCORE_MINIMUM}).")
     return resultats
+
+
+# ---------------------------------------------------------------------------
+# Re-ranking Cohere (M6E4)
+# ---------------------------------------------------------------------------
+
+_cohere_client = None
+
+
+def _get_cohere_client():
+    """Client Cohere lazy init (singleton)."""
+    global _cohere_client
+    if _cohere_client is None and HAS_COHERE:
+        _cohere_client = cohere.Client(api_key=os.getenv("COHERE_API_KEY"))
+    return _cohere_client
+
+
+def rerank_cohere(query: str, resultats: list[dict], top_n: int = 5) -> list[dict]:
+    """
+    Re-rank les résultats RAG avec Cohere rerank-multilingual-v3.0.
+    Fallback : retourne les résultats inchangés si Cohere est indisponible.
+    """
+    client = _get_cohere_client()
+    if client is None or not resultats:
+        return resultats[:top_n]
+
+    docs = [r.get("resume_extrait", r.get("titre", "")) for r in resultats]
+
+    try:
+        response = client.rerank(
+            model="rerank-multilingual-v3.0",
+            query=query,
+            documents=docs,
+            top_n=min(top_n, len(docs)),
+        )
+        reranked = []
+        for r in response.results:
+            item = resultats[r.index].copy()
+            item["rerank_score"] = round(r.relevance_score, 4)
+            reranked.append(item)
+
+        logger.info(f"[RAG] Reranking Cohere : {len(resultats)} → {len(reranked)} résultats")
+        return reranked
+
+    except Exception as e:
+        logger.warning(f"[RAG] Reranking Cohere échoué (fallback sans rerank) : {e}")
+        return resultats[:top_n]
 
 
 # ---------------------------------------------------------------------------

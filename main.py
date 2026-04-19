@@ -9,6 +9,7 @@ import logging
 import sys
 
 from llm import appeler_llm, appeler_llm_json, appeler_llm_tools
+from config import MODEL_FAST, MODEL_POWERFUL
 from tools.search import search_web
 from tools.database import query_db
 from tools.rag import rechercher_articles
@@ -113,6 +114,47 @@ SYSTEM_REACT = (
     "(IA, Cloud, Cybersécurité, GPU, etc.), SQLite interne (query_db). "
     "Pas d'accès académique, temps réel ou payant."
 )
+
+
+# ---------------------------------------------------------------------------
+# Cascade M6E3 — Classifier la complexité de la requête
+# ---------------------------------------------------------------------------
+PROMPT_COMPLEXITE = """Classe cette requête utilisateur.
+Réponds UNIQUEMENT en JSON avec les clés complexite et categorie.
+- complexite = simple si : salutation, FAQ, reformulation, lookup direct, question factuelle courte
+- complexite = complexe si : raisonnement multi-étapes, synthèse, code, analyse comparative
+- categorie = salutation | faq | raisonnement | code | analyse
+Requête : {question}"""
+
+
+@observe(name="classifier_complexite")
+def classifier_complexite(requete: str) -> dict:
+    """
+    Classifie la complexité d'une requête avec le modèle rapide.
+    Retourne {"complexite": "simple"|"complexe", "categorie": "..."}.
+    Fallback vers "complexe" si le parsing échoue.
+    """
+    try:
+        result = appeler_llm_json(
+            PROMPT_COMPLEXITE.format(question=requete),
+            schema={"complexite": "simple|complexe", "categorie": "salutation|faq|raisonnement|code|analyse"},
+            system_prompt="Tu es un classificateur de requêtes. Réponds uniquement en JSON.",
+        )
+        if result.get("complexite") not in ("simple", "complexe"):
+            result["complexite"] = "complexe"
+        if "categorie" not in result:
+            result["categorie"] = "raisonnement"
+        return result
+    except Exception as e:
+        logger.warning(f"[Cascade] Classification échouée, fallback complexe : {e}")
+        return {"complexite": "complexe", "categorie": "raisonnement"}
+
+
+def choisir_modele(complexite: str) -> str:
+    """Retourne le modèle à utiliser selon la complexité."""
+    if complexite == "simple":
+        return MODEL_FAST
+    return MODEL_POWERFUL
 
 
 # ---------------------------------------------------------------------------
@@ -336,7 +378,7 @@ _FORMATS_PAR_INTENT = {
 
 
 @observe(name="formuler_reponse")
-def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general", historique: list[dict] | None = None) -> str:
+def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general", historique: list[dict] | None = None, model: str | None = None) -> str:
     """Demande au LLM de formuler une réponse finale à partir du résultat de l'outil."""
     # Correction Log B : instruction stricte si l'outil a échoué ou retourné vide
     if resultat_outil.startswith("[ERREUR_OUTIL]"):
@@ -364,7 +406,7 @@ def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general",
         f"Résultat de l'outil :\n{resultat_outil}\n\n"
         f"{instruction}"
     )
-    return appeler_llm(prompt, historique=historique)
+    return appeler_llm(prompt, historique=historique, model=model)
 
 
 # ---------------------------------------------------------------------------
@@ -390,6 +432,14 @@ def agent_react(requete: str) -> str:
 
     # Langfuse : taguer la trace avec la requête utilisateur
     update_current_trace(input=requete, tags=["react-agent"])
+
+    # --- Cascade M6E3 : classifier la complexité ---
+    routing = classifier_complexite(requete)
+    model_cascade = choisir_modele(routing["complexite"])
+    logger.info(
+        f"[Cascade] complexite={routing['complexite']}, "
+        f"categorie={routing.get('categorie', '?')}, model={model_cascade}"
+    )
 
     # --- Garde de sécurité (M4E5) ---
     check = analyser_securite(requete)
@@ -417,7 +467,8 @@ def agent_react(requete: str) -> str:
             logger.warning(f"[ReAct] Outil '{outil}' déjà essayé — abandon, réponse directe.")
             mark_fallback(f"outil_repete:{outil}")
             reponse = appeler_llm(
-                f"Réponds à cette question en reconnaissant tes limites si nécessaire : {requete}"
+                f"Réponds à cette question en reconnaissant tes limites si nécessaire : {requete}",
+                model=model_cascade,
             )
             break
         outils_essayes.append(outil)
@@ -429,7 +480,7 @@ def agent_react(requete: str) -> str:
             logger.warning(f"[ReAct] Itération {iteration} — outil en erreur, nouvelle tentative.")
             continue
 
-        reponse = formuler_reponse(requete, resultat, intent=decision.get("intent", "general"), historique=historique)
+        reponse = formuler_reponse(requete, resultat, intent=decision.get("intent", "general"), historique=historique, model=model_cascade)
         break
     else:
         logger.error("[ReAct] Max itérations atteint — abandon.")

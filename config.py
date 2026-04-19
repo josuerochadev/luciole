@@ -5,7 +5,9 @@ load_dotenv()
 
 # --- Modèle et paramètres LLM ---
 MODEL_DEFAULT = "gpt-4o-mini"
-MODEL_VISION = "gpt-4o"  # Vision nécessite gpt-4o (pas mini)
+MODEL_FAST = "gpt-4o-mini"        # Cascade M6E3 : modèle rapide/économique
+MODEL_POWERFUL = "gpt-4o"          # Cascade M6E3 : modèle puissant (raisonnement complexe)
+MODEL_VISION = "gpt-4o"            # Vision nécessite gpt-4o (pas mini)
 TEMPERATURE = 0.3
 MAX_TOKENS = 2048
 

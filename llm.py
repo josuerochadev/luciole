@@ -3,7 +3,7 @@ import re
 import openai
 import time
 import logging
-from config import OPENAI_API_KEY, MODEL_DEFAULT, TEMPERATURE, MAX_TOKENS, SYSTEM_PROMPT
+from config import OPENAI_API_KEY, MODEL_DEFAULT, MODEL_FAST, MODEL_POWERFUL, TEMPERATURE, MAX_TOKENS, SYSTEM_PROMPT
 
 # Monitoring : hook optionnel — no-op si le module n'est pas présent (ex: tests isolés)
 try:
@@ -131,6 +131,7 @@ def appeler_llm(
     system_prompt: str = SYSTEM_PROMPT,
     retries: int = 3,
     historique: list[dict] | None = None,
+    model: str | None = None,
 ) -> str:
     """
     Appelle l'API OpenAI et retourne le texte généré.
@@ -140,6 +141,7 @@ def appeler_llm(
         system_prompt: Le prompt système (rôle de l'agent).
         retries: Nombre de tentatives en cas d'erreur temporaire.
         historique: Messages précédents (user/assistant) à injecter pour le contexte.
+        model: Modèle à utiliser (si None, utilise MODEL_DEFAULT).
 
     Returns:
         Le texte de la réponse du modèle.
@@ -148,6 +150,7 @@ def appeler_llm(
         ValueError: Si la clé API est absente ou invalide.
         RuntimeError: Si toutes les tentatives échouent.
     """
+    effective_model = model or MODEL_DEFAULT
     messages = [{"role": "system", "content": system_prompt}]
     if historique:
         messages.extend(historique)
@@ -156,7 +159,7 @@ def appeler_llm(
     for tentative in range(1, retries + 1):
         try:
             response = get_openai_client().chat.completions.create(
-                model=MODEL_DEFAULT,
+                model=effective_model,
                 temperature=TEMPERATURE,
                 max_tokens=MAX_TOKENS,
                 messages=messages,

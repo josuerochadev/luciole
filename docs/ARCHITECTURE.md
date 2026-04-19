@@ -234,20 +234,49 @@ Agent: "Vous vous appelez Alice."   ← grâce aux 10 derniers messages en mémo
 ## 9. Structure des fichiers
 
 ```
-agent-fil-rouge/
+fil-rouge/
 │
 ├── config.py          → paramètres globaux (modèle, sources RSS, thèmes, RGPD)
 ├── llm.py             → appeler_llm(), appeler_llm_json(), resumer_article()
 ├── pipeline.py        → pipeline quotidien RSS → LLM → stockage
 ├── main.py            → boucle ReAct interactive
+├── api.py             → API FastAPI (endpoints /ask, /digest, /feedback, etc.)
+├── security.py        → middleware sécurité (rate limiting, headers)
+├── monitoring.py      → métriques et monitoring
+├── tracing.py         → intégration Langfuse (tracing LLM)
+├── seed.py            → peuplement initial de la base d'articles
+├── generate_traffic.py → génération de trafic pour tests de charge
 │
 ├── tools/
 │   ├── search.py      → recuperer_articles_rss(), search_web()
 │   ├── database.py    → sauvegarder_articles(), query_db() SQLite
-│   └── rag.py         → indexer_article(), rechercher_articles()
+│   ├── rag.py         → indexer_article(), rechercher_articles()
+│   ├── email.py       → génération et envoi de rapports HTML
+│   ├── scraper.py     → scraping de pages web
+│   ├── transcribe.py  → transcription audio (Whisper)
+│   └── vision.py      → analyse d'images (GPT-4o vision)
 │
 ├── memory/
 │   └── store.py       → store(), recall(), clear() — mémoire conversationnelle
+│
+├── static/            → assets frontend (design system Luciole)
+│   ├── luciole.css        CSS du design system
+│   ├── luciole-chat.js    logique chat côté client
+│   └── *.svg              favicon et wordmark
+│
+├── templates/         → templates Jinja2
+│   ├── base.html          layout principal
+│   ├── index.html         interface chat
+│   ├── dashboard.html     tableau de bord articles
+│   ├── about.html         page à propos
+│   └── digest.html        template email digest
+│
+├── tests/             → tests unitaires et d'intégration
+│
+├── Dockerfile         → image Docker de production
+├── docker-compose.yml → orchestration Docker
+├── render.yaml        → configuration déploiement Render
+├── start.sh           → script de démarrage (pipeline au cold start)
 │
 ├── data/              → généré automatiquement
 │   ├── articles.json      articles enrichis (90j)
@@ -257,7 +286,9 @@ agent-fil-rouge/
 │   ├── test_clients.db    base SQLite de test
 │   └── historique_envois.json
 │
-└── test_*.py          → tests unitaires par exercice
+└── docs/              → documentation technique
+    ├── ARCHITECTURE.md    ce fichier
+    └── ROADMAP-UX.md      roadmap UX/UI
 ```
 
 ---
@@ -285,12 +316,18 @@ agent-fil-rouge/
 
 ---
 
-## 11. Ce qui n'est pas encore fait
+## 11. État des fonctionnalités
 
 | Fonctionnalité | Statut |
 |---|---|
-| Envoi email quotidien | À implémenter (`smtplib`) |
-| Interface utilisateur | Hors périmètre (cahier des charges) |
+| Envoi email quotidien | Implémenté (`tools/email.py`, SMTP) |
+| Interface utilisateur web | Implémenté (FastAPI + templates Jinja2 + design system Luciole) |
+| Pipeline automatisé au démarrage | Implémenté (`start.sh`) |
+| Observabilité LLM (Langfuse) | Implémenté (`tracing.py`) |
+| Déploiement Docker / Render | Implémenté (`Dockerfile`, `render.yaml`) |
+| Outils multimodaux (audio, vision) | Implémenté (`tools/transcribe.py`, `tools/vision.py`) |
+| Historique de conversations persistant | À implémenter (voir `docs/ROADMAP-UX.md` Phase 1) |
+| Comptes utilisateurs | À implémenter (voir `docs/ROADMAP-UX.md` Phase 2) |
+| Streaming des réponses (SSE) | À implémenter (voir `docs/ROADMAP-UX.md` Phase 3) |
 | Traduction des articles EN → FR | Hors périmètre |
 | Réseaux sociaux (Twitter/LinkedIn) | Hors périmètre |
-| Pipeline automatisé (cron/scheduler) | À configurer |

@@ -1,6 +1,7 @@
 """
 Gestion de la mémoire conversationnelle de l'agent.
 Stocke les messages dans une base SQLite persistante (DATA_DIR/memory.db).
+Supporte aussi le chargement de contexte depuis l'historique conversations (database.py).
 """
 import logging
 import sqlite3
@@ -15,6 +16,16 @@ LIMITE_MEMOIRE = 50
 
 _DB_PATH = f"{DATA_DIR}/memory.db"
 _session_id: str = str(uuid.uuid4())
+
+# Conversation active (optionnel, alimenté par l'API)
+_active_conversation_id: str | None = None
+
+
+def set_active_conversation(conv_id: str | None) -> None:
+    """Définit la conversation active pour le contexte mémoire."""
+    global _active_conversation_id
+    _active_conversation_id = conv_id
+    logger.debug(f"[memory] Conversation active : {conv_id}")
 
 
 def _get_connection() -> sqlite3.Connection:

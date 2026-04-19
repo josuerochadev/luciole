@@ -564,6 +564,165 @@ img { max-width: 100%; display: block; }
 }
 
 /* ============================================================
+   Sidebar — Conversation history
+   ============================================================ */
+
+.luciole-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
+  background: var(--luciole-white);
+  border-right: var(--luciole-rule-medium);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.luciole-sidebar.open {
+  transform: translateX(0);
+}
+
+.luciole-sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--luciole-space-4) var(--luciole-space-4);
+  border-bottom: var(--luciole-rule-thin);
+  flex-shrink: 0;
+}
+
+.luciole-sidebar-new {
+  font-family: var(--luciole-sans);
+  font-weight: 500;
+  font-size: var(--luciole-text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--luciole-white);
+  background: var(--luciole-ink);
+  border: none;
+  border-radius: 4px;
+  padding: var(--luciole-space-2) var(--luciole-space-3);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.luciole-sidebar-new:hover {
+  background: var(--luciole-accent);
+}
+
+.luciole-sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--luciole-space-2) 0;
+}
+
+.luciole-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--luciole-space-2);
+  padding: var(--luciole-space-3) var(--luciole-space-4);
+  cursor: pointer;
+  transition: background 0.15s;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+.luciole-sidebar-item:hover {
+  background: var(--luciole-paper-alt);
+}
+.luciole-sidebar-item.active {
+  background: var(--luciole-paper-alt);
+  border-left: 3px solid var(--luciole-accent);
+}
+
+.luciole-sidebar-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.luciole-sidebar-item-title {
+  font-family: var(--luciole-sans);
+  font-weight: 500;
+  font-size: var(--luciole-text-sm);
+  color: var(--luciole-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.luciole-sidebar-item-date {
+  font-family: var(--luciole-sans);
+  font-size: 11px;
+  color: var(--luciole-muted);
+  margin-top: 2px;
+  display: block;
+}
+
+.luciole-sidebar-delete {
+  background: transparent;
+  border: none;
+  color: var(--luciole-muted);
+  cursor: pointer;
+  font-size: var(--luciole-text-sm);
+  padding: var(--luciole-space-1);
+  border-radius: 3px;
+  opacity: 0;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.luciole-sidebar-item:hover .luciole-sidebar-delete {
+  opacity: 1;
+}
+.luciole-sidebar-delete:hover {
+  color: var(--luciole-accent);
+  background: var(--luciole-accent-soft);
+}
+
+/* Sidebar overlay (mobile) */
+.luciole-sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 199;
+}
+.luciole-sidebar-overlay.visible {
+  display: block;
+}
+
+/* Sidebar toggle button — inline in masthead */
+.luciole-sidebar-toggle {
+  background: transparent;
+  border: 1px solid var(--luciole-rule);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: var(--luciole-text-lg);
+  color: var(--luciole-ink);
+  line-height: 1;
+  margin-right: var(--luciole-space-2);
+}
+.luciole-sidebar-toggle:hover {
+  background: var(--luciole-paper-alt);
+  border-color: var(--luciole-ink);
+}
+
+/* Empty state */
+.luciole-sidebar-empty {
+  padding: var(--luciole-space-6) var(--luciole-space-4);
+  text-align: center;
+  color: var(--luciole-muted);
+  font-size: var(--luciole-text-sm);
+  font-style: italic;
+}
+
+/* ============================================================
    Chat Active State — minimal hero
    ============================================================ */
 
@@ -735,6 +894,20 @@ body.chat-active .luciole-footer {
   }
 }
 
+/* Desktop: sidebar always visible when opened */
+@media (min-width: 769px) {
+  .luciole-sidebar.open ~ .luciole-container,
+  body.sidebar-open .luciole-container {
+    margin-left: 280px;
+  }
+  body.sidebar-open .luciole-masthead {
+    padding-left: 280px;
+  }
+  body.sidebar-open .luciole-footer {
+    margin-left: 280px;
+  }
+}
+
 @media (max-width: 768px) {
   :root {
     --luciole-gutter: 16px;
@@ -800,6 +973,213 @@ body.chat-active .luciole-footer {
 ::selection {
   background: var(--luciole-accent);
   color: var(--luciole-white);
+}
+
+/* ============================================================
+   Auth — Login / Register page
+   ============================================================ */
+
+.luciole-auth {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  padding: var(--luciole-space-12) 0;
+}
+
+.luciole-auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--luciole-white);
+  border: 1px solid var(--luciole-rule);
+  border-radius: 8px;
+  padding: var(--luciole-space-12) var(--luciole-space-8);
+  box-shadow: var(--luciole-shadow-md);
+}
+
+.luciole-auth-title {
+  font-family: var(--luciole-serif);
+  font-weight: 700;
+  font-size: var(--luciole-text-3xl);
+  color: var(--luciole-ink);
+  text-align: center;
+  margin-bottom: var(--luciole-space-1);
+}
+
+.luciole-auth-subtitle {
+  font-family: var(--luciole-sans);
+  font-size: var(--luciole-text-sm);
+  color: var(--luciole-muted);
+  text-align: center;
+  margin-bottom: var(--luciole-space-8);
+}
+
+.luciole-auth-tabs {
+  display: flex;
+  border-bottom: var(--luciole-rule-medium);
+  margin-bottom: var(--luciole-space-6);
+}
+
+.luciole-auth-tab {
+  flex: 1;
+  font-family: var(--luciole-sans);
+  font-weight: 500;
+  font-size: var(--luciole-text-sm);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--luciole-muted);
+  background: transparent;
+  border: none;
+  padding: var(--luciole-space-3) 0;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.luciole-auth-tab::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.luciole-auth-tab.active {
+  color: var(--luciole-ink);
+}
+
+.luciole-auth-tab.active::after {
+  background: var(--luciole-accent);
+}
+
+.luciole-auth-tab:hover {
+  color: var(--luciole-ink);
+}
+
+.luciole-auth-field {
+  margin-bottom: var(--luciole-space-4);
+}
+
+.luciole-auth-field label {
+  display: block;
+  margin-bottom: var(--luciole-space-2);
+}
+
+.luciole-auth-input {
+  width: 100%;
+  font-family: var(--luciole-sans);
+  font-size: var(--luciole-text-base);
+  padding: var(--luciole-space-3) var(--luciole-space-4);
+  border: 1px solid var(--luciole-rule);
+  border-radius: 6px;
+  background: var(--luciole-paper);
+  color: var(--luciole-ink);
+  outline: none;
+  transition: all 0.2s;
+}
+
+.luciole-auth-input:focus {
+  border-color: var(--luciole-accent);
+  box-shadow: 0 0 0 3px var(--luciole-accent-soft);
+  background: var(--luciole-white);
+}
+
+.luciole-auth-input::placeholder {
+  color: var(--luciole-muted);
+  font-style: italic;
+}
+
+.luciole-auth-error {
+  font-family: var(--luciole-sans);
+  font-size: var(--luciole-text-sm);
+  color: var(--luciole-accent);
+  background: var(--luciole-accent-soft);
+  padding: var(--luciole-space-3) var(--luciole-space-4);
+  border-radius: 4px;
+  margin-bottom: var(--luciole-space-4);
+}
+
+.luciole-auth-submit {
+  width: 100%;
+  font-family: var(--luciole-sans);
+  font-weight: 600;
+  font-size: var(--luciole-text-base);
+  letter-spacing: 0.05em;
+  color: var(--luciole-white);
+  background: var(--luciole-ink);
+  border: none;
+  border-radius: 6px;
+  padding: var(--luciole-space-4);
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: var(--luciole-space-4);
+}
+
+.luciole-auth-submit:hover {
+  background: var(--luciole-accent);
+}
+
+.luciole-auth-submit:active {
+  transform: scale(0.98);
+}
+
+/* User info in masthead */
+.luciole-masthead-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--luciole-space-3);
+}
+
+.luciole-user-info {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--luciole-space-2);
+  margin-left: var(--luciole-space-3);
+}
+
+.luciole-user-name {
+  font-family: var(--luciole-sans);
+  font-weight: 500;
+  font-size: var(--luciole-text-xs);
+  letter-spacing: 0.05em;
+  color: var(--luciole-ink);
+}
+
+.luciole-logout-btn {
+  font-family: var(--luciole-sans);
+  font-size: var(--luciole-text-base);
+  color: var(--luciole-muted);
+  background: transparent;
+  border: 1px solid var(--luciole-rule);
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+}
+
+.luciole-logout-btn:hover {
+  color: var(--luciole-accent);
+  border-color: var(--luciole-accent);
+  background: var(--luciole-accent-soft);
+}
+
+.luciole-login-link {
+  font-family: var(--luciole-sans);
+  font-weight: 500;
+  font-size: var(--luciole-text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--luciole-accent) !important;
+  margin-left: var(--luciole-space-3);
 }
 
 /* Screen-reader only */

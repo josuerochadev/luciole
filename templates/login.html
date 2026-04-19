@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="luciole-auth">
+  <div class="luciole-auth-card">
+    <h1 class="luciole-auth-title">
+      luciole<span class="luciole-underscore">_</span>
+    </h1>
+    <p class="luciole-auth-subtitle">La lumiere dans le bruit</p>
+
+    <!-- Tabs -->
+    <div class="luciole-auth-tabs">
+      <button class="luciole-auth-tab active" data-tab="login">Connexion</button>
+      <button class="luciole-auth-tab" data-tab="register">Inscription</button>
+    </div>
+
+    <!-- Login form -->
+    <form class="luciole-auth-form" id="login-form">
+      <div class="luciole-auth-field">
+        <label for="login-email" class="t-eyebrow">Email</label>
+        <input type="email" id="login-email" class="luciole-auth-input" placeholder="vous@example.com" required autocomplete="email">
+      </div>
+      <div class="luciole-auth-field">
+        <label for="login-password" class="t-eyebrow">Mot de passe</label>
+        <input type="password" id="login-password" class="luciole-auth-input" placeholder="Votre mot de passe" required autocomplete="current-password" minlength="6">
+      </div>
+      <div class="luciole-auth-error" id="login-error" hidden></div>
+      <button type="submit" class="luciole-auth-submit">
+        Se connecter <span class="luciole-submit-arrow" aria-hidden="true">&rarr;</span>
+      </button>
+    </form>
+
+    <!-- Register form -->
+    <form class="luciole-auth-form" id="register-form" hidden>
+      <div class="luciole-auth-field">
+        <label for="register-name" class="t-eyebrow">Nom d'affichage</label>
+        <input type="text" id="register-name" class="luciole-auth-input" placeholder="Votre nom" maxlength="100" autocomplete="name">
+      </div>
+      <div class="luciole-auth-field">
+        <label for="register-email" class="t-eyebrow">Email</label>
+        <input type="email" id="register-email" class="luciole-auth-input" placeholder="vous@example.com" required autocomplete="email">
+      </div>
+      <div class="luciole-auth-field">
+        <label for="register-password" class="t-eyebrow">Mot de passe</label>
+        <input type="password" id="register-password" class="luciole-auth-input" placeholder="6 caracteres minimum" required autocomplete="new-password" minlength="6">
+      </div>
+      <div class="luciole-auth-error" id="register-error" hidden></div>
+      <button type="submit" class="luciole-auth-submit">
+        Creer un compte <span class="luciole-submit-arrow" aria-hidden="true">&rarr;</span>
+      </button>
+    </form>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  const tabs = document.querySelectorAll('.luciole-auth-tab');
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const loginError = document.getElementById('login-error');
+  const registerError = document.getElementById('register-error');
+
+  // Tab switching
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      tabs.forEach(function (t) { t.classList.remove('active'); });
+      tab.classList.add('active');
+      const target = tab.getAttribute('data-tab');
+      loginForm.hidden = target !== 'login';
+      registerForm.hidden = target !== 'register';
+      loginError.hidden = true;
+      registerError.hidden = true;
+    });
+  });
+
+  function showError(el, msg) {
+    el.textContent = msg;
+    el.hidden = false;
+  }
+
+  // Login
+  loginForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    loginError.hidden = true;
+
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+
+    try {
+      const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        showError(loginError, data.detail || 'Erreur de connexion.');
+        return;
+      }
+
+      window.location.href = '/';
+    } catch {
+      showError(loginError, 'Impossible de contacter le serveur.');
+    }
+  });
+
+  // Register
+  registerForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    registerError.hidden = true;
+
+    const display_name = document.getElementById('register-name').value.trim();
+    const email = document.getElementById('register-email').value.trim();
+    const password = document.getElementById('register-password').value;
+
+    if (password.length < 6) {
+      showError(registerError, 'Le mot de passe doit contenir au moins 6 caracteres.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, display_name: display_name || null }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        showError(registerError, data.detail || "Erreur lors de l'inscription.");
+        return;
+      }
+
+      window.location.href = '/';
+    } catch {
+      showError(registerError, 'Impossible de contacter le serveur.');
+    }
+  });
+})();
+</script>
+{% endblock %}

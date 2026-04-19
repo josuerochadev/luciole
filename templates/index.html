@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!-- Sidebar — Conversation history -->
+<aside class="luciole-sidebar" id="sidebar">
+  <div class="luciole-sidebar-header">
+    <span class="t-eyebrow">Historique</span>
+    <button class="luciole-sidebar-new" id="sidebar-new-btn" aria-label="Nouvelle conversation">
+      + Nouveau
+    </button>
+  </div>
+  <div class="luciole-sidebar-list" id="sidebar-list">
+    <!-- Populated by JS -->
+  </div>
+</aside>
+
+<!-- Sidebar overlay (mobile) -->
+<div class="luciole-sidebar-overlay" id="sidebar-overlay"></div>
+
 <!-- Hero — Centered, chat-first -->
 <section class="luciole-hero" id="hero-section">
   <span class="t-eyebrow-accent luciole-hero-eyebrow">En direct · Conversationnel</span>

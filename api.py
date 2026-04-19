@@ -4,16 +4,21 @@ API FastAPI pour l'agent de veille technologique.
 - M5E5 : monitoring + KPIs (GET /metrics, GET /metrics/recent).
 - M6   : digest endpoints (GET /digest, POST /digest/send).
 - Luciole_ : interface éditoriale HTML (GET /, GET /about).
+- Phase 1 : historique des conversations persistant (SQLite).
+- Phase 2 : comptes utilisateurs et authentification (JWT).
 """
+import logging
 import os
+import sqlite3
+import time
 from pathlib import Path
 
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -29,6 +34,29 @@ from monitoring import (
 from tools.database import charger_json, noter_article
 from tools.email import envoyer_rapport, generer_html, selectionner_articles
 from config import HISTORIQUE_FILE
+from database import (
+    create_conversation,
+    create_user,
+    get_user_by_email,
+    list_conversations,
+    get_conversation,
+    get_conversation_messages,
+    add_message,
+    delete_conversation,
+    update_conversation_title,
+    get_recent_messages,
+)
+from llm import appeler_llm
+from auth import (
+    COOKIE_NAME,
+    create_access_token,
+    get_current_user,
+    get_optional_user,
+    hash_password,
+    verify_password,
+)
+
+logger = logging.getLogger(__name__)
 
 API_KEY = os.getenv("API_KEY")
 if not API_KEY:
@@ -49,7 +77,7 @@ if ALLOWED_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=ALLOWED_ORIGINS,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "DELETE", "PATCH"],
         allow_headers=["X-API-Key", "Content-Type"],
     )
 
@@ -57,27 +85,122 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 
+# ---------------------------------------------------------------------------
+# Auth endpoints (Phase 2)
+# ---------------------------------------------------------------------------
+
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=6, max_length=128)
+    display_name: str | None = Field(default=None, max_length=100)
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=1)
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    user = await get_optional_user(request)
+    if user:
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse(request, "login.html", {"active_page": "login"})
+
+
+@app.post("/auth/register")
+@limiter.limit("5/minute")
+async def auth_register(request: Request, req: RegisterRequest):
+    # Check if email already exists
+    existing = get_user_by_email(req.email)
+    if existing:
+        raise HTTPException(status_code=409, detail="Un compte existe déjà avec cet email.")
+
+    pw_hash = hash_password(req.password)
+    user = create_user(
+        email=req.email,
+        password_hash=pw_hash,
+        display_name=req.display_name or req.email.split("@")[0],
+    )
+
+    token = create_access_token(user["id"])
+    response = JSONResponse(content={"ok": True, "display_name": user["display_name"]})
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=86400,
+    )
+    return response
+
+
+@app.post("/auth/login")
+@limiter.limit("10/minute")
+async def auth_login(request: Request, req: LoginRequest):
+    user = get_user_by_email(req.email)
+    if not user or not verify_password(req.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect.")
+
+    token = create_access_token(user["id"])
+    response = JSONResponse(content={"ok": True, "display_name": user["display_name"]})
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=86400,
+    )
+    return response
+
+
+@app.post("/auth/logout")
+async def auth_logout():
+    response = JSONResponse(content={"ok": True})
+    response.delete_cookie(key=COOKIE_NAME)
+    return response
+
+
+@app.get("/auth/me")
+async def auth_me(user=Depends(get_current_user)):
+    if isinstance(user, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Non authentifié.")
+    return {"id": user["id"], "email": user["email"], "display_name": user["display_name"]}
+
+
+# ---------------------------------------------------------------------------
+# Pages HTML (protégées par auth)
+# ---------------------------------------------------------------------------
+
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
+    conversation_id: str | None = None
 
 
 class AskResponse(BaseModel):
     reponse: str
+    conversation_id: str
 
 
 @app.get("/", response_class=HTMLResponse)
-async def landing(request: Request):
-    return templates.TemplateResponse(request, "index.html", {"active_page": "chat"})
+async def landing(request: Request, user=Depends(get_current_user)):
+    if isinstance(user, RedirectResponse):
+        return user
+    return templates.TemplateResponse(request, "index.html", {"active_page": "chat", "user": user})
 
 
 @app.get("/about", response_class=HTMLResponse)
-async def about(request: Request):
-    return templates.TemplateResponse(request, "about.html", {"active_page": "about"})
+async def about(request: Request, user=Depends(get_optional_user)):
+    return templates.TemplateResponse(request, "about.html", {"active_page": "about", "user": user})
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    return templates.TemplateResponse(request, "dashboard.html", {"active_page": "dashboard"})
+async def dashboard(request: Request, user=Depends(get_current_user)):
+    if isinstance(user, RedirectResponse):
+        return user
+    return templates.TemplateResponse(request, "dashboard.html", {"active_page": "dashboard", "user": user})
 
 
 @app.get("/health")
@@ -85,18 +208,105 @@ def health():
     return {"status": "ok"}
 
 
+def _generate_title(question: str) -> str:
+    """Génère un titre court pour une conversation à partir du 1er message."""
+    try:
+        title = appeler_llm(
+            f"Génère un titre très court (5 mots max) pour cette conversation. "
+            f"Réponds UNIQUEMENT avec le titre, sans guillemets ni ponctuation finale.\n\n"
+            f"Message : {question}",
+            system_prompt="Tu génères des titres courts et descriptifs.",
+        )
+        return title.strip().strip('"').strip("'")[:80]
+    except Exception as e:
+        logger.warning(f"Échec génération titre : {e}")
+        return question[:50] + ("…" if len(question) > 50 else "")
+
+
 @app.post("/ask", response_model=AskResponse)
 @limiter.limit("10/minute")
-def ask(request: Request, req: AskRequest, x_api_key: str | None = Header(default=None)):
-    _verifier_api_key(x_api_key, request)
+def ask(request: Request, req: AskRequest, user=Depends(get_current_user)):
+    if isinstance(user, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Non authentifié.")
+
+    # Créer ou récupérer la conversation
+    conv_id = req.conversation_id
+    is_new = False
+    if not conv_id:
+        conv = create_conversation(user_id=user["id"])
+        conv_id = conv["id"]
+        is_new = True
+    else:
+        conv = get_conversation(conv_id)
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation introuvable.")
+
+    # Sauvegarder le message utilisateur
+    add_message(conv_id, "user", req.question)
+
+    # Appeler l'agent
     start_request(req.question)
+    t0 = time.time()
     try:
         reponse = agent_react(req.question)
-    except Exception as exc:  # noqa: BLE001 — on veut tout capturer pour le monitoring
+    except Exception as exc:
         end_request(error=f"{type(exc).__name__}: {exc}")
         raise
+    latency_ms = int((time.time() - t0) * 1000)
     end_request()
-    return AskResponse(reponse=reponse)
+
+    # Sauvegarder la réponse
+    add_message(conv_id, "assistant", reponse, latency_ms=latency_ms)
+
+    # Générer un titre au 1er message
+    if is_new:
+        title = _generate_title(req.question)
+        update_conversation_title(conv_id, title)
+
+    return AskResponse(reponse=reponse, conversation_id=conv_id)
+
+
+# ---------------------------------------------------------------------------
+# Conversations endpoints (Phase 1 + Phase 2 user scoping)
+# ---------------------------------------------------------------------------
+
+@app.get("/conversations")
+def conversations_list(request: Request, user=Depends(get_current_user)):
+    if isinstance(user, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Non authentifié.")
+    return list_conversations(user_id=user["id"])
+
+
+@app.get("/conversations/{conv_id}/messages")
+def conversation_messages(conv_id: str, request: Request, user=Depends(get_current_user)):
+    if isinstance(user, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Non authentifié.")
+    conv = get_conversation(conv_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation introuvable.")
+    return get_conversation_messages(conv_id)
+
+
+@app.delete("/conversations/{conv_id}")
+def conversation_delete(conv_id: str, request: Request, user=Depends(get_current_user)):
+    if isinstance(user, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Non authentifié.")
+    if not delete_conversation(conv_id):
+        raise HTTPException(status_code=404, detail="Conversation introuvable.")
+    return {"ok": True}
+
+
+class ConversationUpdateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+
+
+@app.patch("/conversations/{conv_id}")
+def conversation_update(conv_id: str, req: ConversationUpdateRequest, request: Request, user=Depends(get_current_user)):
+    if isinstance(user, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Non authentifié.")
+    if not update_conversation_title(conv_id, req.title):
+        raise HTTPException(status_code=404, detail="Conversation introuvable.")
+    return {"ok": True, "title": req.title}
 
 
 @app.get("/metrics")
@@ -135,9 +345,10 @@ def _verifier_api_key(x_api_key: str | None, request: Request | None = None):
 
 
 @app.get("/digest-page", response_class=HTMLResponse)
-async def digest_page(request: Request):
-    """Page de gestion du digest email."""
-    return templates.TemplateResponse(request, "digest.html", {"active_page": "digest"})
+async def digest_page(request: Request, user=Depends(get_current_user)):
+    if isinstance(user, RedirectResponse):
+        return user
+    return templates.TemplateResponse(request, "digest.html", {"active_page": "digest", "user": user})
 
 
 @app.get("/digest", response_class=HTMLResponse)

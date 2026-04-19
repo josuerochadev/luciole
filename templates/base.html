@@ -30,13 +30,26 @@
   <header class="luciole-masthead">
     <div class="luciole-masthead-row">
       <span class="t-meta luciole-status" id="api-status">
+        <button class="luciole-sidebar-toggle" id="sidebar-toggle" aria-label="Ouvrir l'historique" style="display:none;">&#9776;</button>
         <span class="luciole-status-dot" id="status-dot"></span>
         <span id="status-text">En ligne</span>
       </span>
       <a href="/" class="luciole-wordmark-link" aria-label="luciole_">
         <span class="luciole-wordmark">luciole<span class="luciole-underscore">_</span></span>
       </a>
-      <span class="t-meta" id="today-date"></span>
+      <span class="t-meta luciole-masthead-right">
+        <span id="today-date"></span>
+        {% if user %}
+          <span class="luciole-user-info">
+            <span class="luciole-user-name">{{ user.display_name or user.email }}</span>
+            <button class="luciole-logout-btn" id="logout-btn" title="Déconnexion">&times;</button>
+          </span>
+        {% else %}
+          {% if active_page != "login" %}
+            <a href="/login" class="luciole-login-link">Connexion</a>
+          {% endif %}
+        {% endif %}
+      </span>
     </div>
     <nav class="luciole-nav" aria-label="Navigation principale">
       <a href="/" {% if active_page == "chat" %}class="active"{% endif %}>Chat</a>
@@ -85,6 +98,15 @@
       if (dot) dot.classList.add('luciole-status-dot--offline');
       if (text) text.textContent = 'Hors ligne';
     });
+
+    // Logout handler
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async function () {
+        await fetch('/auth/logout', { method: 'POST' });
+        window.location.href = '/login';
+      });
+    }
   </script>
 
   {% block scripts %}{% endblock %}

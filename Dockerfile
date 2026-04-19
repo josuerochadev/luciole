@@ -6,8 +6,8 @@
 #   OPENAI_API_KEY          — Cle API OpenAI (obligatoire)
 #   SMTP_HOST               — Serveur SMTP (defaut: smtp.gmail.com)
 #   SMTP_PORT               — Port SMTP (defaut: 587)
-#   SMTP_USER               — Utilisateur SMTP
 #   SMTP_PASSWORD            — Mot de passe SMTP
+#   SMTP_USER               — Utilisateur SMTP
 #   EMAIL_EXPEDITEUR        — Adresse expediteur (defaut: veille@example.com)
 #   EMAIL_DESTINATAIRES     — Adresses destinataires, separees par des virgules
 #   LANGFUSE_PUBLIC_KEY     — Cle publique Langfuse (optionnel, tracing)
@@ -23,7 +23,18 @@ WORKDIR /build
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# --------------- Stage 2 : runtime ---------------
+# --------------- Stage 2 : prebuild (collecte RSS sans cle API) ---------------
+FROM python:3.12-slim AS prebuild
+
+WORKDIR /app
+
+COPY --from=build /install /usr/local
+COPY . .
+
+# Collecte RSS + filtrage + scraping (pas besoin de cle API)
+RUN python prebuild.py
+
+# --------------- Stage 3 : runtime ---------------
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -33,6 +44,9 @@ COPY --from=build /install /usr/local
 
 # Copier le code source
 COPY . .
+
+# Copier les articles pre-collectes depuis le stage prebuild
+COPY --from=prebuild /app/data/articles_raw.json /app/data/articles_raw.json
 
 # Utilisateur non-root pour la securite
 RUN useradd --create-home --no-log-init appuser \

@@ -21,19 +21,35 @@ def conv_db(tmp_path, monkeypatch):
 
 @pytest.fixture
 def api_client(tmp_path, monkeypatch):
-    """Client TestClient FastAPI avec DB temporaire."""
+    """Client TestClient FastAPI avec DB temporaire + utilisateur authentifié."""
     # Patch database.py avant import api
     import database as db_mod
     db_path = str(tmp_path / "test_luciole.db")
     monkeypatch.setattr(db_mod, "DB_PATH", db_path)
     db_mod.init_db()
 
-    # Patch API key
+    # Patch API key + JWT secret
     monkeypatch.setenv("API_KEY", "test-key")
+    monkeypatch.setenv("JWT_SECRET", "test-secret-key")
+
+    # Patch auth JWT_SECRET (already loaded at import time)
+    import auth
+    monkeypatch.setattr(auth, "JWT_SECRET", "test-secret-key")
 
     from fastapi.testclient import TestClient
     from api import app
-    return TestClient(app)
+
+    # Create a test user and get a JWT cookie
+    user = db_mod.create_user(
+        email="test@example.com",
+        password_hash=auth.hash_password("password123"),
+        display_name="Testeur",
+    )
+    token = auth.create_access_token(user["id"])
+
+    client = TestClient(app)
+    client.cookies.set(auth.COOKIE_NAME, token)
+    return client
 
 
 # ---------------------------------------------------------------------------

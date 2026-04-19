@@ -24,6 +24,7 @@ def init_db():
     """Crée les tables si elles n'existent pas."""
     conn = _get_connection()
     try:
+        # Create tables
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS users (
                 id TEXT PRIMARY KEY,
@@ -54,14 +55,15 @@ def init_db():
 
             CREATE INDEX IF NOT EXISTS idx_messages_conv
                 ON messages(conversation_id);
-
-            CREATE INDEX IF NOT EXISTS idx_conversations_user
-                ON conversations(user_id);
         """)
+
         # Migration: add user_id column if missing (existing databases)
         cols = [r["name"] for r in conn.execute("PRAGMA table_info(conversations)").fetchall()]
         if "user_id" not in cols:
             conn.execute("ALTER TABLE conversations ADD COLUMN user_id TEXT REFERENCES users(id)")
+
+        # Index on user_id (after migration to ensure column exists)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_user ON conversations(user_id)")
         conn.commit()
     finally:
         conn.close()

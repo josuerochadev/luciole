@@ -25,9 +25,6 @@
   // State
   let currentConversationId = null;
 
-  // Show the sidebar toggle (hidden by default in base.html, only shown on chat page)
-  if (sidebarToggle) sidebarToggle.style.display = '';
-
   // ── Fetch KPIs on load ──────────────────────────────────────
   async function loadMetrics() {
     try {
@@ -274,7 +271,28 @@
     return div.innerHTML;
   }
 
-  // ── Submit handler ──────────────────────────────────────────
+  // ── Create streaming agent message DOM ─────────────────────
+  function createAgentBubble() {
+    const article = document.createElement('article');
+    article.className = 'luciole-message luciole-message--agent';
+
+    article.innerHTML =
+      '<div class="luciole-message-avatar luciole-message-avatar--agent" aria-hidden="true">l<span style="color:var(--luciole-accent)">_</span></div>' +
+      '<div class="luciole-message-body">' +
+        '<div class="luciole-message-meta">' +
+          '<span class="t-eyebrow-accent">luciole_</span>' +
+          '<span class="t-meta luciole-stream-meta">réflexion…</span>' +
+        '</div>' +
+        '<div class="luciole-stream-steps"></div>' +
+        '<div class="luciole-message-content t-body"></div>' +
+      '</div>';
+
+    chatMessages.appendChild(article);
+    chatBottom.scrollIntoView({ behavior: 'smooth' });
+    return article;
+  }
+
+  // ── Submit handler (SSE streaming) ─────────────────────────
   async function submitQuery(query) {
     if (!query.trim()) return;
 
@@ -284,7 +302,7 @@
     // Add user message
     appendMessage({ role: 'user', content: query, meta: timeNow() + ' · Requête' });
 
-    // Typing indicator
+    // Show typing indicator while waiting for first event
     showTyping();
     const t0 = performance.now();
 
@@ -300,15 +318,15 @@
         body: JSON.stringify(body),
       });
 
-      hideTyping();
-      const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
-
       if (res.status === 401) {
+        hideTyping();
         window.location.href = '/login';
         return;
       }
 
       if (!res.ok) {
+        hideTyping();
+        const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
         appendMessage({
           role: 'agent',
           content: 'Erreur serveur — réessayez.',
@@ -317,24 +335,149 @@
         return;
       }
 
-      const data = await res.json();
-
-      // Track conversation ID
-      if (data.conversation_id) {
-        currentConversationId = data.conversation_id;
+      // Check if response is SSE stream
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('text/event-stream')) {
+        // Fallback: JSON response (non-streaming)
+        hideTyping();
+        const data = await res.json();
+        if (data.conversation_id) currentConversationId = data.conversation_id;
+        const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+        appendMessage({ role: 'agent', content: data.reponse, meta: timeNow() + ' · ' + elapsed + 's' });
+        loadConversations();
+        loadMetrics();
+        return;
       }
 
-      appendMessage({
-        role: 'agent',
-        content: data.reponse,
-        meta: timeNow() + ' · ' + elapsed + 's',
-      });
+      // SSE streaming via ReadableStream
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let agentBubble = null;
+      let contentEl = null;
+      let stepsEl = null;
+      let metaEl = null;
+      let fullText = '';
+      let firstChunk = true;
 
-      // Refresh sidebar
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
+
+          let event;
+          try {
+            event = JSON.parse(jsonStr);
+          } catch {
+            continue;
+          }
+
+          // Handle event types
+          if (event.type === 'start') {
+            if (event.conversation_id) {
+              currentConversationId = event.conversation_id;
+            }
+            continue;
+          }
+
+          if (event.type === 'thinking') {
+            // Replace typing indicator with agent bubble on first thinking event
+            if (!agentBubble) {
+              hideTyping();
+              agentBubble = createAgentBubble();
+              contentEl = agentBubble.querySelector('.luciole-message-content');
+              stepsEl = agentBubble.querySelector('.luciole-stream-steps');
+              metaEl = agentBubble.querySelector('.luciole-stream-meta');
+            }
+            // Add a step badge
+            var badge = document.createElement('div');
+            badge.className = 'luciole-step-badge';
+            badge.innerHTML = '<span class="luciole-step-badge-dot"></span>' + escapeHtml(event.label || event.tool);
+            stepsEl.appendChild(badge);
+            chatBottom.scrollIntoView({ behavior: 'smooth' });
+            continue;
+          }
+
+          if (event.type === 'tool_result') {
+            // Mark the last step badge as done
+            var badges = stepsEl ? stepsEl.querySelectorAll('.luciole-step-badge') : [];
+            if (badges.length) {
+              var last = badges[badges.length - 1];
+              last.classList.add('luciole-step-badge--done');
+            }
+            continue;
+          }
+
+          if (event.type === 'chunk') {
+            if (!agentBubble) {
+              hideTyping();
+              agentBubble = createAgentBubble();
+              contentEl = agentBubble.querySelector('.luciole-message-content');
+              stepsEl = agentBubble.querySelector('.luciole-stream-steps');
+              metaEl = agentBubble.querySelector('.luciole-stream-meta');
+            }
+            if (firstChunk && metaEl) {
+              metaEl.textContent = 'rédaction…';
+              firstChunk = false;
+            }
+            fullText += event.content;
+            // Render markdown incrementally
+            contentEl.innerHTML = marked.parse(fullText);
+            chatBottom.scrollIntoView({ behavior: 'smooth' });
+            continue;
+          }
+
+          if (event.type === 'done') {
+            var elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+            var latency = event.latency_ms ? (event.latency_ms / 1000).toFixed(1) + 's' : elapsed + 's';
+            if (metaEl) {
+              metaEl.textContent = timeNow() + ' · ' + latency;
+            }
+            // Final markdown render with full response
+            if (contentEl && event.full_response) {
+              contentEl.innerHTML = marked.parse(event.full_response);
+            }
+            continue;
+          }
+
+          if (event.type === 'error') {
+            hideTyping();
+            if (!agentBubble) {
+              appendMessage({
+                role: 'agent',
+                content: 'Erreur : ' + (event.message || 'inconnue'),
+                meta: timeNow() + ' · erreur',
+              });
+            } else if (contentEl) {
+              contentEl.innerHTML = '<em>Erreur : ' + escapeHtml(event.message || 'inconnue') + '</em>';
+            }
+            continue;
+          }
+        }
+      }
+
+      // If we never got any content (edge case)
+      if (!agentBubble) {
+        hideTyping();
+        appendMessage({
+          role: 'agent',
+          content: fullText || 'Aucune réponse reçue.',
+          meta: timeNow(),
+        });
+      }
+
+      // Refresh sidebar & KPIs
       loadConversations();
-
-      // Refresh KPIs
       loadMetrics();
+
     } catch {
       hideTyping();
       appendMessage({

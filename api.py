@@ -15,7 +15,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr, Field
@@ -24,7 +24,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from main import agent_react
+from main import agent_react, agent_react_stream
 from monitoring import (
     end_request,
     get_metrics,
@@ -57,6 +57,10 @@ from auth import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Cookie secure=True uniquement en prod (HTTPS). En dev localhost, secure=False.
+IS_PROD = bool(os.getenv("RENDER") or os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("FLY_APP_NAME"))
+COOKIE_SECURE = IS_PROD
 
 API_KEY = os.getenv("API_KEY")
 if not API_KEY:
@@ -129,7 +133,7 @@ async def auth_register(request: Request, req: RegisterRequest):
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        secure=True,
+        secure=COOKIE_SECURE,
         samesite="lax",
         max_age=86400,
     )
@@ -149,7 +153,7 @@ async def auth_login(request: Request, req: LoginRequest):
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        secure=True,
+        secure=COOKIE_SECURE,
         samesite="lax",
         max_age=86400,
     )
@@ -185,9 +189,7 @@ class AskResponse(BaseModel):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def landing(request: Request, user=Depends(get_current_user)):
-    if isinstance(user, RedirectResponse):
-        return user
+async def landing(request: Request, user=Depends(get_optional_user)):
     return templates.TemplateResponse(request, "index.html", {"active_page": "chat", "user": user})
 
 
@@ -223,9 +225,9 @@ def _generate_title(question: str) -> str:
         return question[:50] + ("…" if len(question) > 50 else "")
 
 
-@app.post("/ask", response_model=AskResponse)
+@app.post("/ask")
 @limiter.limit("10/minute")
-def ask(request: Request, req: AskRequest, user=Depends(get_current_user)):
+async def ask(request: Request, req: AskRequest, user=Depends(get_current_user)):
     if isinstance(user, RedirectResponse):
         raise HTTPException(status_code=401, detail="Non authentifié.")
 
@@ -244,26 +246,55 @@ def ask(request: Request, req: AskRequest, user=Depends(get_current_user)):
     # Sauvegarder le message utilisateur
     add_message(conv_id, "user", req.question)
 
-    # Appeler l'agent
     start_request(req.question)
-    t0 = time.time()
-    try:
-        reponse = agent_react(req.question)
-    except Exception as exc:
-        end_request(error=f"{type(exc).__name__}: {exc}")
-        raise
-    latency_ms = int((time.time() - t0) * 1000)
-    end_request()
 
-    # Sauvegarder la réponse
-    add_message(conv_id, "assistant", reponse, latency_ms=latency_ms)
+    async def event_stream():
+        import json as _json
+        full_response = ""
+        latency_ms = 0
 
-    # Générer un titre au 1er message
-    if is_new:
-        title = _generate_title(req.question)
-        update_conversation_title(conv_id, title)
+        try:
+            # Envoyer le conversation_id en premier événement
+            yield f"data: {_json.dumps({'type': 'start', 'conversation_id': conv_id})}\n\n"
 
-    return AskResponse(reponse=reponse, conversation_id=conv_id)
+            async for event in agent_react_stream(req.question):
+                # Vérifier la déconnexion client
+                if await request.is_disconnected():
+                    logger.info("[SSE] Client déconnecté.")
+                    break
+
+                if event["type"] == "done":
+                    full_response = event.get("full_response", "")
+                    latency_ms = event.get("latency_ms", 0)
+
+                yield f"data: {_json.dumps(event, ensure_ascii=False)}\n\n"
+
+        except Exception as exc:
+            end_request(error=f"{type(exc).__name__}: {exc}")
+            error_event = {"type": "error", "message": str(exc)}
+            yield f"data: {_json.dumps(error_event, ensure_ascii=False)}\n\n"
+            return
+
+        end_request()
+
+        # Sauvegarder la réponse en DB
+        if full_response:
+            add_message(conv_id, "assistant", full_response, latency_ms=latency_ms)
+
+        # Générer un titre au 1er message
+        if is_new:
+            title = _generate_title(req.question)
+            update_conversation_title(conv_id, title)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ---------------------------------------------------------------------------

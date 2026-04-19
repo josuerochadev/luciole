@@ -280,6 +280,46 @@ def appeler_llm_tools(
             raise RuntimeError(f"Erreur API OpenAI : {e}") from e
 
 
+@observe(name="appeler_llm_stream")
+def appeler_llm_stream(
+    question: str,
+    system_prompt: str = SYSTEM_PROMPT,
+    historique: list[dict] | None = None,
+    model: str | None = None,
+):
+    """
+    Version streaming de appeler_llm(). Yield les chunks de texte au fur et à mesure.
+
+    Yields:
+        str: Chaque chunk de texte généré par le modèle.
+    """
+    effective_model = model or MODEL_DEFAULT
+    messages = [{"role": "system", "content": system_prompt}]
+    if historique:
+        messages.extend(historique)
+    messages.append({"role": "user", "content": question})
+
+    try:
+        stream = get_openai_client().chat.completions.create(
+            model=effective_model,
+            temperature=TEMPERATURE,
+            max_tokens=MAX_TOKENS,
+            messages=messages,
+            stream=True,
+            timeout=60,
+        )
+        for chunk in stream:
+            delta = chunk.choices[0].delta if chunk.choices else None
+            if delta and delta.content:
+                yield delta.content
+    except openai.AuthenticationError as e:
+        raise ValueError(f"Clé API invalide ou révoquée : {e}") from e
+    except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError) as e:
+        raise RuntimeError(f"Erreur API streaming : {e}") from e
+    except openai.APIError as e:
+        raise RuntimeError(f"Erreur API OpenAI : {e}") from e
+
+
 def resumer_article(titre: str, contenu: str) -> dict:
     """
     Résume un article RSS et retourne pertinence, catégorie, résumé et action.

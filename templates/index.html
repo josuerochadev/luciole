@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 
+{% block masthead_toggle %}
+<button class="luciole-sidebar-toggle" id="sidebar-toggle" aria-label="Ouvrir l'historique">&#9776;</button>
+{% endblock %}
+
 {% block content %}
 <!-- Sidebar — Conversation history -->
 <aside class="luciole-sidebar" id="sidebar">

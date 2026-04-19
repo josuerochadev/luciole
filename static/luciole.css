@@ -553,6 +553,63 @@ img { max-width: 100%; display: block; }
   40% { opacity: 1; transform: scale(1); }
 }
 
+/* ── SSE Streaming — Step badges ────────────────────────── */
+
+.luciole-stream-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--luciole-space-2);
+  margin-bottom: var(--luciole-space-3);
+}
+
+.luciole-stream-steps:empty {
+  display: none;
+}
+
+.luciole-step-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--luciole-sans);
+  font-size: var(--luciole-text-xs);
+  font-weight: 500;
+  color: var(--luciole-muted);
+  background: var(--luciole-paper-alt);
+  border: 1px solid var(--luciole-rule);
+  border-radius: 100px;
+  padding: 4px 12px 4px 8px;
+  animation: luciole-badge-in 0.3s ease-out backwards;
+}
+
+.luciole-step-badge--done {
+  color: var(--luciole-ink);
+  border-color: var(--luciole-secondary);
+  background: var(--luciole-secondary-soft);
+}
+
+.luciole-step-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--luciole-accent);
+  animation: luciole-dot 1.4s ease-in-out infinite;
+}
+
+.luciole-step-badge--done .luciole-step-badge-dot {
+  background: #22c55e;
+  animation: none;
+}
+
+@keyframes luciole-badge-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Streaming text appear animation */
+.luciole-message--agent .luciole-message-content {
+  transition: opacity 0.15s ease;
+}
+
 /* Sticky chat input at bottom */
 .luciole-chat-input--sticky {
   position: sticky;

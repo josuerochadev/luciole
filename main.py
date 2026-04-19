@@ -7,8 +7,9 @@ Utilisation : python main.py
 import json
 import logging
 import sys
+import time
 
-from llm import appeler_llm, appeler_llm_json, appeler_llm_tools
+from llm import appeler_llm, appeler_llm_json, appeler_llm_tools, appeler_llm_stream
 from config import MODEL_FAST, MODEL_POWERFUL
 from tools.search import search_web
 from tools.database import query_db
@@ -500,6 +501,163 @@ def agent_react(requete: str) -> str:
     flush()
 
     return reponse
+
+
+# ---------------------------------------------------------------------------
+# Boucle ReAct streaming (Phase 3 — SSE)
+# ---------------------------------------------------------------------------
+
+# Labels humains pour les outils (affiché côté client)
+_TOOL_LABELS = {
+    "query_db": "Interrogation de la base de données",
+    "search_web": "Recherche sur le web",
+    "search_articles": "Recherche dans les articles",
+    "transcribe_audio": "Transcription audio",
+    "analyze_image": "Analyse d'image",
+    "preview_digest": "Préparation du digest",
+    "send_digest": "Envoi du digest",
+    "reponse_directe": "Réflexion",
+}
+
+
+async def agent_react_stream(requete: str):
+    """
+    Version streaming de agent_react(). Générateur async qui yield des
+    événements JSON pour le streaming SSE.
+
+    Yields:
+        dict: Événements SSE avec type thinking/tool_result/chunk/done.
+    """
+    import asyncio
+    t0 = time.time()
+
+    # Langfuse
+    update_current_trace(input=requete, tags=["react-agent", "streaming"])
+
+    # --- Cascade ---
+    routing = classifier_complexite(requete)
+    model_cascade = choisir_modele(routing["complexite"])
+    logger.info(
+        f"[Cascade] complexite={routing['complexite']}, "
+        f"categorie={routing.get('categorie', '?')}, model={model_cascade}"
+    )
+
+    # --- Sécurité ---
+    check = analyser_securite(requete)
+    if check["bloque"]:
+        msg = f"[BLOQUÉ] {check['raison']} (type: {check['type']})"
+        logger.warning(f"[SECURITE] {msg}")
+        mark_fallback(f"security:{check.get('type', 'inconnu')}")
+        yield {"type": "chunk", "content": check["raison"]}
+        latency_ms = int((time.time() - t0) * 1000)
+        yield {"type": "done", "latency_ms": latency_ms, "full_response": check["raison"]}
+        flush()
+        return
+
+    # --- Mémoire ---
+    historique = memory_recall(n=20)
+    memory_store(requete, role="user")
+
+    outils_essayes = []
+    resultat = ""
+    decision = {}
+
+    for iteration in range(1, MAX_ITERATIONS + 1):
+        logger.info(f"[ReAct] Itération {iteration}/{MAX_ITERATIONS}")
+
+        # Yield "thinking" quand on choisit l'outil (bloquant, run in executor)
+        decision = choisir_outil(requete, historique=historique)
+        outil = decision.get("outil", "reponse_directe")
+
+        yield {
+            "type": "thinking",
+            "tool": outil,
+            "label": _TOOL_LABELS.get(outil, outil),
+        }
+
+        # Détection boucle
+        if outil in outils_essayes:
+            logger.warning(f"[ReAct] Outil '{outil}' déjà essayé — abandon.")
+            mark_fallback(f"outil_repete:{outil}")
+            # Stream la réponse directe
+            full = ""
+            for chunk in appeler_llm_stream(
+                f"Réponds à cette question en reconnaissant tes limites si nécessaire : {requete}",
+                model=model_cascade,
+            ):
+                full += chunk
+                yield {"type": "chunk", "content": chunk}
+            resultat = full
+            break
+        outils_essayes.append(outil)
+
+        # Exécuter l'outil
+        resultat = executer_outil(decision)
+
+        yield {
+            "type": "tool_result",
+            "tool": outil,
+            "label": _TOOL_LABELS.get(outil, outil),
+            "summary": resultat[:200] + ("…" if len(resultat) > 200 else ""),
+        }
+
+        # Retry si erreur
+        if resultat.startswith("[ERREUR_OUTIL]") and iteration < MAX_ITERATIONS:
+            logger.warning(f"[ReAct] Itération {iteration} — outil en erreur, retry.")
+            continue
+
+        # --- Stream la réponse finale ---
+        intent = decision.get("intent", "general")
+
+        if resultat.startswith("[ERREUR_OUTIL]"):
+            instruction = (
+                "L'outil a retourné une erreur. "
+                "Informe l'utilisateur que la donnée est inaccessible. "
+                "N'invente AUCUN chiffre, nom ou donnée — dis clairement que tu ne sais pas."
+            )
+        elif resultat.startswith("[AUCUN_RESULTAT]"):
+            instruction = (
+                "L'outil n'a trouvé aucune donnée correspondante. "
+                "Informe l'utilisateur qu'aucun résultat n'existe pour sa requête. "
+                "NE JAMAIS inventer de titre d'article, d'URL, de chiffre ou de date pour combler ce vide."
+            )
+        else:
+            format_instruction = _FORMATS_PAR_INTENT.get(intent, _FORMAT_DIRECT)
+            instruction = (
+                "Formule une réponse claire et structurée en français pour l'utilisateur.\n\n"
+                f"{format_instruction}\n"
+                f"{_REGLES_FIDELITE}"
+            )
+
+        prompt = (
+            f"Requête initiale : {requete}\n\n"
+            f"Résultat de l'outil :\n{resultat}\n\n"
+            f"{instruction}"
+        )
+
+        full_response = ""
+        for chunk in appeler_llm_stream(prompt, historique=historique, model=model_cascade):
+            full_response += chunk
+            yield {"type": "chunk", "content": chunk}
+
+        resultat = full_response
+        break
+    else:
+        logger.error("[ReAct] Max itérations atteint — abandon.")
+        mark_fallback("max_iterations")
+        resultat = "Je n'ai pas pu répondre à votre requête après plusieurs tentatives."
+        yield {"type": "chunk", "content": resultat}
+
+    # --- Post-traitement ---
+    reponse = filtrer_sortie(resultat)
+    memory_store(reponse, role="assistant")
+
+    latency_ms = int((time.time() - t0) * 1000)
+    logger.info(f"[ReAct] Streaming terminé en {latency_ms}ms.")
+
+    yield {"type": "done", "latency_ms": latency_ms, "full_response": reponse}
+
+    flush()
 
 
 # ---------------------------------------------------------------------------

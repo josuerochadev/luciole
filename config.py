@@ -116,6 +116,30 @@ HISTORIQUE_FILE = f"{DATA_DIR}/historique_envois.json"
 ARCHIVES_FILE = f"{DATA_DIR}/archives.json"
 LOGS_FILE = f"{DATA_DIR}/logs.jsonl"
 
+# --- Upload de fichiers ---
+UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+ALLOWED_TYPES = {
+    "image/png", "image/jpeg", "image/webp",
+    "audio/mpeg", "audio/mp4", "audio/wav",
+    "application/pdf",
+}
+UPLOAD_TTL = 3600  # Nettoyage auto après 1h
+
+# Magic bytes pour validation côté serveur
+MAGIC_BYTES = {
+    b"\x89PNG\r\n\x1a\n": "image/png",
+    b"\xff\xd8\xff": "image/jpeg",
+    b"RIFF": "image/webp",  # WebP commence par RIFF....WEBP
+    b"%PDF": "application/pdf",
+    b"\xff\xfb": "audio/mpeg",  # MP3 frame sync
+    b"\xff\xf3": "audio/mpeg",
+    b"\xff\xf2": "audio/mpeg",
+    b"ID3": "audio/mpeg",  # MP3 avec tag ID3
+    b"RIFF_WAV": "audio/wav",  # Placeholder, vérifié spécialement
+}
+
 # --- Rétention des données (en jours) ---
 RETENTION_ARTICLES_JOURS = 90
 RETENTION_LOGS_JOURS = 30

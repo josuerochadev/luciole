@@ -1239,6 +1239,149 @@ body.chat-active .luciole-footer {
   margin-left: var(--luciole-space-3);
 }
 
+/* ============================================================
+   File Upload — Attach button, preview, drag & drop (Phase 4)
+   ============================================================ */
+
+/* Attach (paperclip) button */
+.luciole-attach-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--luciole-muted);
+  cursor: pointer;
+  padding: 0 var(--luciole-space-3) 0 var(--luciole-space-4);
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+.luciole-attach-btn:hover {
+  color: var(--luciole-accent);
+}
+
+/* File preview bar (below input) */
+.luciole-file-preview {
+  max-width: 720px;
+  margin: var(--luciole-space-2) auto 0;
+}
+.luciole-chat-input--sticky + .luciole-file-preview {
+  max-width: 100%;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+.luciole-file-preview[hidden] { display: none; }
+
+.luciole-file-preview-content {
+  display: flex;
+  align-items: center;
+  gap: var(--luciole-space-3);
+  background: var(--luciole-white);
+  border: 1px solid var(--luciole-rule);
+  border-radius: 6px;
+  padding: var(--luciole-space-2) var(--luciole-space-3);
+  animation: luciole-fade-in 0.2s ease-out;
+}
+
+.luciole-file-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--luciole-rule);
+  flex-shrink: 0;
+}
+
+.luciole-file-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  width: 36px;
+  text-align: center;
+}
+
+.luciole-file-info {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--luciole-sans);
+  font-size: var(--luciole-text-sm);
+  color: var(--luciole-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.luciole-file-remove {
+  background: transparent;
+  border: 1px solid var(--luciole-rule);
+  border-radius: 4px;
+  color: var(--luciole-muted);
+  cursor: pointer;
+  font-size: var(--luciole-text-lg);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  line-height: 1;
+}
+.luciole-file-remove:hover {
+  color: var(--luciole-accent);
+  border-color: var(--luciole-accent);
+  background: var(--luciole-accent-soft);
+}
+
+/* Drag & drop overlay */
+.luciole-dragover {
+  position: relative;
+}
+.luciole-dragover::after {
+  content: 'Deposez votre fichier ici';
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(250, 248, 243, 0.9);
+  border: 3px dashed var(--luciole-accent);
+  border-radius: 8px;
+  z-index: 1000;
+  font-family: var(--luciole-sans);
+  font-weight: 600;
+  font-size: var(--luciole-text-lg);
+  color: var(--luciole-accent);
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
+/* File attachment in chat bubbles */
+.luciole-msg-attachment {
+  margin-bottom: var(--luciole-space-3);
+}
+
+.luciole-msg-image {
+  max-width: 320px;
+  max-height: 240px;
+  border-radius: 6px;
+  border: 1px solid var(--luciole-rule);
+  object-fit: contain;
+}
+
+.luciole-msg-audio {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: var(--luciole-space-1);
+  border-radius: 20px;
+}
+
+.luciole-msg-attachment .luciole-file-icon {
+  font-size: 18px;
+  vertical-align: middle;
+}
+
 /* Screen-reader only */
 .sr-only {
   position: absolute;

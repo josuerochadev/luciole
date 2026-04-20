@@ -22,8 +22,25 @@
   const sidebarToggle = document.getElementById('sidebar-toggle');
   const sidebarOverlay = document.getElementById('sidebar-overlay');
 
+  // File upload elements
+  const attachBtn = document.getElementById('attach-btn');
+  const fileInput = document.getElementById('file-input');
+  const filePreview = document.getElementById('file-preview');
+  const attachBtnSticky = document.getElementById('attach-btn-sticky');
+  const fileInputSticky = document.getElementById('file-input-sticky');
+  const filePreviewSticky = document.getElementById('file-preview-sticky');
+
   // State
   let currentConversationId = null;
+  let pendingFile = null; // { file: File, previewEl: HTMLElement }
+
+  // Allowed MIME types (client-side filter)
+  var ALLOWED_TYPES = new Set([
+    'image/png', 'image/jpeg', 'image/webp',
+    'audio/mpeg', 'audio/mp4', 'audio/wav',
+    'application/pdf',
+  ]);
+  var MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
   // ── Fetch KPIs on load ──────────────────────────────────────
   async function loadMetrics() {
@@ -94,7 +111,6 @@
   async function loadConversations() {
     try {
       const res = await fetch('/conversations');
-      if (res.status === 401) { window.location.href = '/login'; return; }
       if (!res.ok) return;
       const conversations = await res.json();
       renderSidebarList(conversations);
@@ -201,6 +217,7 @@
     document.body.classList.remove('chat-active');
     input.value = '';
     inputSticky.value = '';
+    clearPendingFile();
     input.focus();
 
     // Clear active state in sidebar
@@ -210,7 +227,7 @@
   }
 
   // ── Create message DOM ──────────────────────────────────────
-  function appendMessage({ role, content, meta }) {
+  function appendMessage({ role, content, meta, attachment }) {
     const article = document.createElement('article');
     article.className = 'luciole-message luciole-message--' + role;
 
@@ -222,6 +239,20 @@
 
     const rendered = isAgent ? marked.parse(content) : escapeHtml(content);
 
+    // Build attachment HTML for user messages
+    var attachHtml = '';
+    if (attachment && attachment instanceof File) {
+      if (attachment.type.startsWith('image/')) {
+        var imgUrl = URL.createObjectURL(attachment);
+        attachHtml = '<div class="luciole-msg-attachment"><img src="' + imgUrl + '" class="luciole-msg-image" alt="Image jointe"></div>';
+      } else if (attachment.type.startsWith('audio/')) {
+        var audioUrl = URL.createObjectURL(attachment);
+        attachHtml = '<div class="luciole-msg-attachment"><audio controls src="' + audioUrl + '" class="luciole-msg-audio"></audio><span class="t-meta">' + escapeHtml(attachment.name) + '</span></div>';
+      } else {
+        attachHtml = '<div class="luciole-msg-attachment"><span class="luciole-file-icon">&#128196;</span> <span class="t-meta">' + escapeHtml(attachment.name) + '</span></div>';
+      }
+    }
+
     article.innerHTML =
       '<div class="' + avatarClass + '" aria-hidden="true">' + avatarContent + '</div>' +
       '<div class="luciole-message-body">' +
@@ -229,6 +260,7 @@
           '<span class="' + labelClass + '">' + label + '</span>' +
           '<span class="t-meta">' + meta + '</span>' +
         '</div>' +
+        attachHtml +
         '<div class="luciole-message-content t-body">' + rendered + '</div>' +
       '</div>';
 
@@ -292,24 +324,161 @@
     return article;
   }
 
+  // ── File upload helpers ──────────────────────────────────────
+
+  function selectFile(file, previewEl) {
+    if (!file) return;
+
+    if (!ALLOWED_TYPES.has(file.type)) {
+      alert('Type de fichier non supporté.\nTypes acceptés : PNG, JPEG, WebP, MP3, M4A, WAV, PDF');
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      alert('Fichier trop volumineux (max 10 MB).');
+      return;
+    }
+
+    pendingFile = { file: file, previewEl: previewEl };
+    renderFilePreview(file, previewEl);
+  }
+
+  function renderFilePreview(file, previewEl) {
+    previewEl.hidden = false;
+    var isImage = file.type.startsWith('image/');
+    var isAudio = file.type.startsWith('audio/');
+    var sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+
+    var html = '<div class="luciole-file-preview-content">';
+    if (isImage) {
+      var url = URL.createObjectURL(file);
+      html += '<img src="' + url + '" class="luciole-file-thumb" alt="Aperçu">';
+    } else if (isAudio) {
+      html += '<span class="luciole-file-icon">&#9835;</span>';
+    } else {
+      html += '<span class="luciole-file-icon">&#128196;</span>';
+    }
+    html += '<span class="luciole-file-info">' + escapeHtml(file.name) + ' <span class="t-meta">(' + sizeMB + ' MB)</span></span>';
+    html += '<button type="button" class="luciole-file-remove" aria-label="Retirer le fichier">&times;</button>';
+    html += '</div>';
+    previewEl.innerHTML = html;
+
+    previewEl.querySelector('.luciole-file-remove').addEventListener('click', function () {
+      clearPendingFile();
+    });
+  }
+
+  function clearPendingFile() {
+    if (pendingFile && pendingFile.previewEl) {
+      pendingFile.previewEl.innerHTML = '';
+      pendingFile.previewEl.hidden = true;
+    }
+    pendingFile = null;
+    fileInput.value = '';
+    fileInputSticky.value = '';
+  }
+
+  async function uploadFile(file) {
+    var formData = new FormData();
+    formData.append('file', file);
+
+    var res = await fetch('/upload', { method: 'POST', body: formData });
+    if (!res.ok) {
+      var err = await res.json().catch(function () { return { detail: 'Erreur upload' }; });
+      throw new Error(err.detail || 'Erreur upload');
+    }
+    return res.json();
+  }
+
+  // ── Attach button clicks ────────────────────────────────────
+  attachBtn.addEventListener('click', function () { fileInput.click(); });
+  attachBtnSticky.addEventListener('click', function () { fileInputSticky.click(); });
+
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files[0]) selectFile(fileInput.files[0], filePreview);
+  });
+  fileInputSticky.addEventListener('change', function () {
+    if (fileInputSticky.files[0]) selectFile(fileInputSticky.files[0], filePreviewSticky);
+  });
+
+  // ── Drag & drop on chat zone ──────────────────────────────
+  var dropTarget = chatZone.parentElement || document.body;
+
+  dropTarget.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    dropTarget.classList.add('luciole-dragover');
+  });
+  dropTarget.addEventListener('dragleave', function (e) {
+    if (!dropTarget.contains(e.relatedTarget)) {
+      dropTarget.classList.remove('luciole-dragover');
+    }
+  });
+  dropTarget.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropTarget.classList.remove('luciole-dragover');
+    if (e.dataTransfer.files.length) {
+      var activePreview = chatZone.hidden ? filePreview : filePreviewSticky;
+      selectFile(e.dataTransfer.files[0], activePreview);
+    }
+  });
+
   // ── Submit handler (SSE streaming) ─────────────────────────
-  async function submitQuery(query) {
-    if (!query.trim()) return;
+  async function submitQuery(query, fileOverride) {
+    if (!query.trim() && !pendingFile && !fileOverride) return;
+
+    // Capture the pending file before clearing
+    var fileToSend = fileOverride || (pendingFile ? pendingFile.file : null);
+    var fileInfo = null;
 
     // Enter chat mode (collapse hero, show sticky input)
     enterChatMode();
 
+    // Build user message content with file preview
+    var userContent = query;
+    var userMeta = timeNow() + ' · Requête';
+    var userAttachment = null;
+
+    if (fileToSend) {
+      userAttachment = fileToSend;
+      if (!query.trim()) {
+        query = 'Analyse ce fichier';
+        userContent = query;
+      }
+    }
+
     // Add user message
-    appendMessage({ role: 'user', content: query, meta: timeNow() + ' · Requête' });
+    appendMessage({ role: 'user', content: userContent, meta: userMeta, attachment: userAttachment });
+
+    // Clear pending file
+    clearPendingFile();
 
     // Show typing indicator while waiting for first event
     showTyping();
     const t0 = performance.now();
 
     try {
+      // Upload file first if present
+      var fileId = null;
+      if (fileToSend) {
+        try {
+          fileInfo = await uploadFile(fileToSend);
+          fileId = fileInfo.file_id;
+        } catch (uploadErr) {
+          hideTyping();
+          appendMessage({
+            role: 'agent',
+            content: 'Erreur lors de l\'upload : ' + uploadErr.message,
+            meta: timeNow() + ' · erreur',
+          });
+          return;
+        }
+      }
+
       const body = { question: query };
       if (currentConversationId) {
         body.conversation_id = currentConversationId;
+      }
+      if (fileId) {
+        body.file_id = fileId;
       }
 
       const res = await fetch('/ask', {

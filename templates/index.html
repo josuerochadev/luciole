@@ -31,6 +31,10 @@
     Interrogez vos sources, synthétisez l'actualité tech, analysez les tendances — en une conversation.
   </p>
   <form class="luciole-chat-input" id="chat-form">
+    <button type="button" class="luciole-attach-btn" id="attach-btn" aria-label="Joindre un fichier" title="Joindre un fichier">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+    </button>
+    <input type="file" id="file-input" class="sr-only" accept="image/png,image/jpeg,image/webp,audio/mpeg,audio/mp4,audio/wav,application/pdf">
     <label for="chat-input" class="sr-only">Posez votre question</label>
     <input type="text"
            class="luciole-input"
@@ -42,6 +46,7 @@
       Envoyer <span class="luciole-submit-arrow" aria-hidden="true">&rarr;</span>
     </button>
   </form>
+  <div class="luciole-file-preview" id="file-preview" hidden></div>
 </section>
 
 <!-- Headline Cards — Magazine layout -->
@@ -74,6 +79,10 @@
   <div id="chat-messages"></div>
   <div id="chat-bottom"></div>
   <form class="luciole-chat-input luciole-chat-input--sticky" id="chat-form-sticky">
+    <button type="button" class="luciole-attach-btn" id="attach-btn-sticky" aria-label="Joindre un fichier" title="Joindre un fichier">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+    </button>
+    <input type="file" id="file-input-sticky" class="sr-only" accept="image/png,image/jpeg,image/webp,audio/mpeg,audio/mp4,audio/wav,application/pdf">
     <label for="chat-input-sticky" class="sr-only">Posez votre question</label>
     <input type="text"
            class="luciole-input"
@@ -84,10 +93,11 @@
       Envoyer <span class="luciole-submit-arrow" aria-hidden="true">&rarr;</span>
     </button>
   </form>
+  <div class="luciole-file-preview" id="file-preview-sticky" hidden></div>
 </section>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="/static/luciole-chat.js"></script>
+<script src="/static/luciole-chat.js?v={{ cache_bust }}"></script>
 {% endblock %}

@@ -11,9 +11,10 @@ import logging
 import os
 import sqlite3
 import time
+import uuid
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -33,7 +34,7 @@ from monitoring import (
 )
 from tools.database import charger_json, noter_article
 from tools.email import envoyer_rapport, generer_html, selectionner_articles
-from config import HISTORIQUE_FILE
+from config import HISTORIQUE_FILE, UPLOAD_DIR, MAX_FILE_SIZE, ALLOWED_TYPES, UPLOAD_TTL
 from database import (
     create_conversation,
     create_user,
@@ -87,6 +88,131 @@ if ALLOWED_ORIGINS:
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
+# Cache-buster: changes on each server restart to force browser to reload static assets
+import hashlib
+_cache_bust = hashlib.md5(str(time.time()).encode()).hexdigest()[:8]
+templates.env.globals["cache_bust"] = _cache_bust
+
+
+# ---------------------------------------------------------------------------
+# Upload helpers (Phase 4)
+# ---------------------------------------------------------------------------
+
+def _validate_magic_bytes(data: bytes, declared_type: str) -> bool:
+    """Valide le type de fichier via magic bytes, pas seulement l'extension."""
+    if declared_type in ("image/png",):
+        return data[:8] == b"\x89PNG\r\n\x1a\n"
+    if declared_type in ("image/jpeg",):
+        return data[:3] == b"\xff\xd8\xff"
+    if declared_type in ("image/webp",):
+        return data[:4] == b"RIFF" and data[8:12] == b"WEBP"
+    if declared_type in ("application/pdf",):
+        return data[:4] == b"%PDF"
+    if declared_type in ("audio/mpeg",):
+        return data[:3] in (b"\xff\xfb", b"\xff\xf3", b"\xff\xf2") or data[:3] == b"ID3"
+    if declared_type in ("audio/wav",):
+        return data[:4] == b"RIFF" and data[8:12] == b"WAVE"
+    if declared_type in ("audio/mp4",):
+        # MP4/M4A: ftyp box after size bytes
+        return b"ftyp" in data[:12]
+    return False
+
+
+def _cleanup_expired_uploads():
+    """Supprime les fichiers uploadés expirés (TTL dépassé)."""
+    now = time.time()
+    upload_path = Path(UPLOAD_DIR)
+    if not upload_path.exists():
+        return
+    count = 0
+    for f in upload_path.iterdir():
+        if f.is_file() and (now - f.stat().st_mtime) > UPLOAD_TTL:
+            f.unlink(missing_ok=True)
+            count += 1
+    if count:
+        logger.info(f"[Upload] Nettoyage : {count} fichier(s) expiré(s) supprimé(s)")
+
+
+# Nettoyage périodique via tâche de fond
+from contextlib import asynccontextmanager
+import asyncio
+
+_cleanup_task = None
+
+async def _periodic_cleanup():
+    """Tâche de fond pour nettoyer les uploads expirés."""
+    while True:
+        await asyncio.sleep(600)  # Toutes les 10 minutes
+        try:
+            _cleanup_expired_uploads()
+        except Exception as e:
+            logger.error(f"[Upload] Erreur nettoyage : {e}")
+
+
+@app.on_event("startup")
+async def start_cleanup_task():
+    global _cleanup_task
+    _cleanup_task = asyncio.create_task(_periodic_cleanup())
+
+
+@app.on_event("shutdown")
+async def stop_cleanup_task():
+    if _cleanup_task:
+        _cleanup_task.cancel()
+
+
+# ---------------------------------------------------------------------------
+# Upload endpoint (Phase 4)
+# ---------------------------------------------------------------------------
+
+@app.post("/upload")
+@limiter.limit("20/minute")
+async def upload_file(request: Request, file: UploadFile = File(...), user=Depends(get_current_user)):
+    if isinstance(user, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Non authentifié.")
+
+    # Valider le type MIME déclaré
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Type de fichier non autorisé : {file.content_type}. "
+                   f"Types acceptés : {', '.join(sorted(ALLOWED_TYPES))}",
+        )
+
+    # Lire le contenu et vérifier la taille
+    data = await file.read()
+    if len(data) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Fichier trop volumineux ({len(data) // (1024*1024)} MB). Maximum : {MAX_FILE_SIZE // (1024*1024)} MB.",
+        )
+
+    # Valider les magic bytes
+    if not _validate_magic_bytes(data, file.content_type):
+        raise HTTPException(
+            status_code=400,
+            detail="Le contenu du fichier ne correspond pas au type déclaré.",
+        )
+
+    # Sauvegarder avec un nom unique
+    ext = Path(file.filename).suffix.lower() if file.filename else ""
+    file_id = uuid.uuid4().hex
+    safe_name = f"{file_id}{ext}"
+    file_path = Path(UPLOAD_DIR) / safe_name
+
+    file_path.write_bytes(data)
+    logger.info(f"[Upload] Fichier sauvegardé : {safe_name} ({len(data)} octets, {file.content_type})")
+
+    return {
+        "file_id": file_id,
+        "filename": file.filename,
+        "type": file.content_type,
+        "size": len(data),
+    }
+
+
+# Servir les fichiers uploadés pour affichage dans le chat
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
 # ---------------------------------------------------------------------------
@@ -181,6 +307,7 @@ async def auth_me(user=Depends(get_current_user)):
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     conversation_id: str | None = None
+    file_id: str | None = None
 
 
 class AskResponse(BaseModel):
@@ -243,6 +370,33 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_current_user))
         if not conv:
             raise HTTPException(status_code=404, detail="Conversation introuvable.")
 
+    # Résoudre le fichier uploadé si file_id est fourni
+    enriched_question = req.question
+    file_meta = None
+    if req.file_id:
+        # Chercher le fichier dans UPLOAD_DIR
+        upload_path = Path(UPLOAD_DIR)
+        matches = list(upload_path.glob(f"{req.file_id}.*"))
+        if not matches:
+            raise HTTPException(status_code=404, detail="Fichier uploadé introuvable ou expiré.")
+        file_path = matches[0]
+        ext = file_path.suffix.lower()
+
+        # Déterminer le type d'outil à utiliser
+        image_exts = {".png", ".jpg", ".jpeg", ".webp"}
+        audio_exts = {".mp3", ".m4a", ".mp4", ".wav", ".mpeg"}
+        pdf_exts = {".pdf"}
+
+        if ext in image_exts:
+            enriched_question = f"Analyse cette image : {file_path}\n\nConsigne de l'utilisateur : {req.question}"
+            file_meta = {"type": "image", "path": str(file_path), "filename": file_path.name}
+        elif ext in audio_exts:
+            enriched_question = f"Transcris ce fichier audio : {file_path}\n\nConsigne de l'utilisateur : {req.question}"
+            file_meta = {"type": "audio", "path": str(file_path), "filename": file_path.name}
+        elif ext in pdf_exts:
+            enriched_question = f"Analyse ce document PDF : {file_path}\n\nConsigne de l'utilisateur : {req.question}"
+            file_meta = {"type": "pdf", "path": str(file_path), "filename": file_path.name}
+
     # Sauvegarder le message utilisateur
     add_message(conv_id, "user", req.question)
 
@@ -255,9 +409,12 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_current_user))
 
         try:
             # Envoyer le conversation_id en premier événement
-            yield f"data: {_json.dumps({'type': 'start', 'conversation_id': conv_id})}\n\n"
+            start_data = {"type": "start", "conversation_id": conv_id}
+            if file_meta:
+                start_data["file"] = file_meta
+            yield f"data: {_json.dumps(start_data)}\n\n"
 
-            async for event in agent_react_stream(req.question):
+            async for event in agent_react_stream(enriched_question):
                 # Vérifier la déconnexion client
                 if await request.is_disconnected():
                     logger.info("[SSE] Client déconnecté.")

@@ -9,7 +9,18 @@ MODEL_FAST = "gpt-4o-mini"        # Cascade M6E3 : modèle rapide/économique
 MODEL_POWERFUL = "gpt-4o"          # Cascade M6E3 : modèle puissant (raisonnement complexe)
 MODEL_VISION = "gpt-4o"            # Vision nécessite gpt-4o (pas mini)
 TEMPERATURE = 0.3
-MAX_TOKENS = 2048
+MAX_TOKENS = 4096
+
+# Budget de tokens adapté par type d'intent
+MAX_TOKENS_BY_INTENT = {
+    "general": 1024,
+    "search": 4096,
+    "rag": 4096,
+    "database": 2048,
+    "email": 2048,
+    "transcribe": 4096,
+    "vision": 2048,
+}
 
 # --- Clé API (depuis variable d'environnement) ---
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

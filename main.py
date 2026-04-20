@@ -10,7 +10,7 @@ import sys
 import time
 
 from llm import appeler_llm, appeler_llm_json, appeler_llm_tools, appeler_llm_stream
-from config import MODEL_FAST, MODEL_POWERFUL
+from config import MODEL_FAST, MODEL_POWERFUL, MAX_TOKENS_BY_INTENT
 from tools.search import search_web
 from tools.database import query_db
 from tools.rag import rechercher_articles
@@ -94,7 +94,10 @@ SYSTEM_REACT = (
     "technologique et que tu ne peux pas aider sur ce sujet. Propose de reformuler "
     "vers un sujet tech si possible.\n\n"
     "OUTILS :\n"
-    "- query_db → données internes : clients, tickets, stats, KPIs (SQL)\n"
+    "- query_db → base SQLite interne. Table unique disponible :\n"
+    "  TABLE clients (id INTEGER PK, nom TEXT, email TEXT, type TEXT ['Premium'|'Standard'], depuis TEXT)\n"
+    "  Contient quelques clients de test. Pas de tables tickets, stats ou KPIs.\n"
+    "  Génère UNIQUEMENT des requêtes SELECT sur cette table.\n"
     "- search_web → actus, tendances, nouveautés, veille externe tech\n"
     "- search_articles → archives internes déjà collectées (RAG)\n"
     "- transcribe_audio → fichier audio fourni par l'utilisateur\n"
@@ -113,7 +116,12 @@ SYSTEM_REACT = (
     "- Doute → search_web en priorité\n\n"
     "SOURCES : RSS archivés (search_articles), recherche web "
     "(IA, Cloud, Cybersécurité, GPU, etc.), SQLite interne (query_db). "
-    "Pas d'accès académique, temps réel ou payant."
+    "Pas d'accès académique, temps réel ou payant.\n\n"
+    "CONTEXTE CONVERSATIONNEL :\n"
+    "- L'historique de la conversation est fourni dans les messages précédents.\n"
+    "- Utilise-le pour résoudre les références implicites (« il », « ça », « le même », etc.).\n"
+    "- Si l'utilisateur dit « et en cybersécurité ? », reprends le contexte de sa question précédente.\n"
+    "- Ne redemande pas une information déjà fournie dans l'historique."
 )
 
 
@@ -162,14 +170,14 @@ def choisir_modele(complexite: str) -> str:
 # Étape 1 — Raisonnement : choisir l'outil (function calling natif)
 # ---------------------------------------------------------------------------
 @observe(name="choisir_outil")
-def choisir_outil(requete: str, historique: list[dict] | None = None) -> dict:
+def choisir_outil(requete: str, historique: list[dict] | None = None, model: str | None = None) -> dict:
     """Demande au LLM quel outil utiliser via function calling natif OpenAI."""
     messages = [{"role": "system", "content": SYSTEM_REACT}]
     # Injecter l'historique conversationnel pour garder le contexte
     if historique:
         messages.extend(historique)
     messages.append({"role": "user", "content": f"Requête de l'utilisateur : {requete}"})
-    decision = appeler_llm_tools(messages=messages, tools=TOOLS_DECISION)
+    decision = appeler_llm_tools(messages=messages, tools=TOOLS_DECISION, model=model)
     logger.info(f"[ReAct] Intent détecté    : {decision.get('intent', '?')}")
     logger.info(f"[ReAct] Outil choisi      : {decision.get('outil', '?')}")
     logger.info(f"[ReAct] Raisonnement      : {decision.get('raisonnement', '?')}")
@@ -207,7 +215,10 @@ def executer_outil(decision: dict) -> str:
     elif outil == "search_web":
         query = decision.get("query_recherche", "")
         resultats = search_web(query)
-        resultat = json.dumps(resultats, ensure_ascii=False, indent=2)
+        if not resultats:
+            resultat = "[AUCUN_RESULTAT] La recherche web est indisponible (clé API Tavily non configurée) ou n'a retourné aucun résultat."
+        else:
+            resultat = json.dumps(resultats, ensure_ascii=False, indent=2)
         logger.info(f"[ReAct] Résultat search_web : {len(resultats)} résultat(s)")
 
     elif outil == "search_articles":
@@ -379,7 +390,7 @@ _FORMATS_PAR_INTENT = {
 
 
 @observe(name="formuler_reponse")
-def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general", historique: list[dict] | None = None, model: str | None = None) -> str:
+def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general", historique: list[dict] | None = None, model: str | None = None, max_tokens: int | None = None) -> str:
     """Demande au LLM de formuler une réponse finale à partir du résultat de l'outil."""
     # Correction Log B : instruction stricte si l'outil a échoué ou retourné vide
     if resultat_outil.startswith("[ERREUR_OUTIL]"):
@@ -407,7 +418,7 @@ def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general",
         f"Résultat de l'outil :\n{resultat_outil}\n\n"
         f"{instruction}"
     )
-    return appeler_llm(prompt, historique=historique, model=model)
+    return appeler_llm(prompt, historique=historique, model=model, max_tokens=max_tokens)
 
 
 # ---------------------------------------------------------------------------
@@ -416,13 +427,14 @@ def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general",
 MAX_ITERATIONS = 2  # Correction Log C : limite de boucle pour éviter les boucles infinies
 
 @observe(name="agent_react")
-def agent_react(requete: str) -> str:
+def agent_react(requete: str, conversation_id: str | None = None) -> str:
     """
     Boucle ReAct complète : Reason → Act → Observe → Respond.
     Inclut une garde contre les boucles infinies (MAX_ITERATIONS).
 
     Args:
-        requete: La question ou demande de l'utilisateur.
+        requete:         La question ou demande de l'utilisateur.
+        conversation_id: ID de conversation pour isoler la mémoire par utilisateur.
 
     Returns:
         Réponse finale en langage naturel.
@@ -452,15 +464,15 @@ def agent_react(requete: str) -> str:
         return check["raison"]
 
     # --- Mémoire conversationnelle : rappeler l'historique ---
-    historique = memory_recall(n=20)
-    memory_store(requete, role="user")
+    historique = memory_recall(n=20, conversation_id=conversation_id)
+    memory_store(requete, role="user", conversation_id=conversation_id)
 
     outils_essayes = []
 
     for iteration in range(1, MAX_ITERATIONS + 1):
         logger.info(f"[ReAct] Itération {iteration}/{MAX_ITERATIONS}")
 
-        decision = choisir_outil(requete, historique=historique)
+        decision = choisir_outil(requete, historique=historique, model=model_cascade)
         outil    = decision.get("outil", "reponse_directe")
 
         # Correction Log C : si le même outil échoue deux fois, basculer en réponse directe
@@ -481,7 +493,9 @@ def agent_react(requete: str) -> str:
             logger.warning(f"[ReAct] Itération {iteration} — outil en erreur, nouvelle tentative.")
             continue
 
-        reponse = formuler_reponse(requete, resultat, intent=decision.get("intent", "general"), historique=historique, model=model_cascade)
+        intent = decision.get("intent", "general")
+        intent_max_tokens = MAX_TOKENS_BY_INTENT.get(intent)
+        reponse = formuler_reponse(requete, resultat, intent=intent, historique=historique, model=model_cascade, max_tokens=intent_max_tokens)
         break
     else:
         logger.error("[ReAct] Max itérations atteint — abandon.")
@@ -492,7 +506,7 @@ def agent_react(requete: str) -> str:
     reponse = filtrer_sortie(reponse)
 
     # --- Mémoire conversationnelle : sauvegarder la réponse ---
-    memory_store(reponse, role="assistant")
+    memory_store(reponse, role="assistant", conversation_id=conversation_id)
 
     logger.info("[ReAct] Réponse finale générée.")
     print(f"\nRÉPONSE :\n{reponse}\n")
@@ -520,10 +534,14 @@ _TOOL_LABELS = {
 }
 
 
-async def agent_react_stream(requete: str):
+async def agent_react_stream(requete: str, conversation_id: str | None = None):
     """
     Version streaming de agent_react(). Générateur async qui yield des
     événements JSON pour le streaming SSE.
+
+    Args:
+        requete:         La question ou demande de l'utilisateur.
+        conversation_id: ID de conversation pour isoler la mémoire par utilisateur.
 
     Yields:
         dict: Événements SSE avec type thinking/tool_result/chunk/done.
@@ -555,8 +573,8 @@ async def agent_react_stream(requete: str):
         return
 
     # --- Mémoire ---
-    historique = memory_recall(n=20)
-    memory_store(requete, role="user")
+    historique = memory_recall(n=20, conversation_id=conversation_id)
+    memory_store(requete, role="user", conversation_id=conversation_id)
 
     outils_essayes = []
     resultat = ""
@@ -566,7 +584,7 @@ async def agent_react_stream(requete: str):
         logger.info(f"[ReAct] Itération {iteration}/{MAX_ITERATIONS}")
 
         # Yield "thinking" quand on choisit l'outil (bloquant, run in executor)
-        decision = choisir_outil(requete, historique=historique)
+        decision = choisir_outil(requete, historique=historique, model=model_cascade)
         outil = decision.get("outil", "reponse_directe")
 
         yield {
@@ -635,8 +653,9 @@ async def agent_react_stream(requete: str):
             f"{instruction}"
         )
 
+        intent_max_tokens = MAX_TOKENS_BY_INTENT.get(intent)
         full_response = ""
-        for chunk in appeler_llm_stream(prompt, historique=historique, model=model_cascade):
+        for chunk in appeler_llm_stream(prompt, historique=historique, model=model_cascade, max_tokens=intent_max_tokens):
             full_response += chunk
             yield {"type": "chunk", "content": chunk}
 
@@ -650,7 +669,7 @@ async def agent_react_stream(requete: str):
 
     # --- Post-traitement ---
     reponse = filtrer_sortie(resultat)
-    memory_store(reponse, role="assistant")
+    memory_store(reponse, role="assistant", conversation_id=conversation_id)
 
     latency_ms = int((time.time() - t0) * 1000)
     logger.info(f"[ReAct] Streaming terminé en {latency_ms}ms.")

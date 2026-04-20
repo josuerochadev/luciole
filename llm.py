@@ -132,6 +132,7 @@ def appeler_llm(
     retries: int = 3,
     historique: list[dict] | None = None,
     model: str | None = None,
+    max_tokens: int | None = None,
 ) -> str:
     """
     Appelle l'API OpenAI et retourne le texte généré.
@@ -142,6 +143,7 @@ def appeler_llm(
         retries: Nombre de tentatives en cas d'erreur temporaire.
         historique: Messages précédents (user/assistant) à injecter pour le contexte.
         model: Modèle à utiliser (si None, utilise MODEL_DEFAULT).
+        max_tokens: Limite de tokens pour la réponse (si None, utilise MAX_TOKENS).
 
     Returns:
         Le texte de la réponse du modèle.
@@ -151,6 +153,7 @@ def appeler_llm(
         RuntimeError: Si toutes les tentatives échouent.
     """
     effective_model = model or MODEL_DEFAULT
+    effective_max_tokens = max_tokens or MAX_TOKENS
     messages = [{"role": "system", "content": system_prompt}]
     if historique:
         messages.extend(historique)
@@ -161,7 +164,7 @@ def appeler_llm(
             response = get_openai_client().chat.completions.create(
                 model=effective_model,
                 temperature=TEMPERATURE,
-                max_tokens=MAX_TOKENS,
+                max_tokens=effective_max_tokens,
                 messages=messages,
                 timeout=30,
             )
@@ -208,6 +211,7 @@ def appeler_llm_tools(
     messages: list[dict],
     tools: list[dict],
     retries: int = 3,
+    model: str | None = None,
 ) -> dict:
     """
     Appelle l'API OpenAI avec le function calling natif.
@@ -228,7 +232,7 @@ def appeler_llm_tools(
     for tentative in range(1, retries + 1):
         try:
             response = get_openai_client().chat.completions.create(
-                model=MODEL_DEFAULT,
+                model=model or MODEL_DEFAULT,
                 temperature=TEMPERATURE,
                 max_tokens=MAX_TOKENS,
                 messages=messages,
@@ -286,6 +290,7 @@ def appeler_llm_stream(
     system_prompt: str = SYSTEM_PROMPT,
     historique: list[dict] | None = None,
     model: str | None = None,
+    max_tokens: int | None = None,
 ):
     """
     Version streaming de appeler_llm(). Yield les chunks de texte au fur et à mesure.
@@ -294,6 +299,7 @@ def appeler_llm_stream(
         str: Chaque chunk de texte généré par le modèle.
     """
     effective_model = model or MODEL_DEFAULT
+    effective_max_tokens = max_tokens or MAX_TOKENS
     messages = [{"role": "system", "content": system_prompt}]
     if historique:
         messages.extend(historique)
@@ -303,7 +309,7 @@ def appeler_llm_stream(
         stream = get_openai_client().chat.completions.create(
             model=effective_model,
             temperature=TEMPERATURE,
-            max_tokens=MAX_TOKENS,
+            max_tokens=effective_max_tokens,
             messages=messages,
             stream=True,
             timeout=60,

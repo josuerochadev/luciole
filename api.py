@@ -46,6 +46,8 @@ from database import (
     delete_conversation,
     update_conversation_title,
     get_recent_messages,
+    save_response_feedback,
+    get_response_feedback_stats,
 )
 from llm import appeler_llm
 from auth import (
@@ -406,6 +408,7 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_optional_user)
         import json as _json
         full_response = ""
         latency_ms = 0
+        sources = None
 
         try:
             # Envoyer le conversation_id en premier événement
@@ -414,7 +417,7 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_optional_user)
                 start_data["file"] = file_meta
             yield f"data: {_json.dumps(start_data)}\n\n"
 
-            async for event in agent_react_stream(enriched_question):
+            async for event in agent_react_stream(enriched_question, conversation_id=conv_id):
                 # Vérifier la déconnexion client
                 if await request.is_disconnected():
                     logger.info("[SSE] Client déconnecté.")
@@ -423,6 +426,7 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_optional_user)
                 if event["type"] == "done":
                     full_response = event.get("full_response", "")
                     latency_ms = event.get("latency_ms", 0)
+                    sources = event.get("sources")
 
                 yield f"data: {_json.dumps(event, ensure_ascii=False)}\n\n"
 
@@ -435,8 +439,19 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_optional_user)
         end_request()
 
         # Sauvegarder la réponse en DB (seulement si connecté)
+        message_id = None
         if user and conv_id and full_response:
-            add_message(conv_id, "assistant", full_response, latency_ms=latency_ms)
+            msg = add_message(conv_id, "assistant", full_response, latency_ms=latency_ms)
+            message_id = msg["id"]
+
+        # Envoyer le message_id au client pour le feedback
+        if message_id or sources:
+            meta_event = {"type": "meta"}
+            if message_id:
+                meta_event["message_id"] = message_id
+            if sources:
+                meta_event["sources"] = sources
+            yield f"data: {_json.dumps(meta_event, ensure_ascii=False)}\n\n"
 
         # Générer un titre au 1er message
         if user and is_new and conv_id:
@@ -585,6 +600,26 @@ def feedback(request: Request, req: FeedbackRequest, x_api_key: str | None = Hea
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return result
+
+
+class ResponseFeedbackRequest(BaseModel):
+    message_id: str
+    rating: str = Field(..., pattern="^(up|down)$")
+    comment: str | None = None
+
+
+@app.post("/feedback/response")
+@limiter.limit("30/minute")
+def response_feedback(request: Request, req: ResponseFeedbackRequest, user=Depends(get_optional_user)):
+    """Enregistre un feedback (thumbs up/down) sur une réponse de l'agent."""
+    result = save_response_feedback(req.message_id, req.rating, req.comment)
+    return result
+
+
+@app.get("/feedback/stats")
+def feedback_stats():
+    """Stats globales des feedbacks sur les réponses."""
+    return get_response_feedback_stats()
 
 
 class DigestSendRequest(BaseModel):

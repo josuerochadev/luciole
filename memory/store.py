@@ -49,19 +49,22 @@ def _get_connection() -> sqlite3.Connection:
     return conn
 
 
-def store(message: str, role: str = "user") -> None:
+def store(message: str, role: str = "user", conversation_id: str | None = None) -> None:
     """
     Ajoute un message en mémoire (INSERT dans SQLite).
 
     Args:
-        message: Le contenu du message.
-        role:    "user" ou "assistant".
+        message:         Le contenu du message.
+        role:            "user" ou "assistant".
+        conversation_id: ID de conversation pour isoler la mémoire par utilisateur.
+                         Si None, utilise le session_id global (mode CLI).
     """
+    sid = conversation_id or _session_id
     conn = _get_connection()
     try:
         conn.execute(
             "INSERT INTO conversations (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)",
-            (_session_id, role, message, datetime.now(timezone.utc).isoformat()),
+            (sid, role, message, datetime.now(timezone.utc).isoformat()),
         )
         # Tronquer les messages les plus anciens au-delà de LIMITE_MEMOIRE
         conn.execute(
@@ -74,27 +77,30 @@ def store(message: str, role: str = "user") -> None:
                 LIMIT ?
             )
             """,
-            (_session_id, _session_id, LIMITE_MEMOIRE),
+            (sid, sid, LIMITE_MEMOIRE),
         )
         conn.commit()
         count = conn.execute(
-            "SELECT COUNT(*) FROM conversations WHERE session_id = ?", (_session_id,)
+            "SELECT COUNT(*) FROM conversations WHERE session_id = ?", (sid,)
         ).fetchone()[0]
-        logger.debug(f"[memory] store() — {count}/{LIMITE_MEMOIRE} messages. Role={role}")
+        logger.debug(f"[memory] store() — {count}/{LIMITE_MEMOIRE} messages. Role={role}, sid={sid[:8]}")
     finally:
         conn.close()
 
 
-def recall(n: int = 20) -> list[dict]:
+def recall(n: int = 20, conversation_id: str | None = None) -> list[dict]:
     """
     Retourne les n derniers messages de la session courante (du plus ancien au plus récent).
 
     Args:
-        n: Nombre de messages à rappeler (défaut : 20).
+        n:               Nombre de messages à rappeler (défaut : 20).
+        conversation_id: ID de conversation pour isoler la mémoire par utilisateur.
+                         Si None, utilise le session_id global (mode CLI).
 
     Returns:
         Liste de dicts {role, content}.
     """
+    sid = conversation_id or _session_id
     conn = _get_connection()
     try:
         rows = conn.execute(
@@ -104,10 +110,10 @@ def recall(n: int = 20) -> list[dict]:
             ORDER BY id DESC
             LIMIT ?
             """,
-            (_session_id, n),
+            (sid, n),
         ).fetchall()
         résultat = [{"role": r[0], "content": r[1]} for r in reversed(rows)]
-        logger.debug(f"[memory] recall({n}) — {len(résultat)} message(s) retourné(s).")
+        logger.debug(f"[memory] recall({n}) — {len(résultat)} message(s) retourné(s). sid={sid[:8]}")
         return résultat
     finally:
         conn.close()

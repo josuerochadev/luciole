@@ -223,19 +223,18 @@ class TestSearchWeb:
         results = search_web("nouveau GPU nvidia")
         assert len(results) >= 1
 
-    def test_requete_sans_correspondance(self):
-        """Requête sans mot-clé reconnu retourne un résultat générique (fallback simulé)."""
+    def test_requete_sans_tavily_retourne_liste_vide(self):
+        """Sans clé Tavily, search_web retourne une liste vide (pas de résultats fictifs)."""
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop("TAVILY_API_KEY", None)
             results = search_web("recette de tarte aux pommes")
-        assert len(results) == 1
-        assert "générique" in results[0]["url"] or "generique" in results[0]["url"]
+        assert results == []
 
     def test_retour_structure(self):
-        """Chaque résultat a les 3 clés attendues."""
-        for query in ["IA", "cloud", "xyz inconnu"]:
-            for r in search_web(query):
-                assert set(r.keys()) == {"titre", "url", "extrait"}
+        """Chaque résultat a les 3 clés attendues (si Tavily est configuré)."""
+        results = search_web("IA")
+        for r in results:
+            assert set(r.keys()) == {"titre", "url", "extrait"}
 
 
 class TestFiltrerParTheme:

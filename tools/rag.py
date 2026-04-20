@@ -207,18 +207,19 @@ def _get_query_embedding(query: str) -> tuple[float, ...]:
 
 def _expand_query(query: str) -> str:
     """
-    Génère un paragraphe hypothétique qui répondrait à la requête.
+    Génère un paragraphe hypothétique qui répondrait à la requête (HyDE).
     L'embedding de ce texte enrichi matche mieux les documents pertinents.
+    Utilise le modèle rapide pour limiter la latence.
     """
     try:
+        from config import MODEL_FAST
         prompt = (
-            "Tu es un assistant de veille technologique. "
             "Écris un court paragraphe (3-4 phrases) qui serait un extrait d'article "
             "répondant précisément à cette question. Sois factuel et technique. "
             "Ne mentionne pas que c'est hypothétique.\n\n"
             f"Question : {query}"
         )
-        hypothetical = appeler_llm(prompt)
+        hypothetical = appeler_llm(prompt, model=MODEL_FAST)
         expanded = f"{query}\n\n{hypothetical}"
         logger.info("[RAG] Query expansion HyDE effectuée (%d chars).", len(expanded))
         return expanded

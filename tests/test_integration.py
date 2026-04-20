@@ -98,10 +98,10 @@ class TestToolRouting:
 
     @pytest.mark.integration
     def test_routing_db_over_rag(self):
-        """Question sur des statistiques internes → query_db (pas search_articles)."""
-        decision = choisir_outil("Score de pertinence moyen des articles dans la base ?")
+        """Question sur les clients → query_db (seule table disponible)."""
+        decision = choisir_outil("Combien de clients Premium dans la base ?")
         assert decision["outil"] == "query_db", (
-            f"Attendu query_db pour question statistique, obtenu {decision['outil']}"
+            f"Attendu query_db pour question clients, obtenu {decision['outil']}"
         )
 
     @pytest.mark.integration

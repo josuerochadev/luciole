@@ -99,80 +99,11 @@ def search_web(query: str) -> list[dict]:
 
 def _search_web_simule(query: str) -> list[dict]:
     """
-    Recherche web simulée (fallback). Retourne des résultats fictifs
-    cohérents avec la requête.
+    Fallback quand TAVILY_API_KEY est absente.
+    Retourne une liste vide pour signaler l'indisponibilité.
     """
-    logger.info(f"[search_web] Recherche simulée : '{query}'")
-
-    query_lower = query.lower()
-
-    banque = [
-        {
-            "mots_cles": ["ia", "intelligence artificielle", "llm", "gpt", "mistral", "gemini"],
-            "resultats": [
-                {
-                    "titre": "Les LLMs en 2026 : où en sommes-nous ?",
-                    "url": "https://example.com/llm-2026",
-                    "extrait": "Les grands modèles de langage atteignent de nouveaux niveaux de performance en raisonnement multi-étapes. GPT-5 et Gemini Ultra 2 dominent les benchmarks.",
-                },
-                {
-                    "titre": "IA générative : les tendances du marché enterprise",
-                    "url": "https://example.com/ia-enterprise-2026",
-                    "extrait": "L'adoption de l'IA générative en entreprise dépasse 60% dans le secteur IT. Les cas d'usage principaux : automatisation du code, veille, support client.",
-                },
-                {
-                    "titre": "Agents IA autonomes : l'année de l'industrialisation",
-                    "url": "https://example.com/agents-ia-2026",
-                    "extrait": "Les frameworks d'agents (ReAct, multi-tool orchestration) passent en production. Les retours d'expérience mettent en avant le coût de supervision et la nécessité d'une observabilité fine.",
-                },
-            ],
-        },
-        {
-            "mots_cles": ["gpu", "nvidia", "amd", "puce", "chip", "matériel", "hardware"],
-            "resultats": [
-                {
-                    "titre": "NVIDIA annonce sa nouvelle architecture Blackwell Ultra",
-                    "url": "https://example.com/nvidia-blackwell-ultra",
-                    "extrait": "NVIDIA présente des puces offrant 4x les performances d'inférence de la génération précédente, ciblant les datacenters IA.",
-                },
-            ],
-        },
-        {
-            "mots_cles": ["cloud", "aws", "azure", "gcp", "kubernetes", "infrastructure"],
-            "resultats": [
-                {
-                    "titre": "Cloud 2026 : la bataille des hyperscalers continue",
-                    "url": "https://example.com/cloud-hyperscalers-2026",
-                    "extrait": "AWS, Azure et GCP intensifient leurs offres IA managées. Les coûts d'inférence baissent de 40% sur un an.",
-                },
-            ],
-        },
-        {
-            "mots_cles": ["cybersécurité", "sécurité", "faille", "ransomware", "hack", "zero-day"],
-            "resultats": [
-                {
-                    "titre": "Cybersécurité : les attaques assistées par IA en hausse de 200%",
-                    "url": "https://example.com/cybersecu-ia-2026",
-                    "extrait": "Les acteurs malveillants utilisent des LLMs pour automatiser la génération de phishing et de malwares. Les SOCs répondent avec des outils de détection IA.",
-                },
-            ],
-        },
-    ]
-
-    for groupe in banque:
-        if any(mot in query_lower for mot in groupe["mots_cles"]):
-            logger.info(f"[search_web] {len(groupe['resultats'])} résultat(s) trouvé(s).")
-            return groupe["resultats"]
-
-    # Résultat générique si aucun mot-clé ne correspond
-    logger.info("[search_web] Aucun mot-clé reconnu, résultat générique retourné.")
-    return [
-        {
-            "titre": f"Résultats pour : {query}",
-            "url": "https://example.com/recherche-generique",
-            "extrait": f"Aucun article spécifique trouvé pour '{query}' dans la base simulée.",
-        }
-    ]
+    logger.warning(f"[search_web] TAVILY_API_KEY absente — aucun résultat réel pour : '{query}'")
+    return []
 
 
 def _parse_date(entry) -> str:

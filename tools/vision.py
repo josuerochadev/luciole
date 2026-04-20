@@ -91,6 +91,14 @@ def analyser_image(chemin_image: str, consigne: str = None) -> dict:
             model=MODEL_VISION,
             messages=[
                 {
+                    "role": "system",
+                    "content": (
+                        "Tu es Luciole, un agent de veille technologique. "
+                        "Tu analyses des images et documents visuels pour en extraire "
+                        "des informations structurées. Réponds toujours en français."
+                    ),
+                },
+                {
                     "role": "user",
                     "content": [
                         {"type": "text", "text": prompt_text},

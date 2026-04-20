@@ -38,11 +38,11 @@ def transcrire_audio(chemin_audio: str) -> dict:
     try:
         client = get_openai_client()
         with open(chemin_audio, "rb") as f:
-            response = client.audio.transcriptions.create(
-                model="whisper-1",
-                file=f,
-                language="fr",
-            )
+            language = os.getenv("WHISPER_LANGUAGE")  # None = auto-détection
+            kwargs = {"model": "whisper-1", "file": f}
+            if language:
+                kwargs["language"] = language
+            response = client.audio.transcriptions.create(**kwargs)
         transcription = response.text
         logger.info(f"[Transcribe] Transcription OK — {len(transcription)} caractères")
     except Exception as e:
@@ -50,7 +50,7 @@ def transcrire_audio(chemin_audio: str) -> dict:
 
     # Analyse du texte transcrit par le LLM
     prompt_analyse = (
-        "Voici la transcription d'un fichier audio en français.\n"
+        "Voici la transcription d'un fichier audio.\n"
         "Fournis une analyse structurée :\n"
         "1. **Résumé** : de quoi parle cet audio (2-3 phrases)\n"
         "2. **Points clés** : liste des informations importantes\n"

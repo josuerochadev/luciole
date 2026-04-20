@@ -167,9 +167,7 @@ async def stop_cleanup_task():
 
 @app.post("/upload")
 @limiter.limit("20/minute")
-async def upload_file(request: Request, file: UploadFile = File(...), user=Depends(get_current_user)):
-    if isinstance(user, RedirectResponse):
-        raise HTTPException(status_code=401, detail="Non authentifié.")
+async def upload_file(request: Request, file: UploadFile = File(...), user=Depends(get_optional_user)):
 
     # Valider le type MIME déclaré
     if file.content_type not in ALLOWED_TYPES:
@@ -235,7 +233,7 @@ async def login_page(request: Request):
     user = await get_optional_user(request)
     if user:
         return RedirectResponse(url="/", status_code=303)
-    return templates.TemplateResponse(request, "login.html", {"active_page": "login"})
+    return templates.TemplateResponse(request, "login.html", {"active_page": "login", "user": None})
 
 
 @app.post("/auth/register")
@@ -354,21 +352,22 @@ def _generate_title(question: str) -> str:
 
 @app.post("/ask")
 @limiter.limit("10/minute")
-async def ask(request: Request, req: AskRequest, user=Depends(get_current_user)):
-    if isinstance(user, RedirectResponse):
-        raise HTTPException(status_code=401, detail="Non authentifié.")
-
-    # Créer ou récupérer la conversation
+async def ask(request: Request, req: AskRequest, user=Depends(get_optional_user)):
+    # Créer ou récupérer la conversation (seulement si connecté)
     conv_id = req.conversation_id
     is_new = False
-    if not conv_id:
-        conv = create_conversation(user_id=user["id"])
-        conv_id = conv["id"]
-        is_new = True
+    if user:
+        if not conv_id:
+            conv = create_conversation(user_id=user["id"])
+            conv_id = conv["id"]
+            is_new = True
+        else:
+            conv = get_conversation(conv_id)
+            if not conv:
+                raise HTTPException(status_code=404, detail="Conversation introuvable.")
     else:
-        conv = get_conversation(conv_id)
-        if not conv:
-            raise HTTPException(status_code=404, detail="Conversation introuvable.")
+        # Visiteur anonyme : pas de persistance
+        conv_id = None
 
     # Résoudre le fichier uploadé si file_id est fourni
     enriched_question = req.question
@@ -397,8 +396,9 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_current_user))
             enriched_question = f"Analyse ce document PDF : {file_path}\n\nConsigne de l'utilisateur : {req.question}"
             file_meta = {"type": "pdf", "path": str(file_path), "filename": file_path.name}
 
-    # Sauvegarder le message utilisateur
-    add_message(conv_id, "user", req.question)
+    # Sauvegarder le message utilisateur (seulement si connecté)
+    if user and conv_id:
+        add_message(conv_id, "user", req.question)
 
     start_request(req.question)
 
@@ -434,12 +434,12 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_current_user))
 
         end_request()
 
-        # Sauvegarder la réponse en DB
-        if full_response:
+        # Sauvegarder la réponse en DB (seulement si connecté)
+        if user and conv_id and full_response:
             add_message(conv_id, "assistant", full_response, latency_ms=latency_ms)
 
         # Générer un titre au 1er message
-        if is_new:
+        if user and is_new and conv_id:
             title = _generate_title(req.question)
             update_conversation_title(conv_id, title)
 

@@ -15,7 +15,10 @@
   const headlinesSection = document.getElementById('headlines-section');
   const newChatBtn = document.getElementById('new-chat-btn');
 
-  // Sidebar elements
+  // Auth state (set by template)
+  const isLoggedIn = window.__lucioleUser === true;
+
+  // Sidebar elements (only exist if logged in)
   const sidebar = document.getElementById('sidebar');
   const sidebarList = document.getElementById('sidebar-list');
   const sidebarNewBtn = document.getElementById('sidebar-new-btn');
@@ -104,8 +107,8 @@
     }
   }
 
-  sidebarToggle.addEventListener('click', toggleSidebar);
-  sidebarOverlay.addEventListener('click', closeSidebar);
+  if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
+  if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
 
   // ── Sidebar — Load conversations ──────────────────────────
   async function loadConversations() {
@@ -487,12 +490,6 @@
         body: JSON.stringify(body),
       });
 
-      if (res.status === 401) {
-        hideTyping();
-        window.location.href = '/login';
-        return;
-      }
-
       if (!res.ok) {
         hideTyping();
         const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
@@ -513,7 +510,7 @@
         if (data.conversation_id) currentConversationId = data.conversation_id;
         const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
         appendMessage({ role: 'agent', content: data.reponse, meta: timeNow() + ' · ' + elapsed + 's' });
-        loadConversations();
+        if (isLoggedIn) loadConversations();
         loadMetrics();
         return;
       }
@@ -644,7 +641,7 @@
       }
 
       // Refresh sidebar & KPIs
-      loadConversations();
+      if (isLoggedIn) loadConversations();
       loadMetrics();
 
     } catch {
@@ -680,10 +677,12 @@
     resetChat();
   });
 
-  sidebarNewBtn.addEventListener('click', function () {
-    resetChat();
-    if (window.innerWidth <= 768) closeSidebar();
-  });
+  if (sidebarNewBtn) {
+    sidebarNewBtn.addEventListener('click', function () {
+      resetChat();
+      if (window.innerWidth <= 768) closeSidebar();
+    });
+  }
 
   // ── Headline card clicks ────────────────────────────────────
   document.querySelectorAll('.luciole-headline-card').forEach(function (card) {
@@ -697,6 +696,6 @@
     });
   });
 
-  // ── Init: load conversations ──────────────────────────────
-  loadConversations();
+  // ── Init: load conversations (connectés uniquement) ───────
+  if (isLoggedIn) loadConversations();
 })();

@@ -62,6 +62,102 @@
 }
 
 /* ============================================================
+   Dark Mode — System preference
+   ============================================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --luciole-ink: #e8e8e8;
+    --luciole-ink-soft: #d0d0d0;
+    --luciole-muted: #9a9a9a;
+    --luciole-rule: rgba(255, 255, 255, 0.1);
+    --luciole-paper: #1a1a1a;
+    --luciole-paper-alt: #222222;
+    --luciole-white: #2a2a2a;
+    --luciole-accent: #ef4444;
+    --luciole-accent-dark: #dc2626;
+    --luciole-accent-soft: rgba(239, 68, 68, 0.12);
+    --luciole-secondary: #8b9daf;
+    --luciole-secondary-soft: rgba(139, 157, 175, 0.15);
+    --luciole-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
+    --luciole-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+    --luciole-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.25);
+    --luciole-rule-heavy: 3px solid var(--luciole-ink);
+  }
+}
+
+/* Dark Mode — Manual toggle */
+[data-theme="dark"] {
+  --luciole-ink: #e8e8e8;
+  --luciole-ink-soft: #d0d0d0;
+  --luciole-muted: #9a9a9a;
+  --luciole-rule: rgba(255, 255, 255, 0.1);
+  --luciole-paper: #1a1a1a;
+  --luciole-paper-alt: #222222;
+  --luciole-white: #2a2a2a;
+  --luciole-accent: #ef4444;
+  --luciole-accent-dark: #dc2626;
+  --luciole-accent-soft: rgba(239, 68, 68, 0.12);
+  --luciole-secondary: #8b9daf;
+  --luciole-secondary-soft: rgba(139, 157, 175, 0.15);
+  --luciole-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
+  --luciole-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+  --luciole-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.25);
+  --luciole-rule-heavy: 3px solid var(--luciole-ink);
+}
+
+/* Dark mode — Drag overlay fix */
+[data-theme="dark"] .luciole-dragover::after,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .luciole-dragover::after {
+    background: rgba(26, 26, 26, 0.9);
+  }
+}
+
+/* Dark mode — Code blocks inversion */
+[data-theme="dark"] .luciole-message-content pre,
+:root:not([data-theme="light"]) .luciole-message-content pre {
+  background: #111111;
+}
+
+/* ── Theme toggle button ──────────────────────────────── */
+
+.luciole-theme-toggle {
+  background: transparent;
+  border: 1px solid var(--luciole-rule);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: var(--luciole-text-lg);
+  color: var(--luciole-ink);
+  line-height: 1;
+  margin-left: var(--luciole-space-2);
+}
+.luciole-theme-toggle:hover {
+  background: var(--luciole-paper-alt);
+  border-color: var(--luciole-ink);
+}
+
+/* ── Smooth theme transitions ──────────────────────────── */
+
+body,
+body *,
+body *::before,
+body *::after {
+  transition-property: background-color, color, border-color, box-shadow;
+  transition-duration: 0.25s;
+  transition-timing-function: ease;
+}
+
+/* Don't transition animations and transforms */
+.luciole-message,
+.luciole-step-badge,
+.luciole-chat-input:focus-within {
+  transition-property: background-color, color, border-color, box-shadow, transform;
+}
+
+/* ============================================================
    Reset & Base
    ============================================================ */
 

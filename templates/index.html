@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 
 {% block masthead_toggle %}
+{% if user %}
 <button class="luciole-sidebar-toggle" id="sidebar-toggle" aria-label="Ouvrir l'historique">&#9776;</button>
+{% endif %}
 {% endblock %}
 
 {% block content %}
-<!-- Sidebar — Conversation history -->
+<!-- Sidebar — Conversation history (connectés uniquement) -->
+{% if user %}
 <aside class="luciole-sidebar" id="sidebar">
   <div class="luciole-sidebar-header">
     <span class="t-eyebrow">Historique</span>
@@ -20,6 +23,7 @@
 
 <!-- Sidebar overlay (mobile) -->
 <div class="luciole-sidebar-overlay" id="sidebar-overlay"></div>
+{% endif %}
 
 <!-- Hero — Centered, chat-first -->
 <section class="luciole-hero" id="hero-section">
@@ -98,6 +102,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>window.__lucioleUser = {{ 'true' if user else 'false' }};</script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="/static/luciole-chat.js?v={{ cache_bust }}"></script>
 {% endblock %}

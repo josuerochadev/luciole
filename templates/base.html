@@ -20,7 +20,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 
   <!-- Design System -->
-  <link rel="stylesheet" href="/static/luciole.css">
+  <link rel="stylesheet" href="/static/luciole.css?v={{ cache_bust }}">
+
+  <!-- Theme init (before paint to avoid flash) -->
+  <script>
+    (function() {
+      var saved = localStorage.getItem('luciole-theme');
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+    })();
+  </script>
 
   {% block head %}{% endblock %}
 </head>
@@ -56,10 +68,11 @@
       {% if user %}
         <a href="#" id="logout-nav" class="luciole-nav-logout">{{ user.display_name or user.email }} · Quitter</a>
       {% else %}
-        {% if active_page != "login" %}
-          <a href="/login" {% if active_page == "login" %}class="active"{% endif %}>Connexion</a>
-        {% endif %}
+        <a href="/login" {% if active_page == "login" %}class="active"{% endif %}>Connexion</a>
       {% endif %}
+      <button class="luciole-theme-toggle" id="theme-toggle" aria-label="Basculer le mode sombre" title="Mode sombre / clair">
+        <span id="theme-icon">&#9790;</span>
+      </button>
     </nav>
   </header>
 
@@ -111,6 +124,38 @@
         window.location.href = '/login';
       });
     });
+
+    // Theme toggle
+    (function() {
+      var toggle = document.getElementById('theme-toggle');
+      var icon = document.getElementById('theme-icon');
+      var html = document.documentElement;
+
+      function isDark() {
+        var theme = html.getAttribute('data-theme');
+        if (theme === 'dark') return true;
+        if (theme === 'light') return false;
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+
+      function updateIcon() {
+        // Moon = currently light (click to go dark), Sun = currently dark (click to go light)
+        icon.innerHTML = isDark() ? '&#9788;' : '&#9790;';
+      }
+
+      updateIcon();
+
+      toggle.addEventListener('click', function() {
+        var nowDark = isDark();
+        var newTheme = nowDark ? 'light' : 'dark';
+        html.setAttribute('data-theme', newTheme);
+        localStorage.setItem('luciole-theme', newTheme);
+        updateIcon();
+      });
+
+      // Listen for system theme changes
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateIcon);
+    })();
   </script>
 
   {% block scripts %}{% endblock %}

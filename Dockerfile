@@ -22,7 +22,8 @@ WORKDIR /build
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt \
-    && pip install --no-cache-dir --prefix=/install email-validator>=2.0.0
+    && pip install --no-cache-dir --prefix=/install email-validator>=2.0.0 \
+    && pip install --no-cache-dir --prefix=/install python-multipart>=0.0.9
 
 # --------------- Stage 2 : prebuild (collecte RSS sans cle API) ---------------
 FROM python:3.12-slim AS prebuild

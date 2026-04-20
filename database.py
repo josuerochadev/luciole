@@ -55,6 +55,17 @@ def init_db():
 
             CREATE INDEX IF NOT EXISTS idx_messages_conv
                 ON messages(conversation_id);
+
+            CREATE TABLE IF NOT EXISTS response_feedback (
+                id TEXT PRIMARY KEY,
+                message_id TEXT NOT NULL,
+                rating TEXT NOT NULL CHECK(rating IN ('up', 'down')),
+                comment TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_response_feedback_msg
+                ON response_feedback(message_id);
         """)
 
         # Migration: add user_id column if missing (existing databases)
@@ -243,6 +254,41 @@ def get_recent_messages(conv_id: str, n: int = 20) -> list[dict]:
             (conv_id, n),
         ).fetchall()
         return [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
+    finally:
+        conn.close()
+
+
+def save_response_feedback(message_id: str, rating: str, comment: str | None = None) -> dict:
+    """Sauvegarde un feedback sur une réponse (up/down)."""
+    fb_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    conn = _get_connection()
+    try:
+        # Upsert: remplace le feedback existant pour ce message
+        conn.execute(
+            "DELETE FROM response_feedback WHERE message_id = ?",
+            (message_id,),
+        )
+        conn.execute(
+            "INSERT INTO response_feedback (id, message_id, rating, comment, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (fb_id, message_id, rating, comment, now),
+        )
+        conn.commit()
+        return {"id": fb_id, "message_id": message_id, "rating": rating, "comment": comment, "created_at": now}
+    finally:
+        conn.close()
+
+
+def get_response_feedback_stats() -> dict:
+    """Stats globales des feedbacks sur les réponses."""
+    conn = _get_connection()
+    try:
+        total = conn.execute("SELECT COUNT(*) as c FROM response_feedback").fetchone()["c"]
+        up = conn.execute("SELECT COUNT(*) as c FROM response_feedback WHERE rating = 'up'").fetchone()["c"]
+        down = conn.execute("SELECT COUNT(*) as c FROM response_feedback WHERE rating = 'down'").fetchone()["c"]
+        pct_positive = round((up / total) * 100, 1) if total > 0 else 0
+        return {"total": total, "up": up, "down": down, "pct_positive": pct_positive}
     finally:
         conn.close()
 

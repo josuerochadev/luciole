@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 EMBEDDINGS_FILE = os.path.join(DATA_DIR, "embeddings.json")
 EMBEDDING_MODEL = "text-embedding-3-small"
-BATCH_SIZE      = 512          # Max inputs par appel OpenAI (limite : 2048)
+BATCH_SIZE      = 100          # Inputs par appel OpenAI (limité pour rester sous 300k tokens)
 FRESHNESS_DECAY  = 90           # Jours après lesquels un article est considéré "vieux"
 
 # --- Chunking ---

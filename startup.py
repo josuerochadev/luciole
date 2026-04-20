@@ -90,4 +90,10 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    import sys
+    try:
+        run()
+    except Exception as e:
+        print(f"[startup] ERREUR FATALE : {e}", file=sys.stderr, flush=True)
+        import traceback
+        traceback.print_exc()

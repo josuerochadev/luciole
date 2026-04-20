@@ -4,7 +4,7 @@
 # 2. Démarre l'API immédiatement
 
 echo "[start] Enrichissement des articles en arrière-plan..."
-python startup.py &
+PYTHONUNBUFFERED=1 python startup.py 2>&1 &
 
 echo "[start] Démarrage de l'API..."
 exec uvicorn api:app --host 0.0.0.0 --port 8000

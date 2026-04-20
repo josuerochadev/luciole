@@ -124,8 +124,7 @@
 
 .luciole-theme-toggle {
   background: transparent;
-  border: 1px solid var(--luciole-rule);
-  border-radius: 4px;
+  border: none;
   padding: 2px 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -136,7 +135,6 @@
 }
 .luciole-theme-toggle:hover {
   background: var(--luciole-paper-alt);
-  border-color: var(--luciole-ink);
 }
 
 /* ── Smooth theme transitions ──────────────────────────── */
@@ -851,8 +849,7 @@ img { max-width: 100%; display: block; }
 /* Sidebar toggle button — inline in masthead */
 .luciole-sidebar-toggle {
   background: transparent;
-  border: 1px solid var(--luciole-rule);
-  border-radius: 4px;
+  border: none;
   padding: 2px 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -863,7 +860,6 @@ img { max-width: 100%; display: block; }
 }
 .luciole-sidebar-toggle:hover {
   background: var(--luciole-paper-alt);
-  border-color: var(--luciole-ink);
 }
 
 /* Empty state */
@@ -1307,8 +1303,7 @@ body.chat-active .luciole-footer {
   font-size: var(--luciole-text-base);
   color: var(--luciole-muted);
   background: transparent;
-  border: 1px solid var(--luciole-rule);
-  border-radius: 4px;
+  border: none;
   width: 24px;
   height: 24px;
   display: flex;
@@ -1321,8 +1316,6 @@ body.chat-active .luciole-footer {
 
 .luciole-logout-btn:hover {
   color: var(--luciole-accent);
-  border-color: var(--luciole-accent);
-  background: var(--luciole-accent-soft);
 }
 
 .luciole-login-link {

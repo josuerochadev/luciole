@@ -66,7 +66,7 @@
       <a href="/dashboard" {% if active_page == "dashboard" %}class="active"{% endif %}>Tableau de bord</a>
       <a href="/about" {% if active_page == "about" %}class="active"{% endif %}>À propos</a>
       {% if user %}
-        <a href="#" id="logout-nav" class="luciole-nav-logout">{{ user.display_name or user.email }} · Quitter</a>
+        <a href="#" id="logout-nav" class="luciole-nav-logout">Déconnexion</a>
       {% else %}
         <a href="/login" {% if active_page == "login" %}class="active"{% endif %}>Connexion</a>
       {% endif %}

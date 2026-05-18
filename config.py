@@ -11,10 +11,10 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
 # --- Modèle et paramètres LLM ---
-MODEL_DEFAULT = "gemini-2.0-flash"
-MODEL_FAST = "gemini-2.0-flash"
-MODEL_POWERFUL = "gemini-1.5-pro"
-MODEL_VISION = "gemini-2.0-flash"  # Gemini Flash supporte le multimodal
+MODEL_DEFAULT = "gemini-2.5-flash"
+MODEL_FAST = "gemini-2.5-flash-lite"
+MODEL_POWERFUL = "gemini-2.5-pro"
+MODEL_VISION = "gemini-2.5-flash"  # Gemini Flash supporte le multimodal
 TEMPERATURE = 0.3
 MAX_TOKENS = 4096
 

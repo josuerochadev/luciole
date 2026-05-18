@@ -1,95 +1,79 @@
-# Agent de Veille Technologique
+<div align="center">
 
-Agent IA automatisé pour la veille technologique, développé dans le cadre d'une formation en Intelligence Artificielle.
+# Luciole
+
+**Agent IA de veille technologique — pipeline automatisé, RAG et interface conversationnelle.**
+
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=flat&logo=fastapi&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-API-412991?style=flat&logo=openai&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-enabled-2496ED?style=flat&logo=docker&logoColor=white)
+
+[Documentation](docs/ARCHITECTURE.md) · [Portfolio](https://josuerocha.dev) · [Signaler un bug](https://github.com/josuerochadev/luciole/issues)
+
+</div>
+
+---
+
+## À propos
+
+Luciole est le projet fil rouge d'une formation de 70h consacrée à la conception et au déploiement d'agents IA (AJC Formation, 2025). L'objectif : automatiser la veille technologique en entreprise — collecte RSS, enrichissement par LLM, recherche sémantique et interface conversationnelle en langage naturel.
+
+Projet réalisé en équipe avec Alex Dubus, Zhengfeng Ding et Stéphanie Consoli.
 
 ## Fonctionnalités
 
-- **Pipeline automatisé** : collecte d'articles RSS, filtrage par thèmes, enrichissement par LLM (résumé, catégorisation, score de pertinence)
-- **Agent conversationnel** : interface en langage naturel avec raisonnement ReAct et 7 outils (base de données, recherche web, recherche sémantique, email, scraping, transcription audio, analyse d'images)
-- **RAG (Retrieval-Augmented Generation)** : recherche sémantique par embeddings avec scoring hybride (similarité cosinus + fraîcheur)
-- **Rapports email** : génération de digests HTML stylisés avec envoi SMTP
-- **Gouvernance des données** : rétention automatique (90j articles, 30j logs), protection anti-injection SQL, conformité RGPD
+- **Pipeline automatisé** : collecte de ~40 flux RSS, filtrage thématique, enrichissement LLM (résumé, catégorie, score de pertinence 1-10)
+- **Agent conversationnel ReAct** : raisonnement Reason → Act → Observe avec 7 outils (base de données, recherche web, RAG, email, scraping, transcription audio, analyse d'images)
+- **RAG** : embeddings `text-embedding-3-small`, scoring hybride cosinus + fraîcheur, re-ranking optionnel via Cohere
+- **Interface web** : chat avec streaming SSE, tableau de bord articles, mode sombre, upload fichiers, feedback sur les réponses
+- **Auth** : comptes utilisateurs, authentification JWT
+- **Rapports email** : digests HTML générés par LLM et envoyés par SMTP
+- **Observabilité** : tracing LLM via Langfuse, métriques et KPIs (`/metrics`)
+- **Gouvernance** : rétention automatique RGPD (90j articles, 30j logs), protection anti-injection, rate limiting
 
-## Architecture
+## Stack technique
 
-```
-fil-rouge/
-├── main.py              # Agent conversationnel (boucle ReAct)
-├── api.py               # API FastAPI (endpoints /ask, /digest, /feedback, etc.)
-├── pipeline.py          # Pipeline automatisé RSS → LLM → stockage
-├── seed.py              # Peuplement initial de la base d'articles
-├── config.py            # Configuration centralisée
-├── llm.py               # Interface OpenAI (appels LLM, parsing JSON)
-├── security.py          # Middleware sécurité (rate limiting, headers)
-├── monitoring.py        # Métriques et monitoring
-├── tracing.py           # Intégration Langfuse (tracing LLM)
-├── generate_traffic.py  # Génération de trafic pour tests de charge
-├── tools/
-│   ├── search.py        # Collecte RSS + recherche web
-│   ├── database.py      # Persistance SQLite + JSON
-│   ├── email.py         # Génération et envoi de rapports HTML
-│   ├── rag.py           # Embeddings + recherche sémantique
-│   ├── scraper.py       # Scraping de pages web
-│   ├── transcribe.py    # Transcription audio (Whisper)
-│   └── vision.py        # Analyse d'images (GPT-4o vision)
-├── memory/
-│   └── store.py         # Mémoire de session conversationnelle
-├── static/              # Assets frontend
-│   ├── luciole.css      # Design system Luciole
-│   ├── luciole-chat.js  # Logique chat côté client
-│   └── *.svg            # Favicon et wordmark
-├── templates/           # Templates Jinja2
-│   ├── base.html        # Layout principal
-│   ├── index.html       # Interface chat
-│   ├── dashboard.html   # Tableau de bord articles
-│   ├── about.html       # Page à propos
-│   └── digest.html      # Template email digest
-├── tests/               # Tests unitaires et d'intégration
-├── docs/                # Documentation technique
-├── Dockerfile           # Image Docker de production
-├── docker-compose.yml   # Orchestration Docker
-├── render.yaml          # Configuration déploiement Render
-├── start.sh             # Script de démarrage (pipeline au cold start)
-└── data/                # Données générées (gitignored)
-```
+| Catégorie | Outils |
+|---|---|
+| Backend | Python 3.12, FastAPI, uvicorn |
+| LLM | OpenAI API (gpt-4o-mini, gpt-4o, text-embedding-3-small) |
+| RAG | numpy (cosinus), rank-bm25, Cohere re-ranking (optionnel) |
+| Auth | python-jose (JWT), bcrypt |
+| Observabilité | Langfuse, slowapi |
+| Web & scraping | trafilatura, feedparser, Jinja2 |
+| Déploiement | Docker, Render |
 
-## Installation
+## Démarrer
+
+### Prérequis
+
+- Python 3.12+
+- Clé API OpenAI
+
+### Installation
 
 ```bash
-# Cloner le repo
-# Depuis la racine du repo
-cd fil-rouge
-
-# Créer un environnement virtuel
+git clone https://github.com/josuerochadev/luciole.git
+cd luciole
 python -m venv .venv
 source .venv/bin/activate
-
-# Installer les dépendances
 pip install -r requirements.txt
-
-# Configurer les variables d'environnement
 cp .env.example .env
-# Éditer .env avec votre clé OpenAI
+# Renseigner OPENAI_API_KEY et API_KEY dans .env
 ```
 
-## Utilisation
-
-### Pipeline de veille (collecte et enrichissement)
+### Lancer l'application
 
 ```bash
+# Peuplement initial de la base d'articles
 python pipeline.py
-```
 
-### Agent conversationnel
+# Interface web + API (http://localhost:8000)
+uvicorn api:app --reload
 
-```bash
+# Agent conversationnel en ligne de commande
 python main.py
-```
-
-### Peuplement initial (articles de test)
-
-```bash
-python seed.py
 ```
 
 ### Tests
@@ -98,26 +82,47 @@ python seed.py
 python -m pytest tests/ -v
 ```
 
-## Configuration
+### Variables d'environnement
 
-Les paramètres principaux sont dans `config.py` :
-- **Modèles LLM** : `gpt-4o-mini` (défaut), `gpt-4o` (vision/puissant) — température 0.3
-- **Sources RSS** : ~40 flux (tech FR/EN, IA, cloud, cybersécurité, open source)
-- **Thèmes surveillés** : ~60 mots-clés (IA, cloud, DevOps, sécurité, data...)
-- **Seuil de pertinence** : 5/10 minimum
+| Variable | Obligatoire | Description |
+|---|---|---|
+| `OPENAI_API_KEY` | oui | Clé API OpenAI |
+| `API_KEY` | oui | Clé pour protéger les endpoints |
+| `LANGFUSE_*` | non | Tracing LLM |
+| `COHERE_API_KEY` | non | Re-ranking RAG |
+| `SMTP_*` / `EMAIL_*` | non | Envoi de rapports email |
 
-Variables d'environnement (voir `.env.example`) :
-- `OPENAI_API_KEY` — clé API OpenAI (obligatoire)
-- `API_KEY` — clé pour protéger les endpoints (obligatoire)
-- `CORS_ORIGINS` — origines CORS autorisées
-- `LANGFUSE_*` — observabilité LLM (optionnel)
-- `COHERE_API_KEY` — re-ranking RAG (optionnel)
-- `SMTP_*` / `EMAIL_*` — envoi de rapports email (optionnel)
+## Architecture
 
-## Équipe
+```
+├── main.py              # Boucle ReAct (Reason → Act → Observe)
+├── api.py               # API FastAPI
+├── pipeline.py          # Pipeline RSS → LLM → stockage
+├── llm.py               # Client OpenAI centralisé
+├── config.py            # Configuration centralisée
+├── security.py          # Rate limiting, headers sécurité
+├── monitoring.py        # Métriques et KPIs
+├── tracing.py           # Intégration Langfuse
+├── tools/
+│   ├── search.py        # Collecte RSS + recherche web
+│   ├── database.py      # Persistance SQLite
+│   ├── rag.py           # Embeddings + recherche sémantique
+│   ├── email.py         # Génération et envoi de rapports HTML
+│   ├── scraper.py       # Scraping web
+│   ├── transcribe.py    # Transcription audio (Whisper)
+│   └── vision.py        # Analyse d'images (GPT-4o)
+├── memory/
+│   └── store.py         # Mémoire de session conversationnelle
+├── static/              # CSS/JS (design system Luciole)
+├── templates/           # Templates Jinja2 (chat, dashboard, digest)
+├── tests/               # Tests unitaires et d'intégration
+├── docs/                # Documentation technique
+├── Dockerfile
+└── render.yaml
+```
 
-Projet réalisé par **Alex Dubus**, **Zhengfeng Ding**, **Josue Xavier Rocha** et **Stéphanie Consoli**.
+Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) pour le détail des flux internes (pipeline, boucle ReAct, RAG, gardes-fous).
 
-## Licence
+---
 
-Projet éducatif — usage libre.
+Construit par **[Josué Rocha](https://josuerocha.dev)** · [LinkedIn](https://linkedin.com/in/josuerocha) · [GitHub](https://github.com/josuerochadev)

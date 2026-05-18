@@ -35,8 +35,10 @@ def test_digest_has_h1():
 
 
 def test_digest_has_h2_sections():
+    """Les sections du digest utilisent <h2> (via redirect login si non authentifié)."""
     r = client.get("/digest-page", follow_redirects=True)
-    assert "<h2" in r.text
+    assert r.status_code == 200
+    assert "<h2" in r.text, "Aucun <h2> dans la réponse /digest-page"
 
 
 def test_dashboard_has_h2_sections():

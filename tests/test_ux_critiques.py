@@ -48,6 +48,7 @@ def test_dashboard_has_h2_sections():
 
 # ── 2. Auth tabs — ARIA pattern ────────────────────────────────────────────
 
+
 @pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
 def test_login_tabs_have_tablist_role():
     """Le conteneur d'onglets a role='tablist' (WCAG 4.1.2)."""
@@ -69,7 +70,6 @@ def test_login_tabs_have_aria_selected():
     assert 'aria-selected="true"' in r.text, "aria-selected='true' absent sur /login"
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
 def test_login_tabs_have_aria_controls():
     """Les onglets référencent leurs panneaux via aria-controls."""
     r = client.get("/login", follow_redirects=True)
@@ -79,7 +79,6 @@ def test_login_tabs_have_aria_controls():
         "aria-controls='register-form' absent"
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
 def test_login_panels_have_tabpanel_role():
     """Les formulaires ont role='tabpanel' (WCAG 4.1.2)."""
     r = client.get("/login", follow_redirects=True)
@@ -88,7 +87,6 @@ def test_login_panels_have_tabpanel_role():
 
 # ── 3. role="alert" sur les erreurs de formulaire ─────────────────────────
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
 def test_login_error_divs_have_role_alert():
     """Les deux divs d'erreur ont role='alert' (WCAG 4.1.3)."""
     r = client.get("/login", follow_redirects=True)

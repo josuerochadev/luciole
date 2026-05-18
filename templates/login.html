@@ -9,13 +9,23 @@
     <p class="luciole-auth-subtitle">La lumiere dans le bruit</p>
 
     <!-- Tabs -->
-    <div class="luciole-auth-tabs">
-      <button class="luciole-auth-tab active" data-tab="login">Connexion</button>
-      <button class="luciole-auth-tab" data-tab="register">Inscription</button>
+    <div class="luciole-auth-tabs" role="tablist" aria-label="Mode d'authentification">
+      <button class="luciole-auth-tab active"
+              role="tab"
+              id="tab-login"
+              aria-selected="true"
+              aria-controls="login-form"
+              data-tab="login">Connexion</button>
+      <button class="luciole-auth-tab"
+              role="tab"
+              id="tab-register"
+              aria-selected="false"
+              aria-controls="register-form"
+              data-tab="register">Inscription</button>
     </div>
 
     <!-- Login form -->
-    <form class="luciole-auth-form" id="login-form">
+    <form class="luciole-auth-form" id="login-form" role="tabpanel" aria-labelledby="tab-login">
       <div class="luciole-auth-field">
         <label for="login-email" class="t-eyebrow">Email</label>
         <input type="email" id="login-email" class="luciole-auth-input" placeholder="vous@example.com" required autocomplete="email">
@@ -24,14 +34,14 @@
         <label for="login-password" class="t-eyebrow">Mot de passe</label>
         <input type="password" id="login-password" class="luciole-auth-input" placeholder="Votre mot de passe" required autocomplete="current-password" minlength="6">
       </div>
-      <div class="luciole-auth-error" id="login-error" hidden></div>
+      <div class="luciole-auth-error" id="login-error" role="alert" hidden></div>
       <button type="submit" class="luciole-auth-submit">
         Se connecter <span class="luciole-submit-arrow" aria-hidden="true">&rarr;</span>
       </button>
     </form>
 
     <!-- Register form -->
-    <form class="luciole-auth-form" id="register-form" hidden>
+    <form class="luciole-auth-form" id="register-form" role="tabpanel" aria-labelledby="tab-register" hidden>
       <div class="luciole-auth-field">
         <label for="register-name" class="t-eyebrow">Nom d'affichage</label>
         <input type="text" id="register-name" class="luciole-auth-input" placeholder="Votre nom" maxlength="100" autocomplete="name">
@@ -44,7 +54,7 @@
         <label for="register-password" class="t-eyebrow">Mot de passe</label>
         <input type="password" id="register-password" class="luciole-auth-input" placeholder="6 caracteres minimum" required autocomplete="new-password" minlength="6">
       </div>
-      <div class="luciole-auth-error" id="register-error" hidden></div>
+      <div class="luciole-auth-error" id="register-error" role="alert" hidden></div>
       <button type="submit" class="luciole-auth-submit">
         Creer un compte <span class="luciole-submit-arrow" aria-hidden="true">&rarr;</span>
       </button>
@@ -67,8 +77,12 @@
   // Tab switching
   tabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
-      tabs.forEach(function (t) { t.classList.remove('active'); });
+      tabs.forEach(function (t) {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
       tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
       const target = tab.getAttribute('data-tab');
       loginForm.hidden = target !== 'login';
       registerForm.hidden = target !== 'register';
@@ -76,6 +90,24 @@
       registerError.hidden = true;
     });
   });
+
+  // Navigation clavier au sein du tablist (WCAG 2.1.1)
+  var tabContainer = document.querySelector('[role="tablist"]');
+  if (tabContainer) {
+    tabContainer.addEventListener('keydown', function (e) {
+      var tabsArr = Array.from(tabs);
+      var idx = tabsArr.indexOf(document.activeElement);
+      if (e.key === 'ArrowRight' && idx < tabsArr.length - 1) {
+        e.preventDefault();
+        tabsArr[idx + 1].focus();
+        tabsArr[idx + 1].click();
+      } else if (e.key === 'ArrowLeft' && idx > 0) {
+        e.preventDefault();
+        tabsArr[idx - 1].focus();
+        tabsArr[idx - 1].click();
+      }
+    });
+  }
 
   function showError(el, msg) {
     el.textContent = msg;

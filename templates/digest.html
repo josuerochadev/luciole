@@ -3,7 +3,7 @@
 {% block head %}
 <style>
   /* Digest page — follows Luciole design system */
-  .digest-section {
+  h2.digest-section, .digest-section {
     font-family: var(--luciole-sans);
     font-size: var(--luciole-text-xs);
     font-weight: 500;
@@ -60,6 +60,43 @@
     gap: var(--luciole-space-4);
     margin-bottom: var(--luciole-space-6);
     flex-wrap: wrap;
+  }
+  .digest-apikey-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--luciole-space-1);
+  }
+  .digest-apikey-label {
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-xs);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--luciole-muted);
+  }
+  .digest-apikey-input {
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-sm);
+    border: 1px solid var(--luciole-rule);
+    border-radius: 4px;
+    padding: var(--luciole-space-2) var(--luciole-space-3);
+    background: var(--luciole-paper);
+    color: var(--luciole-ink);
+    min-width: 220px;
+  }
+  .digest-apikey-input:focus {
+    outline: 2px solid var(--luciole-accent);
+    outline-offset: 1px;
+    border-color: var(--luciole-accent);
+  }
+  .digest-apikey-error {
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-xs);
+    color: var(--luciole-accent);
+    display: none;
+  }
+  .digest-apikey-error--visible {
+    display: block;
   }
   .digest-btn {
     font-family: var(--luciole-sans);
@@ -170,7 +207,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="digest-section digest-section--accent">Digest Email · Veille Technologique</div>
+<h1 class="sr-only">Digest Email</h1>
+<h2 class="digest-section digest-section--accent">Digest Email · Veille Technologique</h2>
 
 <!-- KPIs -->
 <div class="digest-kpis" id="digest-kpis">
@@ -192,9 +230,21 @@
 </div>
 
 <!-- Actions -->
-<div class="digest-section">Actions</div>
+<h2 class="digest-section">Actions</h2>
 <div class="digest-actions">
   <button class="digest-btn" id="btn-preview">Previsualiser</button>
+  <div class="digest-apikey-group">
+    <label class="digest-apikey-label" for="apikey-input">Clé API serveur</label>
+    <input
+      id="apikey-input"
+      class="digest-apikey-input"
+      type="password"
+      placeholder="Clé API serveur"
+      autocomplete="off"
+      aria-describedby="apikey-error"
+    />
+    <span id="apikey-error" class="digest-apikey-error" role="alert">Veuillez saisir votre cle API avant d'envoyer.</span>
+  </div>
   <button class="digest-btn digest-btn--accent" id="btn-send" disabled>Envoyer par email</button>
   <span class="digest-status" id="digest-status"></span>
 </div>
@@ -208,7 +258,7 @@
 </div>
 
 <!-- History -->
-<div class="digest-section">Historique des envois</div>
+<h2 class="digest-section">Historique des envois</h2>
 <div id="digest-history">
   <div class="digest-empty">
     <h3>Chargement...</h3>
@@ -228,6 +278,8 @@
   const previewContainer = document.getElementById('digest-preview-container');
   const emptyState = document.getElementById('digest-empty');
   const historyContainer = document.getElementById('digest-history');
+  const apikeyInput = document.getElementById('apikey-input');
+  const apikeyError = document.getElementById('apikey-error');
 
   function setStatus(msg, type) {
     status.textContent = msg;
@@ -298,11 +350,21 @@
 
   // ── Preview ────────────────────────────────────────────
   btnPreview.addEventListener('click', async function () {
+    const apiKey = apikeyInput.value.trim();
+    if (!apiKey) {
+      apikeyError.classList.add('digest-apikey-error--visible');
+      apikeyInput.focus();
+      return;
+    }
+    apikeyError.classList.remove('digest-apikey-error--visible');
+
     btnPreview.disabled = true;
     setStatus('Generation en cours...', '');
 
     try {
-      const res = await fetch('/digest');
+      const res = await fetch('/digest', {
+        headers: { 'X-API-Key': apiKey }
+      });
       if (!res.ok) throw new Error('Erreur API');
       const html = await res.text();
 
@@ -335,16 +397,18 @@
   btnSend.addEventListener('click', async function () {
     if (!confirm('Envoyer le digest par email aux destinataires configures ?')) return;
 
+    const apiKey = apikeyInput.value.trim();
+    if (!apiKey) {
+      apikeyError.classList.add('digest-apikey-error--visible');
+      apikeyInput.focus();
+      return;
+    }
+    apikeyError.classList.remove('digest-apikey-error--visible');
+
     btnSend.disabled = true;
     setStatus('Envoi en cours...', '');
 
     try {
-      const apiKey = prompt('Cle API (X-API-Key) :', '');
-      if (!apiKey) {
-        setStatus('Envoi annule', '');
-        btnSend.disabled = false;
-        return;
-      }
 
       const res = await fetch('/digest/send', {
         method: 'POST',
@@ -368,6 +432,7 @@
       setStatus('Erreur reseau', 'err');
     } finally {
       btnSend.disabled = false;
+      apikeyInput.value = '';
     }
   });
 

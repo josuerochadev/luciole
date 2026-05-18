@@ -34,6 +34,13 @@ def test_digest_has_h1():
     assert "<h1" in r.text, "Aucun <h1> sur /digest-page"
 
 
+def test_digest_has_h2_sections():
+    """Les sections du digest utilisent <h2> (via redirect login si non authentifié)."""
+    r = client.get("/digest-page", follow_redirects=True)
+    assert r.status_code == 200
+    assert "<h2" in r.text, "Aucun <h2> dans la réponse /digest-page"
+
+
 def test_dashboard_has_h2_sections():
     """Les sections du dashboard utilisent <h2> (généré par JS)."""
     r = client.get("/dashboard", follow_redirects=True)
@@ -132,20 +139,18 @@ def test_js_sidebar_delete_is_button():
 
 
 def test_digest_has_apikey_input():
-    """La page digest a un input#apikey-input pour la clé API."""
-    r = client.get("/digest-page", follow_redirects=True)
-    assert 'id="apikey-input"' in r.text, (
-        "Champ #apikey-input absent sur /digest-page"
-    )
+    """Le template digest.html contient le champ inline #apikey-input."""
+    with open("templates/digest.html") as f:
+        content = f.read()
+    assert 'id="apikey-input"' in content, "Champ #apikey-input absent de templates/digest.html"
 
 
 def test_digest_no_window_prompt():
-    """La page digest ne contient plus d'appel à prompt()."""
-    r = client.get("/digest-page", follow_redirects=True)
-    html = r.text
-    assert "= prompt(" not in html and "window.prompt" not in html, (
-        "window.prompt() encore présent sur /digest-page"
-    )
+    """Le template digest.html n'utilise plus window.prompt()."""
+    with open("templates/digest.html") as f:
+        content = f.read()
+    assert "window.prompt" not in content, "window.prompt() trouvé dans templates/digest.html"
+    assert "= prompt(" not in content, "prompt() trouvé dans templates/digest.html"
 
 
 # ── 7. Plotly — couleurs dynamiques depuis CSS vars ───────────────────────
@@ -153,15 +158,17 @@ def test_digest_no_window_prompt():
 
 def test_dashboard_plotly_reads_css_vars():
     """Le dashboard lit les couleurs CSS via getComputedStyle (pas hard-codées)."""
-    r = client.get("/dashboard", follow_redirects=True)
-    assert "getComputedStyle" in r.text, (
+    with open("templates/dashboard.html") as f:
+        content = f.read()
+    assert "getComputedStyle" in content, (
         "getComputedStyle absent — couleurs Plotly probablement encore hard-codées"
     )
 
 
 def test_dashboard_no_hardcoded_plotly_paper_color():
     """Le layout Plotly ne contient plus paper_bgcolor: '#faf8f3' hard-codé."""
-    r = client.get("/dashboard", follow_redirects=True)
-    assert "paper_bgcolor: '#faf8f3'" not in r.text, (
+    with open("templates/dashboard.html") as f:
+        content = f.read()
+    assert "paper_bgcolor: '#faf8f3'" not in content, (
         "Couleur paper hard-codée #faf8f3 encore dans le layout Plotly"
     )

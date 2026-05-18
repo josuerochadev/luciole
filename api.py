@@ -523,7 +523,7 @@ def _verifier_api_key(x_api_key: str | None):
 
 
 @app.get("/digest-page", response_class=HTMLResponse)
-async def digest_page(request: Request, user=Depends(get_optional_user)):
+async def digest_page(request: Request, user=Depends(get_current_user_page)):
     return templates.TemplateResponse(request, "digest.html", {"active_page": "digest", "user": user})
 
 

@@ -139,11 +139,10 @@ def test_js_sidebar_delete_is_button():
 
 
 def test_digest_has_apikey_input():
-    """La page digest a un input#apikey-input pour la clé API."""
-    r = client.get("/digest-page", follow_redirects=True)
-    assert 'id="apikey-input"' in r.text, (
-        "Champ #apikey-input absent sur /digest-page"
-    )
+    """Le template digest.html contient le champ inline #apikey-input."""
+    with open("templates/digest.html") as f:
+        content = f.read()
+    assert 'id="apikey-input"' in content, "Champ #apikey-input absent de templates/digest.html"
 
 
 def test_digest_no_window_prompt():

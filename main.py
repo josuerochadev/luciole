@@ -1,26 +1,23 @@
 """
 Point d'entrée de l'agent de veille technologique.
-Boucle ReAct (Reason → Act → Observe) via Gemini.
+Boucle ReAct (Reason + Act) — synchrone et streaming SSE.
 
 Utilisation : python main.py
 """
-import json
 import logging
-import sys
 import time
 import uuid
 
-from llm import appeler_llm, appeler_llm_json, appeler_llm_tools, appeler_llm_stream
-from config import MODEL_FAST, MODEL_POWERFUL, MAX_TOKENS_BY_INTENT
-from tools.search import search_web
-from tools.database import query_db
-from tools.rag import rechercher_articles
-from tools.vision import analyser_image
-from tools.email import selectionner_articles, envoyer_rapport
+from config import MAX_TOKENS_BY_INTENT
+from llm import appeler_llm, appeler_llm_stream
 from memory.store import store as memory_store, recall as memory_recall
-from security import analyser_securite, valider_sql, filtrer_sortie
 from monitoring import mark_fallback
-from tracing import observe, update_current_trace, flush
+from security import analyser_securite
+from tracing import flush, observe, update_current_trace
+from agent.cascade import classifier_complexite, choisir_modele
+from agent.prompts import _TOOL_LABELS
+from agent.response import _construire_prompt_reponse, formuler_reponse
+from agent.tools_runner import choisir_outil, executer_outil
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,393 +26,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Schéma des outils pour la décision ReAct (function calling via Gemini)
-# ---------------------------------------------------------------------------
-TOOLS_DECISION = [
-    {
-        "type": "function",
-        "function": {
-            "name": "choisir_outil",
-            "description": "Choisit l'outil à utiliser pour répondre à la requête utilisateur.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "intent": {
-                        "type": "string",
-                        "enum": ["database", "search", "rag", "vision", "email", "general"],
-                        "description": "Type de requête détecté.",
-                    },
-                    "outil": {
-                        "type": "string",
-                        "enum": [
-                            "query_db",
-                            "search_web",
-                            "search_articles",
-                            "analyze_image",
-                            "preview_digest",
-                            "send_digest",
-                            "reponse_directe",
-                        ],
-                        "description": "Outil sélectionné pour traiter la requête.",
-                    },
-                    "sql": {
-                        "type": "string",
-                        "description": "Requête SQL si intent=database, sinon chaîne vide.",
-                    },
-                    "query_recherche": {
-                        "type": "string",
-                        "description": "Requête de recherche si intent=search ou rag, sinon chaîne vide.",
-                    },
-                    "file_path": {
-                        "type": "string",
-                        "description": "Chemin du fichier si intent=vision, sinon chaîne vide.",
-                    },
-                    "raisonnement": {
-                        "type": "string",
-                        "description": "Explication courte du choix de l'outil.",
-                    },
-                },
-                "required": ["intent", "outil", "raisonnement"],
-                "additionalProperties": False,
-            },
-        },
-    }
-]
-
-SYSTEM_REACT = (
-    "Tu es Luciole, un agent de veille technologique spécialisé dans : "
-    "IA, cybersécurité, cloud, infrastructure, DevOps, data et open source.\n\n"
-    "PÉRIMÈTRE STRICT :\n"
-    "- Tu ne traites QUE les sujets liés à la tech / informatique / numérique.\n"
-    "- Si la requête est hors périmètre (recettes, sport, météo, santé, etc.), "
-    "choisis reponse_directe et explique poliment que tu es un agent de veille "
-    "technologique et que tu ne peux pas aider sur ce sujet. Propose de reformuler "
-    "vers un sujet tech si possible.\n\n"
-    "OUTILS :\n"
-    "- query_db → base SQLite interne. Table unique disponible :\n"
-    "  TABLE clients (id INTEGER PK, nom TEXT, email TEXT, type TEXT ['Premium'|'Standard'], depuis TEXT)\n"
-    "  Contient quelques clients de test. Pas de tables tickets, stats ou KPIs.\n"
-    "  Génère UNIQUEMENT des requêtes SELECT sur cette table.\n"
-    "- search_web → actus, tendances, nouveautés, veille externe tech\n"
-    "- search_articles → archives internes déjà collectées (RAG)\n"
-    "- analyze_image → image ou PDF fourni par l'utilisateur\n"
-    "- preview_digest → prévisualiser le digest email (résumé des articles, nombre, catégories)\n"
-    "- send_digest → envoyer le digest par email aux destinataires configurés\n"
-    "- reponse_directe → salutations, questions générales, OU requêtes hors périmètre\n\n"
-    "ARBITRAGE preview_digest vs send_digest :\n"
-    "- « montre / prévisualise / résume / aperçu / affiche le digest » → preview_digest\n"
-    "- « envoie-moi un aperçu » ou « envoie un aperçu » → preview_digest (le mot « aperçu » prime sur « envoie »)\n"
-    "- « envoie / expédie le digest / rapport par mail » (sans « aperçu ») → send_digest\n"
-    "- En cas de doute entre preview et send → preview_digest (plus sûr)\n\n"
-    "ARBITRAGE search_web vs search_articles :\n"
-    "- Actus / tendances / briefing / récent → search_web\n"
-    "- « archives », « historique », « déjà collectés » explicite → search_articles\n"
-    "- Doute → search_web en priorité\n\n"
-    "SOURCES : RSS archivés (search_articles), recherche web "
-    "(IA, Cloud, Cybersécurité, GPU, etc.), SQLite interne (query_db). "
-    "Pas d'accès académique, temps réel ou payant.\n\n"
-    "CONTEXTE CONVERSATIONNEL :\n"
-    "- L'historique de la conversation est fourni dans les messages précédents.\n"
-    "- Utilise-le pour résoudre les références implicites (« il », « ça », « le même », etc.).\n"
-    "- Si l'utilisateur dit « et en cybersécurité ? », reprends le contexte de sa question précédente.\n"
-    "- Ne redemande pas une information déjà fournie dans l'historique."
-)
+# Limite de boucle pour éviter les boucles infinies (Correction Log C)
+MAX_ITERATIONS = 2
 
 
 # ---------------------------------------------------------------------------
-# Cascade M6E3 — Classifier la complexité de la requête
+# Boucle ReAct principale (synchrone)
 # ---------------------------------------------------------------------------
-PROMPT_COMPLEXITE = """Classe cette requête utilisateur.
-Réponds UNIQUEMENT en JSON avec les clés complexite et categorie.
-- complexite = simple si : salutation, FAQ, reformulation, lookup direct, question factuelle courte
-- complexite = complexe si : raisonnement multi-étapes, synthèse, code, analyse comparative
-- categorie = salutation | faq | raisonnement | code | analyse
-Requête : {question}"""
-
-
-@observe(name="classifier_complexite")
-def classifier_complexite(requete: str) -> dict:
-    """
-    Classifie la complexité d'une requête avec le modèle rapide.
-    Retourne {"complexite": "simple"|"complexe", "categorie": "..."}.
-    Fallback vers "complexe" si le parsing échoue.
-    """
-    try:
-        result = appeler_llm_json(
-            PROMPT_COMPLEXITE.format(question=requete),
-            schema={"complexite": "simple|complexe", "categorie": "salutation|faq|raisonnement|code|analyse"},
-            system_prompt="Tu es un classificateur de requêtes. Réponds uniquement en JSON.",
-        )
-        if result.get("complexite") not in ("simple", "complexe"):
-            result["complexite"] = "complexe"
-        if "categorie" not in result:
-            result["categorie"] = "raisonnement"
-        return result
-    except Exception as e:
-        logger.warning(f"[Cascade] Classification échouée, fallback complexe : {e}")
-        return {"complexite": "complexe", "categorie": "raisonnement"}
-
-
-def choisir_modele(complexite: str) -> str:
-    """Retourne le modèle à utiliser selon la complexité."""
-    if complexite == "simple":
-        return MODEL_FAST
-    return MODEL_POWERFUL
-
-
-# ---------------------------------------------------------------------------
-# Étape 1 — Raisonnement : choisir l'outil (function calling natif)
-# ---------------------------------------------------------------------------
-@observe(name="choisir_outil")
-def choisir_outil(requete: str, historique: list[dict] | None = None, model: str | None = None) -> dict:
-    """Demande au LLM quel outil utiliser via function calling (Gemini)."""
-    messages = [{"role": "system", "content": SYSTEM_REACT}]
-    # Injecter l'historique conversationnel pour garder le contexte
-    if historique:
-        messages.extend(historique)
-    messages.append({"role": "user", "content": f"Requête de l'utilisateur : {requete}"})
-    decision = appeler_llm_tools(messages=messages, tools=TOOLS_DECISION, model=model)
-    logger.info(f"[ReAct] Intent détecté    : {decision.get('intent', '?')}")
-    logger.info(f"[ReAct] Outil choisi      : {decision.get('outil', '?')}")
-    logger.info(f"[ReAct] Raisonnement      : {decision.get('raisonnement', '?')}")
-    return decision
-
-
-# ---------------------------------------------------------------------------
-# Étape 2 — Action : exécuter l'outil choisi
-# ---------------------------------------------------------------------------
-@observe(name="executer_outil")
-def executer_outil(decision: dict) -> str:
-    """Exécute l'outil indiqué dans la décision et retourne le résultat en texte."""
-    outil = decision.get("outil", "reponse_directe")
-
-    if outil == "query_db":
-        sql = decision.get("sql", "SELECT * FROM clients")
-        sql_ok, sql_msg = valider_sql(sql)
-        if not sql_ok:
-            resultat = f"[ERREUR_SECURITE] {sql_msg}"
-            logger.warning(f"[ReAct] SQL bloqué par security : {sql}")
-            return resultat
-        try:
-            lignes = query_db(sql)
-            if not lignes:
-                resultat = "[AUCUN_RESULTAT] La requête n'a retourné aucune donnée."
-                logger.info("[ReAct] query_db : 0 ligne retournée.")
-            else:
-                resultat = json.dumps(lignes, ensure_ascii=False, indent=2)
-                logger.info(f"[ReAct] Résultat query_db : {len(lignes)} ligne(s)")
-        except (ValueError, RuntimeError) as e:
-            # Correction Log B : marquer explicitement l'erreur pour éviter l'hallucination
-            resultat = f"[ERREUR_OUTIL] La requête SQL a échoué : {e}"
-            logger.error(f"[ReAct] {resultat}")
-
-    elif outil == "search_web":
-        query = decision.get("query_recherche", "")
-        resultats = search_web(query)
-        if not resultats:
-            resultat = "[AUCUN_RESULTAT] La recherche web est indisponible (clé API Tavily non configurée) ou n'a retourné aucun résultat."
-        else:
-            resultat = json.dumps(resultats, ensure_ascii=False, indent=2)
-        logger.info(f"[ReAct] Résultat search_web : {len(resultats)} résultat(s)")
-
-    elif outil == "search_articles":
-        query = decision.get("query_recherche", "")
-        try:
-            resultats = rechercher_articles(query, n=5)
-            if not resultats:
-                resultat = "[AUCUN_RESULTAT] Aucun article archivé ne correspond à cette requête."
-            else:
-                resultat = json.dumps(resultats, ensure_ascii=False, indent=2)
-            logger.info(f"[ReAct] Résultat search_articles (RAG) : {len(resultats)} résultat(s)")
-        except Exception as e:
-            resultat = f"[ERREUR_OUTIL] Recherche sémantique échouée : {e}"
-            logger.error(f"[ReAct] {resultat}")
-
-    elif outil == "analyze_image":
-        fichier = decision.get("file_path", "")
-        consigne = decision.get("query_recherche", None) or None
-        try:
-            result = analyser_image(fichier, consigne=consigne)
-            resultat = json.dumps(result, ensure_ascii=False, indent=2)
-            logger.info(f"[ReAct] Résultat analyze_image : {len(result)} clé(s) extraites")
-        except (FileNotFoundError, ValueError) as e:
-            resultat = f"[ERREUR_OUTIL] Analyse image impossible : {e}"
-            logger.error(f"[ReAct] {resultat}")
-        except RuntimeError as e:
-            resultat = f"[ERREUR_OUTIL] Erreur Gemini Vision : {e}"
-            logger.error(f"[ReAct] {resultat}")
-
-    elif outil == "preview_digest":
-        try:
-            articles = selectionner_articles(nb_max=20)
-            if not articles:
-                resultat = "[AUCUN_RESULTAT] Aucun article pertinent disponible pour le digest."
-            else:
-                # Résumé structuré pour le LLM
-                categories = {}
-                for a in articles:
-                    cat = a.get("categorie", "Autre")
-                    categories.setdefault(cat, []).append(a.get("titre", "Sans titre"))
-                resume = {
-                    "nb_articles": len(articles),
-                    "categories": {cat: len(arts) for cat, arts in categories.items()},
-                    "top_articles": [
-                        {"titre": a.get("titre", ""), "categorie": a.get("categorie", ""),
-                         "pertinence": a.get("pertinence", 0)}
-                        for a in articles[:5]
-                    ],
-                }
-                resultat = json.dumps(resume, ensure_ascii=False, indent=2)
-            logger.info(f"[ReAct] Résultat preview_digest : {len(articles)} article(s)")
-        except Exception as e:
-            resultat = f"[ERREUR_OUTIL] Prévisualisation du digest échouée : {e}"
-            logger.error(f"[ReAct] {resultat}")
-
-    elif outil == "send_digest":
-        try:
-            result = envoyer_rapport(dry_run=False)
-            resultat = json.dumps(result, ensure_ascii=False, indent=2)
-            logger.info(f"[ReAct] Résultat send_digest : {result.get('message', '?')}")
-        except Exception as e:
-            resultat = f"[ERREUR_OUTIL] Envoi du digest échoué : {e}"
-            logger.error(f"[ReAct] {resultat}")
-
-    else:  # reponse_directe
-        resultat = (
-            "(aucun outil — réponse directe du LLM)\n"
-            "Rappel : tu es Luciole, agent de veille technologique. "
-            "Si la requête est hors périmètre tech, recadre poliment."
-        )
-        logger.info("[ReAct] Outil : réponse directe, pas d'exécution d'outil.")
-
-    return resultat
-
-
-# ---------------------------------------------------------------------------
-# Étape 3 — Observation : formuler la réponse finale
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
-# Instructions de formatage par type d'intent
-# ---------------------------------------------------------------------------
-_REGLES_FIDELITE = (
-    "\nRÈGLES IMPÉRATIVES DE FIDÉLITÉ :\n"
-    "1. **Ne JAMAIS inventer** un titre d'article, une URL, un chiffre, une date, "
-    "un nom propre ou une statistique qui ne figure pas dans le résultat de l'outil.\n"
-    "2. **Corriger les fausses prémisses** : si la question contient une affirmation "
-    "que le résultat contredit, dis-le explicitement.\n"
-    "3. **Clarification sur question ambiguë** : si la requête est vague, propose "
-    "2 interprétations possibles ou demande une précision.\n"
-    "4. **Nombre d'éléments** : si l'utilisateur demande N éléments mais que tu n'en as "
-    "que M < N, annonce-le et ne présente que les M résultats réels."
-)
-
-_FORMAT_SEARCH = (
-    "FORMAT DE RÉPONSE (Markdown) :\n"
-    "1. Commence par une phrase de synthèse TL;DR (1-2 phrases résumant l'essentiel).\n"
-    "2. Puis une section détaillée avec des bullet points `- **Titre** : description`.\n"
-    "3. Termine TOUJOURS par un bloc sources :\n"
-    "   `### Sources`\n"
-    "   `- [Titre](URL)` pour chaque source citée.\n"
-    "Utilise **gras** pour les points clés, et structure avec des titres `##` si pertinent."
-)
-
-_FORMAT_DATABASE = (
-    "FORMAT DE RÉPONSE (Markdown) :\n"
-    "1. Commence par une phrase de synthèse TL;DR résumant le résultat (ex : « 12 clients Premium trouvés »).\n"
-    "2. Présente les données sous forme de liste structurée ou tableau Markdown.\n"
-    "3. Mets en **gras** les chiffres clés et les valeurs importantes.\n"
-    "4. Si pertinent, ajoute une observation ou tendance visible dans les données."
-)
-
-_FORMAT_RAG = (
-    "FORMAT DE RÉPONSE (Markdown) :\n"
-    "1. Commence par une phrase de synthèse TL;DR.\n"
-    "2. Présente chaque article pertinent avec :\n"
-    "   - **Titre** et score de pertinence\n"
-    "   - Résumé en 1-2 phrases\n"
-    "3. Termine TOUJOURS par un bloc sources :\n"
-    "   `### Sources`\n"
-    "   `- [Titre](URL)` pour chaque article cité.\n"
-    "Utilise **gras** pour les points clés."
-)
-
-_FORMAT_DIRECT = (
-    "Réponds de manière conversationnelle, concise et naturelle en français. "
-    "Pas besoin de structure lourde — une réponse courte et directe suffit."
-)
-
-_FORMAT_MULTIMODAL = (
-    "FORMAT DE RÉPONSE (Markdown) :\n"
-    "1. Commence par une phrase de synthèse de ce qui a été analysé.\n"
-    "2. Détaille les éléments clés extraits avec des bullet points.\n"
-    "3. Utilise **gras** pour les informations importantes."
-)
-
-_FORMAT_EMAIL = (
-    "FORMAT DE RÉPONSE (Markdown) :\n"
-    "1. Commence par un résumé TL;DR du digest (nombre d'articles, catégories couvertes).\n"
-    "2. Liste les top articles avec leur catégorie et score de pertinence.\n"
-    "3. Si c'est un envoi, confirme le résultat (succès/échec, destinataires).\n"
-    "Utilise **gras** pour les chiffres clés."
-)
-
-_FORMATS_PAR_INTENT = {
-    "search": _FORMAT_SEARCH,
-    "database": _FORMAT_DATABASE,
-    "rag": _FORMAT_RAG,
-    "email": _FORMAT_EMAIL,
-    "general": _FORMAT_DIRECT,
-    "vision": _FORMAT_MULTIMODAL,
-}
-
-
-def _construire_prompt_reponse(requete: str, resultat_outil: str, intent: str) -> str:
-    """Construit le prompt final pour la réponse LLM à partir du résultat de l'outil.
-    Partagé entre formuler_reponse() (synchrone) et agent_react_stream() (streaming)."""
-    if resultat_outil.startswith("[ERREUR_OUTIL]"):
-        instruction = (
-            "L'outil a retourné une erreur. "
-            "Informe l'utilisateur que la donnée est inaccessible. "
-            "N'invente AUCUN chiffre, nom ou donnée — dis clairement que tu ne sais pas."
-        )
-    elif resultat_outil.startswith("[AUCUN_RESULTAT]"):
-        instruction = (
-            "L'outil n'a trouvé aucune donnée correspondante. "
-            "Informe l'utilisateur qu'aucun résultat n'existe pour sa requête. "
-            "NE JAMAIS inventer de titre d'article, d'URL, de chiffre ou de date pour combler ce vide."
-        )
-    else:
-        format_instruction = _FORMATS_PAR_INTENT.get(intent, _FORMAT_DIRECT)
-        instruction = (
-            "Formule une réponse claire et structurée en français pour l'utilisateur.\n\n"
-            f"{format_instruction}\n"
-            f"{_REGLES_FIDELITE}"
-        )
-    return (
-        f"Requête initiale : {requete}\n\n"
-        f"Résultat de l'outil :\n{resultat_outil}\n\n"
-        f"{instruction}"
-    )
-
-
-@observe(name="formuler_reponse")
-def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general", historique: list[dict] | None = None, model: str | None = None, max_tokens: int | None = None) -> str:
-    """Demande au LLM de formuler une réponse finale à partir du résultat de l'outil."""
-    prompt = _construire_prompt_reponse(requete, resultat_outil, intent)
-    return appeler_llm(prompt, historique=historique, model=model, max_tokens=max_tokens)
-
-
-# ---------------------------------------------------------------------------
-# Boucle ReAct principale
-# ---------------------------------------------------------------------------
-MAX_ITERATIONS = 2  # Correction Log C : limite de boucle pour éviter les boucles infinies
-
 @observe(name="agent_react")
 def agent_react(requete: str, conversation_id: str | None = None) -> str:
     """
     Boucle ReAct complète : Reason → Act → Observe → Respond.
-    Inclut une garde contre les boucles infinies (MAX_ITERATIONS).
 
     Args:
         requete:         La question ou demande de l'utilisateur.
@@ -425,8 +46,6 @@ def agent_react(requete: str, conversation_id: str | None = None) -> str:
         Réponse finale en langage naturel.
     """
     logger.info(f"[ReAct] Requête reçue : {requete[:200]}")
-
-    # Langfuse : taguer la trace avec la requête utilisateur
     update_current_trace(input=requete, tags=["react-agent"])
 
     # --- Cascade M6E3 : classifier la complexité ---
@@ -437,31 +56,28 @@ def agent_react(requete: str, conversation_id: str | None = None) -> str:
         f"categorie={routing.get('categorie', '?')}, model={model_cascade}"
     )
 
-    # --- Garde de sécurité (M4E5) ---
+    # --- Garde de sécurité ---
     check = analyser_securite(requete)
     if check["bloque"]:
-        msg = f"[BLOQUÉ] {check['raison']} (type: {check['type']})"
-        logger.warning(f"[SECURITE] {msg}")
+        logger.warning(f"[SECURITE] {check['raison']} (type: {check['type']})")
         mark_fallback(f"security:{check.get('type', 'inconnu')}")
         return check["raison"]
 
-    # --- Mémoire conversationnelle : rappeler l'historique ---
-    # Si aucun conversation_id fourni (mode CLI ou visiteur anonyme API),
-    # on génère un ID local par appel pour éviter que plusieurs sessions
-    # partagent la même entrée mémoire dans le process.
+    # --- Mémoire conversationnelle ---
     effective_conv_id = conversation_id or str(uuid.uuid4())
     historique = memory_recall(n=20, conversation_id=effective_conv_id)
     memory_store(requete, role="user", conversation_id=effective_conv_id)
 
-    outils_essayes = []
+    outils_essayes: list[str] = []
+    reponse = ""
 
     for iteration in range(1, MAX_ITERATIONS + 1):
         logger.info(f"[ReAct] Itération {iteration}/{MAX_ITERATIONS}")
 
         decision = choisir_outil(requete, historique=historique, model=model_cascade)
-        outil    = decision.get("outil", "reponse_directe")
+        outil = decision.get("outil", "reponse_directe")
 
-        # Correction Log C : si le même outil échoue deux fois, basculer en réponse directe
+        # Détection boucle : même outil échoué deux fois → réponse directe
         if outil in outils_essayes:
             logger.warning(f"[ReAct] Outil '{outil}' déjà essayé — abandon, réponse directe.")
             mark_fallback(f"outil_repete:{outil}")
@@ -474,51 +90,36 @@ def agent_react(requete: str, conversation_id: str | None = None) -> str:
 
         resultat = executer_outil(decision)
 
-        # Si l'outil retourne une erreur et qu'il reste des itérations, on réessaie
         if resultat.startswith("[ERREUR_OUTIL]") and iteration < MAX_ITERATIONS:
             logger.warning(f"[ReAct] Itération {iteration} — outil en erreur, nouvelle tentative.")
             continue
 
         intent = decision.get("intent", "general")
-        intent_max_tokens = MAX_TOKENS_BY_INTENT.get(intent)
-        reponse = formuler_reponse(requete, resultat, intent=intent, historique=historique, model=model_cascade, max_tokens=intent_max_tokens)
+        reponse = formuler_reponse(
+            requete, resultat, intent=intent, historique=historique,
+            model=model_cascade, max_tokens=MAX_TOKENS_BY_INTENT.get(intent),
+        )
         break
     else:
         logger.error("[ReAct] Max itérations atteint — abandon.")
         mark_fallback("max_iterations")
         reponse = "Je n'ai pas pu répondre à votre requête après plusieurs tentatives."
 
-    # --- Filtrage de sortie (M4E5) : masquer données sensibles ---
+    # --- Filtrage de sortie ---
+    from security import filtrer_sortie
     reponse = filtrer_sortie(reponse)
 
-    # --- Mémoire conversationnelle : sauvegarder la réponse ---
+    # --- Sauvegarder la réponse en mémoire ---
     memory_store(reponse, role="assistant", conversation_id=effective_conv_id)
-
     logger.info("[ReAct] Réponse finale générée.")
-
-    # Langfuse : flush des traces en fin de requête
     flush()
 
     return reponse
 
 
 # ---------------------------------------------------------------------------
-# Boucle ReAct streaming (Phase 3 — SSE)
+# Boucle ReAct streaming (SSE)
 # ---------------------------------------------------------------------------
-
-# Labels humains pour les outils (affiché côté client).
-# Doit rester synchronisé avec l'enum "outil" de TOOLS_DECISION (ligne ~50).
-_TOOL_LABELS = {
-    "query_db": "Interrogation de la base de données",
-    "search_web": "Recherche sur le web",
-    "search_articles": "Recherche dans les articles",
-    "analyze_image": "Analyse d'image",
-    "preview_digest": "Préparation du digest",
-    "send_digest": "Envoi du digest",
-    "reponse_directe": "Réflexion",
-}
-
-
 async def agent_react_stream(requete: str, conversation_id: str | None = None):
     """
     Version streaming de agent_react(). Générateur async qui yield des
@@ -531,10 +132,7 @@ async def agent_react_stream(requete: str, conversation_id: str | None = None):
     Yields:
         dict: Événements SSE avec type thinking/tool_result/chunk/done.
     """
-    import asyncio
     t0 = time.time()
-
-    # Langfuse
     update_current_trace(input=requete, tags=["react-agent", "streaming"])
 
     # --- Cascade ---
@@ -548,12 +146,10 @@ async def agent_react_stream(requete: str, conversation_id: str | None = None):
     # --- Sécurité ---
     check = analyser_securite(requete)
     if check["bloque"]:
-        msg = f"[BLOQUÉ] {check['raison']} (type: {check['type']})"
-        logger.warning(f"[SECURITE] {msg}")
+        logger.warning(f"[SECURITE] {check['raison']} (type: {check['type']})")
         mark_fallback(f"security:{check.get('type', 'inconnu')}")
         yield {"type": "chunk", "content": check["raison"]}
-        latency_ms = int((time.time() - t0) * 1000)
-        yield {"type": "done", "latency_ms": latency_ms, "full_response": check["raison"]}
+        yield {"type": "done", "latency_ms": int((time.time() - t0) * 1000), "full_response": check["raison"]}
         flush()
         return
 
@@ -562,14 +158,12 @@ async def agent_react_stream(requete: str, conversation_id: str | None = None):
     historique = memory_recall(n=20, conversation_id=effective_conv_id)
     memory_store(requete, role="user", conversation_id=effective_conv_id)
 
-    outils_essayes = []
+    outils_essayes: list[str] = []
     resultat = ""
-    decision = {}
 
     for iteration in range(1, MAX_ITERATIONS + 1):
         logger.info(f"[ReAct] Itération {iteration}/{MAX_ITERATIONS}")
 
-        # Yield "thinking" quand on choisit l'outil (bloquant, run in executor)
         decision = choisir_outil(requete, historique=historique, model=model_cascade)
         outil = decision.get("outil", "reponse_directe")
 
@@ -583,7 +177,6 @@ async def agent_react_stream(requete: str, conversation_id: str | None = None):
         if outil in outils_essayes:
             logger.warning(f"[ReAct] Outil '{outil}' déjà essayé — abandon.")
             mark_fallback(f"outil_repete:{outil}")
-            # Stream la réponse directe
             full = ""
             for chunk in appeler_llm_stream(
                 f"Réponds à cette question en reconnaissant tes limites si nécessaire : {requete}",
@@ -595,7 +188,6 @@ async def agent_react_stream(requete: str, conversation_id: str | None = None):
             break
         outils_essayes.append(outil)
 
-        # Exécuter l'outil
         resultat = executer_outil(decision)
 
         yield {
@@ -605,21 +197,20 @@ async def agent_react_stream(requete: str, conversation_id: str | None = None):
             "summary": resultat[:200] + ("…" if len(resultat) > 200 else ""),
         }
 
-        # Retry si erreur
         if resultat.startswith("[ERREUR_OUTIL]") and iteration < MAX_ITERATIONS:
             logger.warning(f"[ReAct] Itération {iteration} — outil en erreur, retry.")
             continue
 
         # --- Stream la réponse finale ---
         intent = decision.get("intent", "general")
-
         prompt = _construire_prompt_reponse(requete, resultat, intent)
-        intent_max_tokens = MAX_TOKENS_BY_INTENT.get(intent)
         full_response = ""
-        for chunk in appeler_llm_stream(prompt, historique=historique, model=model_cascade, max_tokens=intent_max_tokens):
+        for chunk in appeler_llm_stream(
+            prompt, historique=historique,
+            model=model_cascade, max_tokens=MAX_TOKENS_BY_INTENT.get(intent),
+        ):
             full_response += chunk
             yield {"type": "chunk", "content": chunk}
-
         resultat = full_response
         break
     else:
@@ -629,19 +220,18 @@ async def agent_react_stream(requete: str, conversation_id: str | None = None):
         yield {"type": "chunk", "content": resultat}
 
     # --- Post-traitement ---
+    from security import filtrer_sortie
     reponse = filtrer_sortie(resultat)
     memory_store(reponse, role="assistant", conversation_id=effective_conv_id)
 
     latency_ms = int((time.time() - t0) * 1000)
     logger.info(f"[ReAct] Streaming terminé en {latency_ms}ms.")
-
     yield {"type": "done", "latency_ms": latency_ms, "full_response": reponse}
-
     flush()
 
 
 # ---------------------------------------------------------------------------
-# Point d'entrée
+# Point d'entrée CLI
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     cas_tests = [

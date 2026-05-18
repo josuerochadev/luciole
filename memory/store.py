@@ -1,20 +1,21 @@
 """
 Gestion de la mémoire conversationnelle de l'agent.
-Stocke les messages dans une base SQLite persistante (DATA_DIR/memory.db).
+Stocke les messages dans PostgreSQL (Neon).
 Supporte aussi le chargement de contexte depuis l'historique conversations (database.py).
 """
 import logging
-import sqlite3
 import uuid
 from datetime import datetime, timezone
 
-from config import DATA_DIR
+import psycopg2
+import psycopg2.extras
+
+from config import DATABASE_URL
 
 logger = logging.getLogger(__name__)
 
 LIMITE_MEMOIRE = 50
 
-_DB_PATH = f"{DATA_DIR}/memory.db"
 _session_id: str = str(uuid.uuid4())
 
 # Conversation active (optionnel, alimenté par l'API)
@@ -28,30 +29,35 @@ def set_active_conversation(conv_id: str | None) -> None:
     logger.debug(f"[memory] Conversation active : {conv_id}")
 
 
-def _get_connection() -> sqlite3.Connection:
-    """Ouvre une connexion SQLite et crée la table si nécessaire."""
-    conn = sqlite3.connect(_DB_PATH)
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS conversations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+def _get_connection() -> psycopg2.extensions.connection:
+    return psycopg2.connect(DATABASE_URL)
+
+
+def _cur(conn) -> psycopg2.extras.RealDictCursor:
+    return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+
+def _init_table(conn) -> None:
+    """Crée la table memory_conversations si nécessaire."""
+    cur = _cur(conn)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS memory_conversations (
+            id         SERIAL PRIMARY KEY,
             session_id TEXT NOT NULL,
-            role TEXT NOT NULL,
-            content TEXT NOT NULL,
-            timestamp TEXT NOT NULL
+            role       TEXT NOT NULL,
+            content    TEXT NOT NULL,
+            timestamp  TEXT NOT NULL
         )
-        """
-    )
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_conversations_session ON conversations(session_id)"
+    """)
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_memory_session ON memory_conversations(session_id)"
     )
     conn.commit()
-    return conn
 
 
 def store(message: str, role: str = "user", conversation_id: str | None = None) -> None:
     """
-    Ajoute un message en mémoire (INSERT dans SQLite).
+    Ajoute un message en mémoire.
 
     Args:
         message:         Le contenu du message.
@@ -62,27 +68,31 @@ def store(message: str, role: str = "user", conversation_id: str | None = None) 
     sid = conversation_id or _session_id
     conn = _get_connection()
     try:
-        conn.execute(
-            "INSERT INTO conversations (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)",
+        _init_table(conn)
+        cur = _cur(conn)
+        cur.execute(
+            "INSERT INTO memory_conversations (session_id, role, content, timestamp)"
+            " VALUES (%s, %s, %s, %s)",
             (sid, role, message, datetime.now(timezone.utc).isoformat()),
         )
         # Tronquer les messages les plus anciens au-delà de LIMITE_MEMOIRE
-        conn.execute(
+        cur.execute(
             """
-            DELETE FROM conversations
-            WHERE session_id = ? AND id NOT IN (
-                SELECT id FROM conversations
-                WHERE session_id = ?
+            DELETE FROM memory_conversations
+            WHERE session_id = %s AND id NOT IN (
+                SELECT id FROM memory_conversations
+                WHERE session_id = %s
                 ORDER BY id DESC
-                LIMIT ?
+                LIMIT %s
             )
             """,
             (sid, sid, LIMITE_MEMOIRE),
         )
         conn.commit()
-        count = conn.execute(
-            "SELECT COUNT(*) FROM conversations WHERE session_id = ?", (sid,)
-        ).fetchone()[0]
+        cur.execute(
+            "SELECT COUNT(*) AS c FROM memory_conversations WHERE session_id = %s", (sid,)
+        )
+        count = cur.fetchone()["c"]
         logger.debug(f"[memory] store() — {count}/{LIMITE_MEMOIRE} messages. Role={role}, sid={sid[:8]}")
     finally:
         conn.close()
@@ -103,16 +113,19 @@ def recall(n: int = 20, conversation_id: str | None = None) -> list[dict]:
     sid = conversation_id or _session_id
     conn = _get_connection()
     try:
-        rows = conn.execute(
+        _init_table(conn)
+        cur = _cur(conn)
+        cur.execute(
             """
-            SELECT role, content FROM conversations
-            WHERE session_id = ?
+            SELECT role, content FROM memory_conversations
+            WHERE session_id = %s
             ORDER BY id DESC
-            LIMIT ?
+            LIMIT %s
             """,
             (sid, n),
-        ).fetchall()
-        résultat = [{"role": r[0], "content": r[1]} for r in reversed(rows)]
+        )
+        rows = cur.fetchall()
+        résultat = [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
         logger.debug(f"[memory] recall({n}) — {len(résultat)} message(s) retourné(s). sid={sid[:8]}")
         return résultat
     finally:
@@ -123,7 +136,9 @@ def clear() -> None:
     """Supprime tous les messages de la session courante."""
     conn = _get_connection()
     try:
-        conn.execute("DELETE FROM conversations WHERE session_id = ?", (_session_id,))
+        _init_table(conn)
+        cur = _cur(conn)
+        cur.execute("DELETE FROM memory_conversations WHERE session_id = %s", (_session_id,))
         conn.commit()
         logger.debug("[memory] clear() — mémoire vidée.")
     finally:
@@ -134,10 +149,13 @@ def taille() -> int:
     """Retourne le nombre de messages de la session courante."""
     conn = _get_connection()
     try:
-        count = conn.execute(
-            "SELECT COUNT(*) FROM conversations WHERE session_id = ?", (_session_id,)
-        ).fetchone()[0]
-        return count
+        _init_table(conn)
+        cur = _cur(conn)
+        cur.execute(
+            "SELECT COUNT(*) AS c FROM memory_conversations WHERE session_id = %s",
+            (_session_id,),
+        )
+        return cur.fetchone()["c"]
     finally:
         conn.close()
 
@@ -151,23 +169,27 @@ def recall_all_sessions() -> list[dict]:
     """
     conn = _get_connection()
     try:
-        rows = conn.execute(
+        _init_table(conn)
+        cur = _cur(conn)
+        cur.execute(
             """
-            SELECT session_id, COUNT(*) as msg_count,
-                   MIN(timestamp) as first_msg, MAX(timestamp) as last_msg
-            FROM conversations
+            SELECT session_id,
+                   COUNT(*) AS msg_count,
+                   MIN(timestamp) AS first_msg,
+                   MAX(timestamp) AS last_msg
+            FROM memory_conversations
             GROUP BY session_id
             ORDER BY first_msg DESC
             """
-        ).fetchall()
+        )
         return [
             {
-                "session_id": r[0],
-                "message_count": r[1],
-                "first_message": r[2],
-                "last_message": r[3],
+                "session_id": r["session_id"],
+                "message_count": r["msg_count"],
+                "first_message": r["first_msg"],
+                "last_message": r["last_msg"],
             }
-            for r in rows
+            for r in cur.fetchall()
         ]
     finally:
         conn.close()

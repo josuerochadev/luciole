@@ -7,4 +7,4 @@ echo "[start] Enrichissement des articles en arrière-plan..."
 PYTHONUNBUFFERED=1 python startup.py 2>&1 &
 
 echo "[start] Démarrage de l'API..."
-exec uvicorn api:app --host 0.0.0.0 --port 8000
+exec uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}

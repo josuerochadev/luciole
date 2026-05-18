@@ -3,6 +3,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# --- Base de données PostgreSQL (Neon) ---
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+
 # --- Modèle et paramètres LLM ---
 MODEL_DEFAULT = "gpt-4o-mini"
 MODEL_FAST = "gpt-4o-mini"        # Cascade M6E3 : modèle rapide/économique

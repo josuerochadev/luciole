@@ -3,7 +3,7 @@
 {% block head %}
 <style>
   /* Digest page — follows Luciole design system */
-  .digest-section {
+  h2.digest-section, .digest-section {
     font-family: var(--luciole-sans);
     font-size: var(--luciole-text-xs);
     font-weight: 500;
@@ -170,7 +170,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="digest-section digest-section--accent">Digest Email · Veille Technologique</div>
+<h2 class="digest-section digest-section--accent">Digest Email · Veille Technologique</h2>
 
 <!-- KPIs -->
 <div class="digest-kpis" id="digest-kpis">
@@ -192,7 +192,7 @@
 </div>
 
 <!-- Actions -->
-<div class="digest-section">Actions</div>
+<h2 class="digest-section">Actions</h2>
 <div class="digest-actions">
   <button class="digest-btn" id="btn-preview">Previsualiser</button>
   <button class="digest-btn digest-btn--accent" id="btn-send" disabled>Envoyer par email</button>
@@ -208,7 +208,7 @@
 </div>
 
 <!-- History -->
-<div class="digest-section">Historique des envois</div>
+<h2 class="digest-section">Historique des envois</h2>
 <div id="digest-history">
   <div class="digest-empty">
     <h3>Chargement...</h3>

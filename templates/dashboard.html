@@ -4,7 +4,7 @@
 <script src="https://cdn.plot.ly/plotly-2.35.0.min.js" charset="utf-8"></script>
 <style>
   /* Dashboard-specific styles */
-  .dash-section {
+  h2.dash-section, .dash-section {
     font-family: var(--luciole-sans);
     font-size: var(--luciole-text-xs);
     font-weight: 500;
@@ -204,7 +204,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="dash-section dash-section--accent">Tableau de bord · Monitoring</div>
+<h2 class="dash-section dash-section--accent">Tableau de bord · Monitoring</h2>
 
 <div class="dash-controls">
   <button class="dash-btn" id="refresh-btn">Actualiser</button>
@@ -319,7 +319,7 @@
     let html = '';
 
     // KPIs row 1
-    html += '<div class="dash-section">Performance</div>';
+    html += '<h2 class="dash-section">Performance</h2>';
     html += '<div class="dash-kpis">';
     html += kpi('Requêtes', metrics.total_requests.toLocaleString(), 'total');
     html += kpi('Latence moy.', Math.round(metrics.avg_duration_ms) + 'ms', 'millisecondes');
@@ -336,13 +336,13 @@
     html += '</div>';
 
     // Health
-    html += '<div class="dash-section">Santé</div>';
+    html += '<h2 class="dash-section">Santé</h2>';
     html += healthBar('Taux d\'erreur', metrics.error_rate);
     html += healthBar('Taux de fallback', metrics.fallback_rate, [0, 0.10]);
 
     // Charts
     if (records.length > 1) {
-      html += '<div class="dash-section">Requêtes récentes</div>';
+      html += '<h2 class="dash-section">Requêtes récentes</h2>';
       html += '<div class="dash-chart-label">Latence par requête (ms)</div>';
       html += '<div id="chart-latency"></div>';
       html += '<div class="dash-chart-label">Tokens par requête</div>';

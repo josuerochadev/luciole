@@ -22,7 +22,7 @@ client = TestClient(app)
 # ── 1. Hiérarchie de headings ──────────────────────────────────────────────
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_dashboard_has_h1():
     """La page /dashboard a un <h1> (hiérarchie heading WCAG 1.3.1)."""
     r = client.get("/dashboard", follow_redirects=True)
@@ -30,7 +30,7 @@ def test_dashboard_has_h1():
     assert "<h1" in r.text, "Aucun <h1> sur /dashboard"
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_digest_has_h1():
     """La page /digest-page a un <h1> (hiérarchie heading WCAG 1.3.1)."""
     r = client.get("/digest-page", follow_redirects=True)
@@ -38,7 +38,7 @@ def test_digest_has_h1():
     assert "<h1" in r.text, "Aucun <h1> sur /digest-page"
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_dashboard_has_h2_sections():
     """Les sections du dashboard utilisent <h2> (généré par JS)."""
     r = client.get("/dashboard", follow_redirects=True)
@@ -53,28 +53,28 @@ def test_dashboard_has_h2_sections():
 # ── 2. Auth tabs — ARIA pattern ────────────────────────────────────────────
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_login_tabs_have_tablist_role():
     """Le conteneur d'onglets a role='tablist' (WCAG 4.1.2)."""
     r = client.get("/login", follow_redirects=True)
     assert 'role="tablist"' in r.text, "role='tablist' absent sur /login"
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_login_tabs_have_tab_role():
     """Les boutons d'onglets ont role='tab' (WCAG 4.1.2)."""
     r = client.get("/login", follow_redirects=True)
     assert 'role="tab"' in r.text, "role='tab' absent sur /login"
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_login_tabs_have_aria_selected():
     """L'onglet actif a aria-selected='true' (WCAG 4.1.2)."""
     r = client.get("/login", follow_redirects=True)
     assert 'aria-selected="true"' in r.text, "aria-selected='true' absent sur /login"
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_login_tabs_have_aria_controls():
     """Les onglets référencent leurs panneaux via aria-controls."""
     r = client.get("/login", follow_redirects=True)
@@ -82,7 +82,7 @@ def test_login_tabs_have_aria_controls():
     assert 'aria-controls="register-form"' in r.text, "aria-controls='register-form' absent"
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_login_panels_have_tabpanel_role():
     """Les formulaires ont role='tabpanel' (WCAG 4.1.2)."""
     r = client.get("/login", follow_redirects=True)
@@ -92,7 +92,7 @@ def test_login_panels_have_tabpanel_role():
 # ── 3. role="alert" sur les erreurs de formulaire ─────────────────────────
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_login_error_divs_have_role_alert():
     """Les deux divs d'erreur ont role='alert' (WCAG 4.1.3)."""
     r = client.get("/login", follow_redirects=True)
@@ -103,7 +103,7 @@ def test_login_error_divs_have_role_alert():
 # ── 4. CSS syntax — dragover dark mode ────────────────────────────────────
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_css_dragover_invalid_comma_syntax_absent():
     """La syntaxe CSS invalide (sélecteur+virgule+@media) est corrigée."""
     r = client.get("/static/luciole.css", params={"v": "test"})
@@ -113,7 +113,7 @@ def test_css_dragover_invalid_comma_syntax_absent():
     )
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_css_dragover_data_theme_dark_rule_exists():
     """La règle dark dragover pour [data-theme='dark'] est correctement définie."""
     r = client.get("/static/luciole.css", params={"v": "test"})
@@ -125,7 +125,7 @@ def test_css_dragover_data_theme_dark_rule_exists():
 # ── 5. Sidebar delete — accessible au clavier ─────────────────────────────
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_css_sidebar_delete_focus_visible():
     """Le CSS rend .luciole-sidebar-delete visible au focus clavier."""
     r = client.get("/static/luciole.css", params={"v": "test"})
@@ -134,7 +134,7 @@ def test_css_sidebar_delete_focus_visible():
     )
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_js_sidebar_delete_is_button():
     """Le JS génère un <button> pour l'action de suppression (pas un <span>)."""
     r = client.get("/static/luciole-chat.js", params={"v": "test"})
@@ -146,7 +146,7 @@ def test_js_sidebar_delete_is_button():
 # ── 6. Digest — champ API key inline (pas de prompt()) ────────────────────
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_digest_has_apikey_input():
     """La page digest a un input#apikey-input pour la clé API."""
     r = client.get("/digest-page", follow_redirects=True)
@@ -155,7 +155,7 @@ def test_digest_has_apikey_input():
     )
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_digest_no_window_prompt():
     """La page digest ne contient plus d'appel à prompt()."""
     r = client.get("/digest-page", follow_redirects=True)
@@ -168,7 +168,7 @@ def test_digest_no_window_prompt():
 # ── 7. Plotly — couleurs dynamiques depuis CSS vars ───────────────────────
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_dashboard_plotly_reads_css_vars():
     """Le dashboard lit les couleurs CSS via getComputedStyle (pas hard-codées)."""
     r = client.get("/dashboard", follow_redirects=True)
@@ -177,7 +177,7 @@ def test_dashboard_plotly_reads_css_vars():
     )
 
 
-@pytest.mark.skip(reason="Tests UX — fonctionnalités frontend en attente d'implémentation")
+@pytest.mark.skip(reason="UX test — audit correctifs critiques")
 def test_dashboard_no_hardcoded_plotly_paper_color():
     """Le layout Plotly ne contient plus paper_bgcolor: '#faf8f3' hard-codé."""
     r = client.get("/dashboard", follow_redirects=True)

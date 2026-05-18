@@ -2,8 +2,10 @@
 # Multi-stage Dockerfile — Agent de veille technologique (luciole_)
 # =============================================================================
 # Variables d'environnement requises au runtime :
+#   GEMINI_API_KEY          — Cle API Gemini (obligatoire)
+#   DATABASE_URL            — URL PostgreSQL Neon (obligatoire)
 #   API_KEY                 — Cle API pour authentifier les requetes (obligatoire)
-#   OPENAI_API_KEY          — Cle API OpenAI (obligatoire)
+#   JWT_SECRET              — Secret JWT pour l'authentification (obligatoire)
 #   SMTP_HOST               — Serveur SMTP (defaut: smtp.gmail.com)
 #   SMTP_PORT               — Port SMTP (defaut: 587)
 #   SMTP_PASSWORD            — Mot de passe SMTP

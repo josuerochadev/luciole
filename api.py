@@ -114,7 +114,7 @@ def _validate_magic_bytes(data: bytes, declared_type: str) -> bool:
         return data[:3] in (b"\xff\xfb", b"\xff\xf3", b"\xff\xf2") or data[:3] == b"ID3"
     if declared_type in ("audio/wav",):
         return data[:4] == b"RIFF" and data[8:12] == b"WAVE"
-    if declared_type in ("audio/mp4",):
+    if declared_type in ("audio/mp4", "audio/x-m4a", "audio/m4a"):
         # MP4/M4A: ftyp box after size bytes
         return b"ftyp" in data[:12]
     return False

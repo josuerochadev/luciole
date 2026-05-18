@@ -40,7 +40,7 @@
   // Allowed MIME types (client-side filter)
   var ALLOWED_TYPES = new Set([
     'image/png', 'image/jpeg', 'image/webp',
-    'audio/mpeg', 'audio/mp4', 'audio/wav',
+    'audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/m4a', 'audio/wav',
     'application/pdf',
   ]);
   var MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB

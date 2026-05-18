@@ -785,6 +785,18 @@ img { max-width: 100%; display: block; }
   width: 100%;
   text-align: left;
 }
+
+/* Sidebar entry — conteneur flex pour item + delete */
+.luciole-sidebar-entry {
+  display: flex;
+  align-items: stretch;
+}
+
+.luciole-sidebar-entry .luciole-sidebar-item {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
 .luciole-sidebar-item:hover {
   background: var(--luciole-paper-alt);
 }
@@ -829,7 +841,8 @@ img { max-width: 100%; display: block; }
   transition: all 0.15s;
   flex-shrink: 0;
 }
-.luciole-sidebar-item:hover .luciole-sidebar-delete {
+.luciole-sidebar-entry:hover .luciole-sidebar-delete,
+.luciole-sidebar-delete:focus-visible {
   opacity: 1;
 }
 .luciole-sidebar-delete:hover {

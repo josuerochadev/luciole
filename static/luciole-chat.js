@@ -133,23 +133,23 @@
       const title = conv.title || 'Sans titre';
       const date = relativeDate(conv.updated_at);
       return (
-        '<button class="luciole-sidebar-item' + (isActive ? ' active' : '') + '" data-id="' + conv.id + '">' +
-          '<div class="luciole-sidebar-item-content">' +
-            '<span class="luciole-sidebar-item-title">' + escapeHtml(title) + '</span>' +
-            '<span class="luciole-sidebar-item-date">' + date + '</span>' +
-          '</div>' +
-          '<span class="luciole-sidebar-delete" data-id="' + conv.id + '" title="Supprimer">&times;</span>' +
-        '</button>'
+        '<div class="luciole-sidebar-entry">' +
+          '<button class="luciole-sidebar-item' + (isActive ? ' active' : '') + '" data-id="' + conv.id + '">' +
+            '<div class="luciole-sidebar-item-content">' +
+              '<span class="luciole-sidebar-item-title">' + escapeHtml(title) + '</span>' +
+              '<span class="luciole-sidebar-item-date">' + date + '</span>' +
+            '</div>' +
+          '</button>' +
+          '<button class="luciole-sidebar-delete" type="button" data-id="' + conv.id + '" ' +
+            'aria-label="Supprimer ' + escapeHtml(title) + '" title="Supprimer">&times;</button>' +
+        '</div>'
       );
     }).join('');
 
     // Click handlers
     sidebarList.querySelectorAll('.luciole-sidebar-item').forEach(function (item) {
-      item.addEventListener('click', function (e) {
-        // Don't load conversation if clicking delete button
-        if (e.target.classList.contains('luciole-sidebar-delete')) return;
+      item.addEventListener('click', function () {
         loadConversation(item.getAttribute('data-id'));
-        // Close sidebar on mobile
         if (window.innerWidth <= 768) closeSidebar();
       });
     });

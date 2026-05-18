@@ -15,13 +15,15 @@
               id="tab-login"
               aria-selected="true"
               aria-controls="login-form"
-              data-tab="login">Connexion</button>
+              data-tab="login"
+              tabindex="0">Connexion</button>
       <button class="luciole-auth-tab"
               role="tab"
               id="tab-register"
               aria-selected="false"
               aria-controls="register-form"
-              data-tab="register">Inscription</button>
+              data-tab="register"
+              tabindex="-1">Inscription</button>
     </div>
 
     <!-- Login form -->
@@ -80,9 +82,11 @@
       tabs.forEach(function (t) {
         t.classList.remove('active');
         t.setAttribute('aria-selected', 'false');
+        t.setAttribute('tabindex', '-1');
       });
       tab.classList.add('active');
       tab.setAttribute('aria-selected', 'true');
+      tab.setAttribute('tabindex', '0');
       const target = tab.getAttribute('data-tab');
       loginForm.hidden = target !== 'login';
       registerForm.hidden = target !== 'register';

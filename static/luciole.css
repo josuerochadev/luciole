@@ -107,7 +107,10 @@
 }
 
 /* Dark mode — Drag overlay fix */
-[data-theme="dark"] .luciole-dragover::after,
+[data-theme="dark"] .luciole-dragover::after {
+  background: rgba(26, 26, 26, 0.9);
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .luciole-dragover::after {
     background: rgba(26, 26, 26, 0.9);

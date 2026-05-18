@@ -287,7 +287,11 @@ fil-rouge/
 │
 └── docs/              → documentation technique
     ├── ARCHITECTURE.md    ce fichier
-    └── ROADMAP-UX.md      roadmap UX/UI
+    ├── ROADMAP-UX.md      roadmap UX/UI (toutes les phases terminées)
+    └── adr/               décisions architecturales
+        ├── ADR-001-migration-openai-vers-gemini.md
+        ├── ADR-002-migration-sqlite-vers-postgresql.md
+        └── ADR-003-migration-render-vers-railway.md
 ```
 
 ---

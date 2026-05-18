@@ -1,5 +1,9 @@
 # Rapport d'évaluation LLM-as-Judge — M5E3
 
+> **Note** : rapport généré avec l'ancienne stack (OpenAI). Le projet a depuis migré vers
+> Google Gemini (gemini-2.5-flash / gemini-2.5-pro). Les scores ci-dessous ne reflètent
+> pas les performances actuelles de l'agent.
+
 **Modèle agent** : OpenAI gpt-4o-mini | **Modèle juge** : openai gpt-4o
 
 **Score global moyen** : 3.13 / 5.0

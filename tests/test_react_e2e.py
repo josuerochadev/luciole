@@ -175,7 +175,12 @@ class TestReponseDirecteE2E:
 # ---------------------------------------------------------------------------
 
 class TestSecurityBlockE2E:
-    """Les requêtes malveillantes sont bloquées avant tout appel LLM."""
+    """Les requêtes malveillantes sont bloquées avant tout appel LLM.
+
+    Note mock : @patch("main.appeler_llm") — le bloc sécurité est dans main.py et retourne
+    directement sans passer par formuler_reponse() ; c'est donc main.appeler_llm qui doit
+    être patché (et non agent.response.appeler_llm) pour vérifier qu'il n'est pas appelé.
+    """
 
     @patch("main.appeler_llm")
     @patch("agent.tools_runner.appeler_llm_tools")
@@ -212,7 +217,12 @@ class TestSecurityBlockE2E:
 # ---------------------------------------------------------------------------
 
 class TestToolErrorRetryE2E:
-    """Quand un outil échoue, l'agent réessaie puis bascule en fallback."""
+    """Quand un outil échoue, l'agent réessaie puis bascule en fallback.
+
+    Note mock : @patch("main.appeler_llm") — le chemin de fallback (outil déjà essayé)
+    appelle appeler_llm directement dans main.py, pas via formuler_reponse() ; d'où
+    le patch sur main.appeler_llm et non agent.response.appeler_llm.
+    """
 
     @patch("main.appeler_llm")
     @patch("agent.tools_runner.appeler_llm_tools")
@@ -252,6 +262,9 @@ class TestToolErrorRetryE2E:
         with pytest.raises(RuntimeError, match="timeout réseau"):
             agent_react("Actus IA")
 
+    # Note mock : @patch("agent.response.appeler_llm") — ici la ValueError est capturée
+    # par executer_outil, [ERREUR_OUTIL] est produit, puis la 2e itération détecte l'outil
+    # déjà essayé et bascule en fallback via formuler_reponse() dans agent/response.py.
     @patch("agent.response.appeler_llm")
     @patch("agent.tools_runner.appeler_llm_tools")
     @patch("agent.tools_runner.query_db")
@@ -276,7 +289,12 @@ class TestToolErrorRetryE2E:
 # ---------------------------------------------------------------------------
 
 class TestStepsOrder:
-    """Vérifie que chaque étape est appelée dans le bon ordre."""
+    """Vérifie que chaque étape est appelée dans le bon ordre.
+
+    Note mock : @patch("agent.response.appeler_llm") — le chemin nominal (outil réussi)
+    passe par formuler_reponse() dans agent/response.py, d'où le patch sur
+    agent.response.appeler_llm (et non main.appeler_llm).
+    """
 
     @patch("agent.response.appeler_llm")
     @patch("agent.tools_runner.appeler_llm_tools")

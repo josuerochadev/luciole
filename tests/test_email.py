@@ -62,14 +62,14 @@ assert resultat["ok"] is True,           f"dry_run échoué : {resultat['message
 assert resultat["nb_articles"] > 0,      "dry_run : aucun article"
 assert "html" in resultat,               "dry_run : HTML absent dans le résultat"
 assert "sujet" in resultat,              "dry_run : sujet absent"
-print(f"\n[4/4] dry_run             : OK")
+print("\n[4/4] dry_run             : OK")
 print(f"       Sujet             : {resultat['sujet']}")
 print(f"       Articles prêts    : {resultat['nb_articles']}")
 
 print(f"\n{'='*65}")
 print("Tous les tests PASSENT — module email opérationnel.")
 print(f"{'='*65}")
-print(f"\nPour envoyer un vrai email, configurez dans .env :")
+print("\nPour envoyer un vrai email, configurez dans .env :")
 print("  SMTP_HOST=smtp.gmail.com")
 print("  SMTP_PORT=587")
 print("  SMTP_USER=votre@gmail.com")

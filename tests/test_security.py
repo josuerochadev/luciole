@@ -2,7 +2,6 @@
 Tests unitaires pour le module security.py (M4E5).
 Vérifie que les 5 attaques de l'exercice sont bien bloquées.
 """
-import pytest
 import sys
 import os
 
@@ -11,8 +10,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from security import (
     analyser_securite,
     valider_input,
-    detecter_injection,
-    detecter_action_non_autorisee,
     valider_sql,
     filtrer_sortie,
 )

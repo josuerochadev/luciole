@@ -150,7 +150,6 @@ class TestToolIntegrationFullLoop:
     def test_small_talk_no_data(self):
         """Small talk ne doit pas contenir de données inventées."""
         reponse = agent_react("Salut, ça roule ?")
-        reponse_lower = reponse.lower()
         # Ne doit pas contenir de noms de clients ou de chiffres suspects
         assert "SELECT" not in reponse, "La réponse small talk contient du SQL"
         assert "[ERREUR" not in reponse, "La réponse small talk contient une erreur outil"

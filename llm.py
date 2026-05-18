@@ -3,7 +3,7 @@ import re
 import openai
 import time
 import logging
-from config import GEMINI_API_KEY, GEMINI_BASE_URL, MODEL_DEFAULT, MODEL_FAST, MODEL_POWERFUL, TEMPERATURE, MAX_TOKENS, SYSTEM_PROMPT
+from config import GEMINI_API_KEY, GEMINI_BASE_URL, MODEL_DEFAULT, TEMPERATURE, MAX_TOKENS, SYSTEM_PROMPT
 
 # Monitoring : hook optionnel — no-op si le module n'est pas présent (ex: tests isolés)
 try:
@@ -22,8 +22,10 @@ try:
 except ImportError:
     LangfuseOpenAI = None
     def observe(*args, **kwargs):
-        def passthrough(fn): return fn
-        if args and callable(args[0]): return args[0]
+        def passthrough(fn):
+            return fn
+        if args and callable(args[0]):
+            return args[0]
         return passthrough
 
 logger = logging.getLogger(__name__)

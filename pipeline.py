@@ -11,7 +11,6 @@ Utilisation :
 import argparse
 import logging
 import os
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
@@ -166,7 +165,7 @@ def start_scheduler(dry_run: bool = False, no_email: bool = False) -> None:
     scheduler.add_job(job, CronTrigger(hour=int(heure), minute=int(minute)))
 
     print(f"🕐 Scheduler démarré — pipeline planifié chaque jour à {veille_heure}")
-    print(f"   (configurable via VEILLE_HEURE, Ctrl+C pour arrêter)\n")
+    print("   (configurable via VEILLE_HEURE, Ctrl+C pour arrêter)\n")
     logger.warning(f"[Scheduler] Démarré — exécution quotidienne à {veille_heure}")
 
     try:

@@ -46,7 +46,7 @@ Voici une sélection d'articles récents sur le cloud, couvrant des sujets allan
 
 ### Analyse
 
-Cette question de catégorie **factuelle** a obtenu le score le plus bas. 
+Cette question de catégorie **factuelle** a obtenu le score le plus bas.
 Causes possibles :
 
 - Le routing a pu orienter vers un outil inadapté
@@ -56,7 +56,7 @@ Causes possibles :
 
 ### Piste d'amélioration
 
-Pour améliorer le score sur ce type de question (factuelle), 
+Pour améliorer le score sur ce type de question (factuelle),
 il faudrait :
 
 - Vérifier que la requête SQL générée couvre bien le cas demandé

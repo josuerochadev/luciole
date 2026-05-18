@@ -25,10 +25,9 @@ from fastapi.templating import Jinja2Templates
 from pydantic import AnyHttpUrl, BaseModel, EmailStr, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from main import agent_react, agent_react_stream
+from main import agent_react_stream
 from monitoring import (
     end_request,
     get_metrics,
@@ -48,7 +47,6 @@ from database import (
     add_message,
     delete_conversation,
     update_conversation_title,
-    get_recent_messages,
     save_response_feedback,
     get_response_feedback_stats,
 )

@@ -9,7 +9,6 @@ Fonctionnalités :
   - Enregistrement de l'historique d'envoi
 """
 import logging
-import os
 import smtplib
 from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart

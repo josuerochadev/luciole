@@ -72,7 +72,7 @@ class TestDatabaseCRUD:
         assert result == []
 
     def test_list_conversations_ordre(self, conv_db):
-        c1 = conv_db.create_conversation("Première")
+        _ = conv_db.create_conversation("Première")
         c2 = conv_db.create_conversation("Deuxième")
         # c2 créée après c1, donc c2 en premier (DESC)
         result = conv_db.list_conversations()

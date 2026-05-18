@@ -60,8 +60,8 @@ def test_rappel_prenom():
     rep_avec = repondre_avec_memoire("Comment je m'appelle ?")
     print(f"Réponse : {rep_avec}")
 
-    print(f"\nObservation : sans mémoire → le LLM ne sait pas.")
-    print(f"             avec mémoire → le LLM répond 'Alice'.")
+    print("\nObservation : sans mémoire → le LLM ne sait pas.")
+    print("             avec mémoire → le LLM répond 'Alice'.")
 
 
 # ---------------------------------------------------------------------------

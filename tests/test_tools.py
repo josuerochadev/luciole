@@ -70,7 +70,7 @@ class TestQueryDb:
 # 2. DATABASE — charger/sauvegarder JSON, articles, archives, logs
 # =========================================================================
 
-from tools.database import (
+from tools.database import (  # noqa: E402
     charger_json,
     sauvegarder_json,
     article_deja_traite,
@@ -199,7 +199,7 @@ class TestHistoriqueEtLogs:
 # 3. SEARCH — search_web, filtrer_par_theme
 # =========================================================================
 
-from tools.search import search_web, filtrer_par_theme
+from tools.search import search_web, filtrer_par_theme  # noqa: E402
 
 
 class TestSearchWeb:
@@ -267,7 +267,7 @@ class TestFiltrerParTheme:
 # 4. EMAIL — génération HTML/texte, helpers
 # =========================================================================
 
-from tools.email import generer_html, generer_texte, _etoiles, _badge
+from tools.email import generer_html, generer_texte, _etoiles, _badge  # noqa: E402
 
 
 class TestEmailHelpers:
@@ -346,7 +346,7 @@ class TestGenererTexte:
 # 5. RAG — fonctions utilitaires (sans appel API)
 # =========================================================================
 
-from tools.rag import _score_fraicheur, _article_id, taille_index, vider_index
+from tools.rag import _score_fraicheur, _article_id, taille_index, vider_index  # noqa: E402
 
 
 class TestRagUtils:
@@ -409,7 +409,7 @@ class TestRagUtils:
 # 6. TRANSCRIBE — validation (sans appel API)
 # =========================================================================
 
-from tools.transcribe import transcrire_audio
+from tools.transcribe import transcrire_audio  # noqa: E402
 
 
 class TestTranscribeValidation:
@@ -437,7 +437,7 @@ class TestTranscribeValidation:
 # 7. VISION — validation (sans appel API)
 # =========================================================================
 
-from tools.vision import analyser_image
+from tools.vision import analyser_image  # noqa: E402
 
 
 class TestVisionValidation:

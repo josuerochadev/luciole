@@ -104,7 +104,7 @@ def valider_sql(sql: str) -> tuple[bool, str]:
     """Valide une requete SQL generee par le LLM avant execution."""
     sql_upper = sql.strip().upper()
     if not sql_upper.startswith("SELECT"):
-        return False, f"Seules les requetes SELECT sont autorisees."
+        return False, "Seules les requetes SELECT sont autorisees."
     for pattern in SQL_DANGEROUS_PATTERNS:
         if re.search(pattern, sql, re.IGNORECASE):
             logger.warning(f"[SECURITE] SQL dangereux — pattern: {pattern}, sql: {sql}")

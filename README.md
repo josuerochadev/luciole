@@ -6,10 +6,10 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=flat&logo=fastapi&logoColor=white)
-![OpenAI](https://img.shields.io/badge/OpenAI-API-412991?style=flat&logo=openai&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-enabled-2496ED?style=flat&logo=docker&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini-API-4285F4?style=flat&logo=google&logoColor=white)
+![Railway](https://img.shields.io/badge/Railway-deployed-0B0D0E?style=flat&logo=railway&logoColor=white)
 
-[Documentation](docs/ARCHITECTURE.md) · [Portfolio](https://josuerocha.dev) · [Signaler un bug](https://github.com/josuerochadev/luciole/issues)
+[**Démo live**](https://luciole-production.up.railway.app) · [Documentation](docs/ARCHITECTURE.md) · [Portfolio](https://josuerocha.dev) · [Signaler un bug](https://github.com/josuerochadev/luciole/issues)
 
 </div>
 
@@ -24,8 +24,8 @@ Projet réalisé en équipe avec Alex Dubus, Zhengfeng Ding et Stéphanie Consol
 ## Fonctionnalités
 
 - **Pipeline automatisé** : collecte de ~40 flux RSS, filtrage thématique, enrichissement LLM (résumé, catégorie, score de pertinence 1-10)
-- **Agent conversationnel ReAct** : raisonnement Reason → Act → Observe avec 7 outils (base de données, recherche web, RAG, email, scraping, transcription audio, analyse d'images)
-- **RAG** : embeddings `text-embedding-3-small`, scoring hybride cosinus + fraîcheur, re-ranking optionnel via Cohere
+- **Agent conversationnel ReAct** : raisonnement Reason → Act → Observe avec 6 outils (base de données, recherche web, RAG, email, scraping, analyse d'images)
+- **RAG** : embeddings `gemini-embedding-001`, scoring hybride cosinus + fraîcheur, re-ranking optionnel via Cohere
 - **Interface web** : chat avec streaming SSE, tableau de bord articles, mode sombre, upload fichiers, feedback sur les réponses
 - **Auth** : comptes utilisateurs, authentification JWT
 - **Rapports email** : digests HTML générés par LLM et envoyés par SMTP
@@ -37,19 +37,21 @@ Projet réalisé en équipe avec Alex Dubus, Zhengfeng Ding et Stéphanie Consol
 | Catégorie | Outils |
 |---|---|
 | Backend | Python 3.12, FastAPI, uvicorn |
-| LLM | OpenAI API (gpt-4o-mini, gpt-4o, text-embedding-3-small) |
+| LLM | Google Gemini API (gemini-2.5-flash, gemini-2.5-pro, gemini-embedding-001) |
 | RAG | numpy (cosinus), rank-bm25, Cohere re-ranking (optionnel) |
+| Base de données | PostgreSQL (Neon) |
 | Auth | python-jose (JWT), bcrypt |
 | Observabilité | Langfuse, slowapi |
 | Web & scraping | trafilatura, feedparser, Jinja2 |
-| Déploiement | Docker, Render |
+| Déploiement | Docker, Railway |
 
 ## Démarrer
 
 ### Prérequis
 
 - Python 3.12+
-- Clé API OpenAI
+- Clé API Gemini (Google AI Studio — gratuit)
+- Base PostgreSQL (Neon — gratuit)
 
 ### Installation
 
@@ -60,7 +62,7 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# Renseigner OPENAI_API_KEY et API_KEY dans .env
+# Renseigner GEMINI_API_KEY, DATABASE_URL et API_KEY dans .env
 ```
 
 ### Lancer l'application
@@ -86,8 +88,11 @@ python -m pytest tests/ -v
 
 | Variable | Obligatoire | Description |
 |---|---|---|
-| `OPENAI_API_KEY` | oui | Clé API OpenAI |
+| `GEMINI_API_KEY` | oui | Clé API Google Gemini |
+| `DATABASE_URL` | oui | URL PostgreSQL Neon |
 | `API_KEY` | oui | Clé pour protéger les endpoints |
+| `JWT_SECRET` | oui | Secret pour les tokens d'authentification |
+| `TAVILY_API_KEY` | recommandé | Recherche web temps réel |
 | `LANGFUSE_*` | non | Tracing LLM |
 | `COHERE_API_KEY` | non | Re-ranking RAG |
 | `SMTP_*` / `EMAIL_*` | non | Envoi de rapports email |
@@ -98,27 +103,27 @@ python -m pytest tests/ -v
 ├── main.py              # Boucle ReAct (Reason → Act → Observe)
 ├── api.py               # API FastAPI
 ├── pipeline.py          # Pipeline RSS → LLM → stockage
-├── llm.py               # Client OpenAI centralisé
+├── llm.py               # Client Gemini centralisé (compat OpenAI)
 ├── config.py            # Configuration centralisée
+├── database.py          # Persistance PostgreSQL (conversations, auth)
 ├── security.py          # Rate limiting, headers sécurité
 ├── monitoring.py        # Métriques et KPIs
 ├── tracing.py           # Intégration Langfuse
 ├── tools/
 │   ├── search.py        # Collecte RSS + recherche web
-│   ├── database.py      # Persistance SQLite
+│   ├── database.py      # Persistance PostgreSQL (articles, feedbacks)
 │   ├── rag.py           # Embeddings + recherche sémantique
 │   ├── email.py         # Génération et envoi de rapports HTML
 │   ├── scraper.py       # Scraping web
-│   ├── transcribe.py    # Transcription audio (Whisper)
-│   └── vision.py        # Analyse d'images (GPT-4o)
+│   └── vision.py        # Analyse d'images (Gemini Vision)
 ├── memory/
-│   └── store.py         # Mémoire de session conversationnelle
+│   └── store.py         # Mémoire de session conversationnelle (PostgreSQL)
 ├── static/              # CSS/JS (design system Luciole)
 ├── templates/           # Templates Jinja2 (chat, dashboard, digest)
 ├── tests/               # Tests unitaires et d'intégration
 ├── docs/                # Documentation technique
 ├── Dockerfile
-└── render.yaml
+└── railway.toml
 ```
 
 Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) pour le détail des flux internes (pipeline, boucle ReAct, RAG, gardes-fous).

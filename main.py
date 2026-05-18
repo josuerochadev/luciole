@@ -14,7 +14,6 @@ from config import MODEL_FAST, MODEL_POWERFUL, MAX_TOKENS_BY_INTENT
 from tools.search import search_web
 from tools.database import query_db
 from tools.rag import rechercher_articles
-from tools.transcribe import transcrire_audio
 from tools.vision import analyser_image
 from tools.email import selectionner_articles, envoyer_rapport
 from memory.store import store as memory_store, recall as memory_recall
@@ -43,7 +42,7 @@ TOOLS_DECISION = [
                 "properties": {
                     "intent": {
                         "type": "string",
-                        "enum": ["database", "search", "rag", "transcribe", "vision", "email", "general"],
+                        "enum": ["database", "search", "rag", "vision", "email", "general"],
                         "description": "Type de requête détecté.",
                     },
                     "outil": {
@@ -52,7 +51,6 @@ TOOLS_DECISION = [
                             "query_db",
                             "search_web",
                             "search_articles",
-                            "transcribe_audio",
                             "analyze_image",
                             "preview_digest",
                             "send_digest",
@@ -70,7 +68,7 @@ TOOLS_DECISION = [
                     },
                     "file_path": {
                         "type": "string",
-                        "description": "Chemin du fichier si intent=transcribe ou vision, sinon chaîne vide.",
+                        "description": "Chemin du fichier si intent=vision, sinon chaîne vide.",
                     },
                     "raisonnement": {
                         "type": "string",
@@ -100,8 +98,7 @@ SYSTEM_REACT = (
     "  Génère UNIQUEMENT des requêtes SELECT sur cette table.\n"
     "- search_web → actus, tendances, nouveautés, veille externe tech\n"
     "- search_articles → archives internes déjà collectées (RAG)\n"
-    "- transcribe_audio → fichier audio fourni par l'utilisateur\n"
-    "- analyze_image → image fournie par l'utilisateur\n"
+    "- analyze_image → image ou PDF fourni par l'utilisateur\n"
     "- preview_digest → prévisualiser le digest email (résumé des articles, nombre, catégories)\n"
     "- send_digest → envoyer le digest par email aux destinataires configurés\n"
     "- reponse_directe → salutations, questions générales, OU requêtes hors périmètre\n\n"
@@ -232,22 +229,6 @@ def executer_outil(decision: dict) -> str:
             logger.info(f"[ReAct] Résultat search_articles (RAG) : {len(resultats)} résultat(s)")
         except Exception as e:
             resultat = f"[ERREUR_OUTIL] Recherche sémantique échouée : {e}"
-            logger.error(f"[ReAct] {resultat}")
-
-    elif outil == "transcribe_audio":
-        fichier = decision.get("file_path", "")
-        try:
-            result = transcrire_audio(fichier)
-            resultat = (
-                f"**Transcription :**\n{result['transcription']}\n\n"
-                f"**Analyse :**\n{result['analyse']}"
-            )
-            logger.info(f"[ReAct] Résultat transcribe_audio : {len(result['transcription'])} car.")
-        except (FileNotFoundError, ValueError) as e:
-            resultat = f"[ERREUR_OUTIL] Transcription impossible : {e}"
-            logger.error(f"[ReAct] {resultat}")
-        except RuntimeError as e:
-            resultat = f"[ERREUR_OUTIL] Erreur API Whisper : {e}"
             logger.error(f"[ReAct] {resultat}")
 
     elif outil == "analyze_image":
@@ -384,7 +365,6 @@ _FORMATS_PAR_INTENT = {
     "rag": _FORMAT_RAG,
     "email": _FORMAT_EMAIL,
     "general": _FORMAT_DIRECT,
-    "transcribe": _FORMAT_MULTIMODAL,
     "vision": _FORMAT_MULTIMODAL,
 }
 
@@ -526,7 +506,6 @@ _TOOL_LABELS = {
     "query_db": "Interrogation de la base de données",
     "search_web": "Recherche sur le web",
     "search_articles": "Recherche dans les articles",
-    "transcribe_audio": "Transcription audio",
     "analyze_image": "Analyse d'image",
     "preview_digest": "Préparation du digest",
     "send_digest": "Envoi du digest",

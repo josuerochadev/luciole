@@ -3,7 +3,7 @@ import re
 import openai
 import time
 import logging
-from config import OPENAI_API_KEY, MODEL_DEFAULT, MODEL_FAST, MODEL_POWERFUL, TEMPERATURE, MAX_TOKENS, SYSTEM_PROMPT
+from config import GEMINI_API_KEY, GEMINI_BASE_URL, MODEL_DEFAULT, MODEL_FAST, MODEL_POWERFUL, TEMPERATURE, MAX_TOKENS, SYSTEM_PROMPT
 
 # Monitoring : hook optionnel — no-op si le module n'est pas présent (ex: tests isolés)
 try:
@@ -32,21 +32,20 @@ _client = None
 
 
 def get_openai_client():
-    """Initialise le client OpenAI au premier appel (lazy init).
+    """Initialise le client Gemini (via endpoint compatibilité OpenAI) au premier appel.
     Si Langfuse est actif, utilise le wrapper instrumenté.
-    Point d'accès unique — utilisé aussi par tools/rag.py."""
+    Point d'accès unique — utilisé aussi par tools/rag.py et tools/vision.py."""
     global _client
     if _client is None:
-        if not OPENAI_API_KEY:
+        if not GEMINI_API_KEY:
             raise ValueError(
-                "Clé API OpenAI manquante. Définissez OPENAI_API_KEY dans le fichier .env "
-                "ou via PowerShell : $env:OPENAI_API_KEY = 'sk-...'"
+                "Clé API Gemini manquante. Définissez GEMINI_API_KEY dans le fichier .env."
             )
         if LangfuseOpenAI is not None:
-            _client = LangfuseOpenAI(api_key=OPENAI_API_KEY)
-            logger.info("[Langfuse] Client OpenAI instrumenté.")
+            _client = LangfuseOpenAI(api_key=GEMINI_API_KEY, base_url=GEMINI_BASE_URL)
+            logger.info("[Langfuse] Client Gemini instrumenté.")
         else:
-            _client = openai.OpenAI(api_key=OPENAI_API_KEY)
+            _client = openai.OpenAI(api_key=GEMINI_API_KEY, base_url=GEMINI_BASE_URL)
     return _client
 
 # Schéma JSON métier de l'agent de veille technologique
@@ -178,7 +177,7 @@ def appeler_llm(
             return response.choices[0].message.content.strip()
 
         except openai.AuthenticationError as e:
-            raise ValueError(f"Clé API invalide ou révoquée : {e}") from e
+            raise ValueError(f"Clé API Gemini invalide ou révoquée : {e}") from e
 
         except openai.RateLimitError as e:
             logger.warning(f"Rate limit atteint (tentative {tentative}/{retries}). Attente 10s...")
@@ -199,11 +198,11 @@ def appeler_llm(
             if tentative < retries:
                 time.sleep(5)
             else:
-                raise RuntimeError("Impossible de joindre l'API OpenAI.") from e
+                raise RuntimeError("Impossible de joindre l'API Gemini.") from e
 
         except openai.APIError as e:
             logger.error(f"Erreur API inattendue : {e}")
-            raise RuntimeError(f"Erreur API OpenAI : {e}") from e
+            raise RuntimeError(f"Erreur API Gemini : {e}") from e
 
 
 @observe(name="appeler_llm_tools")
@@ -256,7 +255,7 @@ def appeler_llm_tools(
             return {}
 
         except openai.AuthenticationError as e:
-            raise ValueError(f"Clé API invalide ou révoquée : {e}") from e
+            raise ValueError(f"Clé API Gemini invalide ou révoquée : {e}") from e
 
         except openai.RateLimitError as e:
             logger.warning(f"Rate limit atteint (tentative {tentative}/{retries}). Attente 10s...")
@@ -277,11 +276,11 @@ def appeler_llm_tools(
             if tentative < retries:
                 time.sleep(5)
             else:
-                raise RuntimeError("Impossible de joindre l'API OpenAI.") from e
+                raise RuntimeError("Impossible de joindre l'API Gemini.") from e
 
         except openai.APIError as e:
             logger.error(f"Erreur API inattendue : {e}")
-            raise RuntimeError(f"Erreur API OpenAI : {e}") from e
+            raise RuntimeError(f"Erreur API Gemini : {e}") from e
 
 
 @observe(name="appeler_llm_stream")
@@ -319,11 +318,11 @@ def appeler_llm_stream(
             if delta and delta.content:
                 yield delta.content
     except openai.AuthenticationError as e:
-        raise ValueError(f"Clé API invalide ou révoquée : {e}") from e
+        raise ValueError(f"Clé API Gemini invalide ou révoquée : {e}") from e
     except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError) as e:
         raise RuntimeError(f"Erreur API streaming : {e}") from e
     except openai.APIError as e:
-        raise RuntimeError(f"Erreur API OpenAI : {e}") from e
+        raise RuntimeError(f"Erreur API Gemini : {e}") from e
 
 
 def resumer_article(titre: str, contenu: str) -> dict:

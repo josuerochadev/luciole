@@ -39,7 +39,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 EMBEDDINGS_FILE = os.path.join(DATA_DIR, "embeddings.json")
-EMBEDDING_MODEL = "text-embedding-3-small"
+EMBEDDING_MODEL = "text-embedding-004"  # Gemini embedding (768 dimensions)
 BATCH_SIZE      = 100          # Inputs par appel OpenAI (limité pour rester sous 300k tokens)
 FRESHNESS_DECAY  = 90           # Jours après lesquels un article est considéré "vieux"
 

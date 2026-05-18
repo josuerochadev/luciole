@@ -6,11 +6,15 @@ load_dotenv()
 # --- Base de données PostgreSQL (Neon) ---
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 
+# --- Clé API Gemini ---
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
 # --- Modèle et paramètres LLM ---
-MODEL_DEFAULT = "gpt-4o-mini"
-MODEL_FAST = "gpt-4o-mini"        # Cascade M6E3 : modèle rapide/économique
-MODEL_POWERFUL = "gpt-4o"          # Cascade M6E3 : modèle puissant (raisonnement complexe)
-MODEL_VISION = "gpt-4o"            # Vision nécessite gpt-4o (pas mini)
+MODEL_DEFAULT = "gemini-2.0-flash"
+MODEL_FAST = "gemini-2.0-flash"
+MODEL_POWERFUL = "gemini-1.5-pro"
+MODEL_VISION = "gemini-2.0-flash"  # Gemini Flash supporte le multimodal
 TEMPERATURE = 0.3
 MAX_TOKENS = 4096
 
@@ -21,12 +25,11 @@ MAX_TOKENS_BY_INTENT = {
     "rag": 4096,
     "database": 2048,
     "email": 2048,
-    "transcribe": 4096,
     "vision": 2048,
 }
 
-# --- Clé API (depuis variable d'environnement) ---
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# --- Clé API (conservée pour compatibilité ascendante éventuelle) ---
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 # --- System prompt de l'agent ---
 SYSTEM_PROMPT = (
@@ -136,9 +139,9 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 ALLOWED_TYPES = {
     "image/png", "image/jpeg", "image/webp",
-    "audio/mpeg", "audio/mp4", "audio/x-m4a", "audio/m4a", "audio/wav",
     "application/pdf",
 }
+# Note : types audio retirés (transcription désactivée — provider sans Whisper)
 UPLOAD_TTL = 3600  # Nettoyage auto après 1h
 
 # Magic bytes pour validation côté serveur
@@ -147,11 +150,6 @@ MAGIC_BYTES = {
     b"\xff\xd8\xff": "image/jpeg",
     b"RIFF": "image/webp",  # WebP commence par RIFF....WEBP
     b"%PDF": "application/pdf",
-    b"\xff\xfb": "audio/mpeg",  # MP3 frame sync
-    b"\xff\xf3": "audio/mpeg",
-    b"\xff\xf2": "audio/mpeg",
-    b"ID3": "audio/mpeg",  # MP3 avec tag ID3
-    b"RIFF_WAV": "audio/wav",  # Placeholder, vérifié spécialement
 }
 
 # --- Rétention des données (en jours) ---

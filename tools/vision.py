@@ -118,7 +118,7 @@ def analyser_image(chemin_image: str, consigne: str = None) -> dict:
         texte_brut = response.choices[0].message.content.strip()
         logger.info(f"[Vision] Réponse reçue — {len(texte_brut)} caractères")
     except Exception as e:
-        raise RuntimeError(f"Erreur GPT-4o Vision : {e}") from e
+        raise RuntimeError(f"Erreur Vision : {e}") from e
 
     # Parsing JSON (même stratégie que llm.py)
     try:

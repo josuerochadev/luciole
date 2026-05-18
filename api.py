@@ -110,13 +110,6 @@ def _validate_magic_bytes(data: bytes, declared_type: str) -> bool:
         return data[:4] == b"RIFF" and data[8:12] == b"WEBP"
     if declared_type in ("application/pdf",):
         return data[:4] == b"%PDF"
-    if declared_type in ("audio/mpeg",):
-        return data[:3] in (b"\xff\xfb", b"\xff\xf3", b"\xff\xf2") or data[:3] == b"ID3"
-    if declared_type in ("audio/wav",):
-        return data[:4] == b"RIFF" and data[8:12] == b"WAVE"
-    if declared_type in ("audio/mp4", "audio/x-m4a", "audio/m4a"):
-        # MP4/M4A: ftyp box after size bytes
-        return b"ftyp" in data[:12]
     return False
 
 
@@ -385,15 +378,11 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_optional_user)
 
         # Déterminer le type d'outil à utiliser
         image_exts = {".png", ".jpg", ".jpeg", ".webp"}
-        audio_exts = {".mp3", ".m4a", ".mp4", ".wav", ".mpeg"}
         pdf_exts = {".pdf"}
 
         if ext in image_exts:
             enriched_question = f"Analyse cette image : {file_path}\n\nConsigne de l'utilisateur : {req.question}"
             file_meta = {"type": "image", "path": str(file_path), "filename": file_path.name}
-        elif ext in audio_exts:
-            enriched_question = f"Transcris ce fichier audio : {file_path}\n\nConsigne de l'utilisateur : {req.question}"
-            file_meta = {"type": "audio", "path": str(file_path), "filename": file_path.name}
         elif ext in pdf_exts:
             enriched_question = f"Analyse ce document PDF : {file_path}\n\nConsigne de l'utilisateur : {req.question}"
             file_meta = {"type": "pdf", "path": str(file_path), "filename": file_path.name}

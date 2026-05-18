@@ -34,6 +34,11 @@ def test_digest_has_h1():
     assert "<h1" in r.text, "Aucun <h1> sur /digest-page"
 
 
+def test_digest_has_h2_sections():
+    r = client.get("/digest-page", follow_redirects=True)
+    assert "<h2" in r.text
+
+
 def test_dashboard_has_h2_sections():
     """Les sections du dashboard utilisent <h2> (généré par JS)."""
     r = client.get("/dashboard", follow_redirects=True)

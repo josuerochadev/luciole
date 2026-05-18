@@ -9,7 +9,14 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from jose import JWTError, jwt
 
+from database import get_user_by_id
+
 JWT_SECRET = os.getenv("JWT_SECRET", "")
+if not JWT_SECRET:
+    raise RuntimeError(
+        "Variable d'environnement JWT_SECRET obligatoire. "
+        "Définissez-la avant de lancer l'API."
+    )
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 24
 COOKIE_NAME = "access_token"
@@ -46,30 +53,29 @@ def _get_user_id_from_request(request: Request) -> str | None:
     return decode_token(token)
 
 
-async def get_current_user(request: Request):
-    """Dependency: returns the current user dict or redirects to /login.
-    For API calls (Accept: application/json), returns 401 instead of redirect."""
-    from database import get_user_by_id
-
+async def get_current_user(request: Request) -> dict:
+    """Dependency pour les endpoints API : lève HTTP 401 si non authentifié."""
     user_id = _get_user_id_from_request(request)
     if not user_id:
-        if "application/json" in request.headers.get("accept", ""):
-            raise HTTPException(status_code=401, detail="Non authentifié.")
-        return RedirectResponse(url="/login", status_code=303)
+        raise HTTPException(status_code=401, detail="Non authentifié.")
 
     user = get_user_by_id(user_id)
     if not user:
-        if "application/json" in request.headers.get("accept", ""):
-            raise HTTPException(status_code=401, detail="Non authentifié.")
-        return RedirectResponse(url="/login", status_code=303)
+        raise HTTPException(status_code=401, detail="Non authentifié.")
 
     return user
 
 
+async def get_current_user_page(request: Request):
+    """Dependency pour les pages HTML : redirige vers /login si non authentifié."""
+    try:
+        return await get_current_user(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=303)
+
+
 async def get_optional_user(request: Request):
     """Dependency: returns the current user dict or None (for public pages)."""
-    from database import get_user_by_id
-
     user_id = _get_user_id_from_request(request)
     if not user_id:
         return None

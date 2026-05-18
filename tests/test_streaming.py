@@ -60,7 +60,7 @@ def _parse_sse_events(response_text: str) -> list[dict]:
 class TestAppelerLlmStream:
     """Vérifie que appeler_llm_stream yield correctement les tokens."""
 
-    @patch("llm.get_openai_client")
+    @patch("llm.get_gemini_client")
     def test_yields_chunks(self, mock_get_client):
         """Les chunks de l'API sont yield un par un."""
         from llm import appeler_llm_stream
@@ -79,7 +79,7 @@ class TestAppelerLlmStream:
         call_kwargs = mock_client.chat.completions.create.call_args[1]
         assert call_kwargs["stream"] is True
 
-    @patch("llm.get_openai_client")
+    @patch("llm.get_gemini_client")
     def test_empty_delta_skipped(self, mock_get_client):
         """Les chunks sans contenu sont ignorés."""
         from llm import appeler_llm_stream
@@ -103,7 +103,7 @@ class TestAppelerLlmStream:
         result = list(appeler_llm_stream("test"))
         assert result == ["Hello", " world"]
 
-    @patch("llm.get_openai_client")
+    @patch("llm.get_gemini_client")
     def test_auth_error_raises_valueerror(self, mock_get_client):
         """AuthenticationError → ValueError."""
         import openai

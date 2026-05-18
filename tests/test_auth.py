@@ -12,12 +12,11 @@ import pytest
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def auth_db(tmp_path, monkeypatch):
-    """DB temporaire avec module database + auth patchés."""
+def auth_db(monkeypatch):
+    """Module database + auth avec JWT_SECRET de test.
+    Utilise la DATABASE_URL configurée (tests d'intégration).
+    """
     import database as db_mod
-    db_path = str(tmp_path / "test_auth.db")
-    monkeypatch.setattr(db_mod, "DB_PATH", db_path)
-    db_mod.init_db()
 
     import auth as auth_mod
     monkeypatch.setattr(auth_mod, "JWT_SECRET", "test-secret-for-auth")
@@ -26,13 +25,8 @@ def auth_db(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def client(tmp_path, monkeypatch):
+def client(monkeypatch):
     """TestClient FastAPI sans cookie (visiteur non connecté)."""
-    import database as db_mod
-    db_path = str(tmp_path / "test_auth_api.db")
-    monkeypatch.setattr(db_mod, "DB_PATH", db_path)
-    db_mod.init_db()
-
     monkeypatch.setenv("API_KEY", "test-key")
     monkeypatch.setenv("JWT_SECRET", "test-jwt-secret")
 
@@ -145,8 +139,8 @@ class TestUsersCRUD:
     def test_duplicate_email_raises(self, auth_db):
         db_mod, auth_mod = auth_db
         db_mod.create_user("dup@test.com", auth_mod.hash_password("p"))
-        import sqlite3
-        with pytest.raises(sqlite3.IntegrityError):
+        import psycopg2
+        with pytest.raises(psycopg2.Error):
             db_mod.create_user("dup@test.com", auth_mod.hash_password("p"))
 
 
@@ -303,12 +297,9 @@ class TestConversationScoping:
         assert res.status_code == 200
         return res.cookies
 
-    def test_conversations_isolated_between_users(self, tmp_path, monkeypatch):
+    def test_conversations_isolated_between_users(self, monkeypatch):
         """Chaque utilisateur ne voit que ses propres conversations."""
         import database as db_mod
-        db_path = str(tmp_path / "test_scope.db")
-        monkeypatch.setattr(db_mod, "DB_PATH", db_path)
-        db_mod.init_db()
 
         monkeypatch.setenv("API_KEY", "test-key")
         monkeypatch.setenv("JWT_SECRET", "test-jwt")

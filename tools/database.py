@@ -21,6 +21,9 @@ DB_TEST_PATH = f"{DATA_DIR}/test_clients.db"
 
 logger = logging.getLogger(__name__)
 
+# Flag pour n'exécuter la migration JSON→PG qu'une seule fois par process
+_migration_done = False
+
 
 # ---------------------------------------------------------------------------
 # Helpers PostgreSQL
@@ -92,6 +95,9 @@ def _init_articles_table(conn) -> None:
 
 def _migrer_json_vers_postgres() -> None:
     """Migration one-shot : importe articles.json et archives.json dans PostgreSQL."""
+    global _migration_done
+    if _migration_done:
+        return
     conn = _pg_connect()
     try:
         _init_articles_table(conn)
@@ -99,6 +105,7 @@ def _migrer_json_vers_postgres() -> None:
         cur.execute("SELECT COUNT(*) AS c FROM articles")
         count = cur.fetchone()["c"]
         if count > 0:
+            _migration_done = True
             return  # déjà migré
 
         for fichier, is_archive in [(ARTICLES_FILE, 0), (ARCHIVES_FILE, 1)]:
@@ -106,6 +113,7 @@ def _migrer_json_vers_postgres() -> None:
             if articles:
                 _insert_articles_pg(conn, articles, archive=is_archive)
                 logger.info(f"Migration : {len(articles)} articles importés depuis {fichier}")
+        _migration_done = True
     finally:
         conn.close()
 
@@ -182,15 +190,13 @@ def sauvegarder_articles(articles: list[dict]) -> int:
             lien = a.get("lien", "")
             if not lien:
                 continue
-            cur.execute("SELECT 1 FROM articles WHERE lien = %s", (lien,))
-            if cur.fetchone():
-                continue
             cur.execute(
                 """
                 INSERT INTO articles
                     (lien, titre, resume_brut, resume, contenu_complet, categorie,
                      pertinence, action, source, source_url, date_publication, date_ajout, archive)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0)
+                ON CONFLICT (lien) DO NOTHING
                 """,
                 (
                     lien,
@@ -207,7 +213,8 @@ def sauvegarder_articles(articles: list[dict]) -> int:
                     now,
                 ),
             )
-            nouveaux.append(a)
+            if cur.rowcount > 0:
+                nouveaux.append(a)
 
         conn.commit()
     finally:

@@ -101,8 +101,8 @@ def prompt_juge(question: str, reponse_agent: str, attendu: str, elements_factue
 
 def _appeler_juge_openai(prompt: str) -> str:
     """Appelle gpt-4o via OpenAI."""
-    from llm import get_openai_client
-    client = get_openai_client()
+    from llm import get_gemini_client
+    client = get_gemini_client()
     response = client.chat.completions.create(
         model=JUGE_MODEL,
         temperature=0.1,

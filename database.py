@@ -11,6 +11,7 @@ import psycopg2.extras
 from config import DATABASE_URL
 
 
+# Helpers de connexion PostgreSQL — pattern identique dans tools/database.py et memory/store.py.
 def _get_connection() -> psycopg2.extensions.connection:
     return psycopg2.connect(DATABASE_URL)
 
@@ -328,5 +329,6 @@ def get_response_feedback_stats() -> dict:
         conn.close()
 
 
-# Init au chargement du module
-init_db()
+# init_db() est appelé explicitement au démarrage de l'application (api.py lifespan)
+# et ne doit PAS être exécuté à l'import pour éviter des connexions réseau non désirées
+# (tests, CI/CD sans DATABASE_URL, imports isolés).

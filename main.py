@@ -8,6 +8,7 @@ import json
 import logging
 import sys
 import time
+import uuid
 
 from llm import appeler_llm, appeler_llm_json, appeler_llm_tools, appeler_llm_stream
 from config import MODEL_FAST, MODEL_POWERFUL, MAX_TOKENS_BY_INTENT
@@ -419,9 +420,7 @@ def agent_react(requete: str, conversation_id: str | None = None) -> str:
     Returns:
         Réponse finale en langage naturel.
     """
-    print(f"\n{'='*60}")
-    print(f"REQUÊTE : {requete}")
-    print("=" * 60)
+    logger.info(f"[ReAct] Requête reçue : {requete[:200]}")
 
     # Langfuse : taguer la trace avec la requête utilisateur
     update_current_trace(input=requete, tags=["react-agent"])
@@ -440,12 +439,15 @@ def agent_react(requete: str, conversation_id: str | None = None) -> str:
         msg = f"[BLOQUÉ] {check['raison']} (type: {check['type']})"
         logger.warning(f"[SECURITE] {msg}")
         mark_fallback(f"security:{check.get('type', 'inconnu')}")
-        print(f"\nRÉPONSE :\n{check['raison']}\n")
         return check["raison"]
 
     # --- Mémoire conversationnelle : rappeler l'historique ---
-    historique = memory_recall(n=20, conversation_id=conversation_id)
-    memory_store(requete, role="user", conversation_id=conversation_id)
+    # Si aucun conversation_id fourni (mode CLI ou visiteur anonyme API),
+    # on génère un ID local par appel pour éviter que plusieurs sessions
+    # partagent la même entrée mémoire dans le process.
+    effective_conv_id = conversation_id or str(uuid.uuid4())
+    historique = memory_recall(n=20, conversation_id=effective_conv_id)
+    memory_store(requete, role="user", conversation_id=effective_conv_id)
 
     outils_essayes = []
 
@@ -486,10 +488,9 @@ def agent_react(requete: str, conversation_id: str | None = None) -> str:
     reponse = filtrer_sortie(reponse)
 
     # --- Mémoire conversationnelle : sauvegarder la réponse ---
-    memory_store(reponse, role="assistant", conversation_id=conversation_id)
+    memory_store(reponse, role="assistant", conversation_id=effective_conv_id)
 
     logger.info("[ReAct] Réponse finale générée.")
-    print(f"\nRÉPONSE :\n{reponse}\n")
 
     # Langfuse : flush des traces en fin de requête
     flush()
@@ -501,7 +502,8 @@ def agent_react(requete: str, conversation_id: str | None = None) -> str:
 # Boucle ReAct streaming (Phase 3 — SSE)
 # ---------------------------------------------------------------------------
 
-# Labels humains pour les outils (affiché côté client)
+# Labels humains pour les outils (affiché côté client).
+# Doit rester synchronisé avec l'enum "outil" de TOOLS_DECISION (ligne ~50).
 _TOOL_LABELS = {
     "query_db": "Interrogation de la base de données",
     "search_web": "Recherche sur le web",
@@ -552,8 +554,9 @@ async def agent_react_stream(requete: str, conversation_id: str | None = None):
         return
 
     # --- Mémoire ---
-    historique = memory_recall(n=20, conversation_id=conversation_id)
-    memory_store(requete, role="user", conversation_id=conversation_id)
+    effective_conv_id = conversation_id or str(uuid.uuid4())
+    historique = memory_recall(n=20, conversation_id=effective_conv_id)
+    memory_store(requete, role="user", conversation_id=effective_conv_id)
 
     outils_essayes = []
     resultat = ""
@@ -648,7 +651,7 @@ async def agent_react_stream(requete: str, conversation_id: str | None = None):
 
     # --- Post-traitement ---
     reponse = filtrer_sortie(resultat)
-    memory_store(reponse, role="assistant", conversation_id=conversation_id)
+    memory_store(reponse, role="assistant", conversation_id=effective_conv_id)
 
     latency_ms = int((time.time() - t0) * 1000)
     logger.info(f"[ReAct] Streaming terminé en {latency_ms}ms.")

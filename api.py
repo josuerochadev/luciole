@@ -7,11 +7,15 @@ API FastAPI pour l'agent de veille technologique.
 - Phase 1 : historique des conversations persistant (SQLite).
 - Phase 2 : comptes utilisateurs et authentification (JWT).
 """
+import asyncio
+import hashlib
+import json
 import logging
 import os
 import sqlite3
 import time
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, UploadFile, File
@@ -54,6 +58,7 @@ from auth import (
     COOKIE_NAME,
     create_access_token,
     get_current_user,
+    get_current_user_page,
     get_optional_user,
     hash_password,
     verify_password,
@@ -61,9 +66,17 @@ from auth import (
 
 logger = logging.getLogger(__name__)
 
-# Cookie secure=True uniquement en prod (HTTPS). En dev localhost, secure=False.
-IS_PROD = bool(os.getenv("RENDER") or os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("FLY_APP_NAME"))
-COOKIE_SECURE = IS_PROD
+# Cookie secure=True uniquement en prod (HTTPS).
+# Priorité : variable explicite COOKIE_SECURE=true/false, sinon auto-détection plateforme.
+_cookie_secure_env = os.getenv("COOKIE_SECURE", "").lower()
+if _cookie_secure_env in ("1", "true", "yes"):
+    COOKIE_SECURE = True
+elif _cookie_secure_env in ("0", "false", "no"):
+    COOKIE_SECURE = False
+else:
+    COOKIE_SECURE = bool(
+        os.getenv("RENDER") or os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("FLY_APP_NAME")
+    )
 
 API_KEY = os.getenv("API_KEY")
 if not API_KEY:
@@ -91,7 +104,6 @@ if ALLOWED_ORIGINS:
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 # Cache-buster: changes on each server restart to force browser to reload static assets
-import hashlib
 _cache_bust = hashlib.md5(str(time.time()).encode()).hexdigest()[:8]
 templates.env.globals["cache_bust"] = _cache_bust
 
@@ -129,9 +141,6 @@ def _cleanup_expired_uploads():
 
 
 # Nettoyage périodique via tâche de fond
-from contextlib import asynccontextmanager
-import asyncio
-
 _cleanup_task = None
 
 async def _periodic_cleanup():
@@ -146,6 +155,8 @@ async def _periodic_cleanup():
 
 @app.on_event("startup")
 async def start_cleanup_task():
+    from database import init_db
+    init_db()
     global _cleanup_task
     _cleanup_task = asyncio.create_task(_periodic_cleanup())
 
@@ -288,8 +299,6 @@ async def auth_logout():
 
 @app.get("/auth/me")
 async def auth_me(user=Depends(get_current_user)):
-    if isinstance(user, RedirectResponse):
-        raise HTTPException(status_code=401, detail="Non authentifié.")
     return {"id": user["id"], "email": user["email"], "display_name": user["display_name"]}
 
 
@@ -319,7 +328,7 @@ async def about(request: Request, user=Depends(get_optional_user)):
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request, user=Depends(get_current_user)):
+async def dashboard(request: Request, user=Depends(get_current_user_page)):
     if isinstance(user, RedirectResponse):
         return user
     return templates.TemplateResponse(request, "dashboard.html", {"active_page": "dashboard", "user": user})
@@ -394,7 +403,6 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_optional_user)
     start_request(req.question)
 
     async def event_stream():
-        import json as _json
         full_response = ""
         latency_ms = 0
         sources = None
@@ -404,7 +412,7 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_optional_user)
             start_data = {"type": "start", "conversation_id": conv_id}
             if file_meta:
                 start_data["file"] = file_meta
-            yield f"data: {_json.dumps(start_data)}\n\n"
+            yield f"data: {json.dumps(start_data)}\n\n"
 
             async for event in agent_react_stream(enriched_question, conversation_id=conv_id):
                 # Vérifier la déconnexion client
@@ -417,12 +425,12 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_optional_user)
                     latency_ms = event.get("latency_ms", 0)
                     sources = event.get("sources")
 
-                yield f"data: {_json.dumps(event, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
         except Exception as exc:
             end_request(error=f"{type(exc).__name__}: {exc}")
             error_event = {"type": "error", "message": str(exc)}
-            yield f"data: {_json.dumps(error_event, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps(error_event, ensure_ascii=False)}\n\n"
             return
 
         end_request()
@@ -440,7 +448,7 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_optional_user)
                 meta_event["message_id"] = message_id
             if sources:
                 meta_event["sources"] = sources
-            yield f"data: {_json.dumps(meta_event, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps(meta_event, ensure_ascii=False)}\n\n"
 
         # Générer un titre au 1er message
         if user and is_new and conv_id:
@@ -464,15 +472,11 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_optional_user)
 
 @app.get("/conversations")
 def conversations_list(request: Request, user=Depends(get_current_user)):
-    if isinstance(user, RedirectResponse):
-        raise HTTPException(status_code=401, detail="Non authentifié.")
     return list_conversations(user_id=user["id"])
 
 
 @app.get("/conversations/{conv_id}/messages")
 def conversation_messages(conv_id: str, request: Request, user=Depends(get_current_user)):
-    if isinstance(user, RedirectResponse):
-        raise HTTPException(status_code=401, detail="Non authentifié.")
     conv = get_conversation(conv_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation introuvable.")
@@ -481,8 +485,6 @@ def conversation_messages(conv_id: str, request: Request, user=Depends(get_curre
 
 @app.delete("/conversations/{conv_id}")
 def conversation_delete(conv_id: str, request: Request, user=Depends(get_current_user)):
-    if isinstance(user, RedirectResponse):
-        raise HTTPException(status_code=401, detail="Non authentifié.")
     if not delete_conversation(conv_id):
         raise HTTPException(status_code=404, detail="Conversation introuvable.")
     return {"ok": True}
@@ -494,8 +496,6 @@ class ConversationUpdateRequest(BaseModel):
 
 @app.patch("/conversations/{conv_id}")
 def conversation_update(conv_id: str, req: ConversationUpdateRequest, request: Request, user=Depends(get_current_user)):
-    if isinstance(user, RedirectResponse):
-        raise HTTPException(status_code=401, detail="Non authentifié.")
     if not update_conversation_title(conv_id, req.title):
         raise HTTPException(status_code=404, detail="Conversation introuvable.")
     return {"ok": True, "title": req.title}
@@ -537,7 +537,7 @@ def _verifier_api_key(x_api_key: str | None, request: Request | None = None):
 
 
 @app.get("/digest-page", response_class=HTMLResponse)
-async def digest_page(request: Request, user=Depends(get_current_user)):
+async def digest_page(request: Request, user=Depends(get_current_user_page)):
     if isinstance(user, RedirectResponse):
         return user
     return templates.TemplateResponse(request, "digest.html", {"active_page": "digest", "user": user})

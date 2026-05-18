@@ -21,14 +21,13 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Tarifs OpenAI — gpt-4o-mini (USD / 1M tokens, barème 2025-11)
-# Input  : 0.150 $ / 1M tokens
-# Output : 0.600 $ / 1M tokens
-# Cf. https://openai.com/api/pricing/
+# Tarifs Gemini 2.5 Flash (USD / 1M tokens, barème 2025)
+# Input  : 0.15 $ / 1M tokens  (prompts ≤ 200k tokens)
+# Output : 0.60 $ / 1M tokens  (réponses non-thinking)
 # ---------------------------------------------------------------------------
 PRICE_INPUT_PER_1M_USD = 0.15
 PRICE_OUTPUT_PER_1M_USD = 0.60
-MODEL_LABEL = "gpt-4o-mini"
+MODEL_LABEL = "gemini-2.5-flash"
 
 # ---------------------------------------------------------------------------
 # Stockage

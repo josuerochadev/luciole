@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 _client = None
 
 
-def get_openai_client():
+def get_gemini_client():
     """Initialise le client Gemini (via endpoint compatibilité OpenAI) au premier appel.
     Si Langfuse est actif, utilise le wrapper instrumenté.
     Point d'accès unique — utilisé aussi par tools/rag.py et tools/vision.py."""
@@ -160,7 +160,7 @@ def appeler_llm(
 
     for tentative in range(1, retries + 1):
         try:
-            response = get_openai_client().chat.completions.create(
+            response = get_gemini_client().chat.completions.create(
                 model=effective_model,
                 temperature=TEMPERATURE,
                 max_tokens=effective_max_tokens,
@@ -230,7 +230,7 @@ def appeler_llm_tools(
     """
     for tentative in range(1, retries + 1):
         try:
-            response = get_openai_client().chat.completions.create(
+            response = get_gemini_client().chat.completions.create(
                 model=model or MODEL_DEFAULT,
                 temperature=TEMPERATURE,
                 max_tokens=MAX_TOKENS,
@@ -305,7 +305,7 @@ def appeler_llm_stream(
     messages.append({"role": "user", "content": question})
 
     try:
-        stream = get_openai_client().chat.completions.create(
+        stream = get_gemini_client().chat.completions.create(
             model=effective_model,
             temperature=TEMPERATURE,
             max_tokens=effective_max_tokens,

@@ -51,7 +51,7 @@ def analyser_image(chemin_image: str, consigne: str = None) -> dict:
         FileNotFoundError: Si le fichier image n'existe pas.
         RuntimeError: Si l'appel API échoue.
     """
-    from llm import get_openai_client
+    from llm import get_gemini_client
     from config import MODEL_VISION
 
     if not os.path.isfile(chemin_image):
@@ -86,7 +86,7 @@ def analyser_image(chemin_image: str, consigne: str = None) -> dict:
     )
 
     try:
-        client = get_openai_client()
+        client = get_gemini_client()
         response = client.chat.completions.create(
             model=MODEL_VISION,
             messages=[

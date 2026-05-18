@@ -76,17 +76,15 @@ def test_score_minimum():
 
 
 def test_recherche_rag():
-    """Test d'intégration de la recherche RAG."""
-    print(f"\n{'='*70}")
-    print(f"TEST RAG v3 — {taille_index()} entrées dans l'index")
-    print("=" * 70)
-
+    """Test d'intégration de la recherche RAG (structure + scores).
+    Ignoré si l'index est vide (pas de données seed en CI).
+    """
     if taille_index() == 0:
-        print("Index vide — lancez d'abord : python seed.py puis réindexez")
-        return 0, len(REQUETES)
+        import pytest
+        pytest.skip("Index RAG vide — lancez d'abord : python seed.py puis réindexez")
 
-    ok = 0
     debut = time.time()
+    ok = 0
 
     for requete, categorie_attendue, filtre_cat, filtre_pert in REQUETES:
         resultats = rechercher_articles(
@@ -96,33 +94,28 @@ def test_recherche_rag():
             pertinence_min=filtre_pert,
             hyde=False,  # Désactiver HyDE pour les tests (économise les appels API)
         )
+
+        # Assertions structurelles : chaque résultat doit avoir les clés attendues
+        for r in resultats:
+            assert "titre" in r, "Clé 'titre' manquante dans le résultat RAG"
+            assert "lien" in r, "Clé 'lien' manquante dans le résultat RAG"
+            assert "score_final" in r, "Clé 'score_final' manquante dans le résultat RAG"
+            assert r["score_final"] >= SCORE_MINIMUM, (
+                f"score_final {r['score_final']} inférieur au seuil {SCORE_MINIMUM}"
+            )
+
         top = resultats[0] if resultats else None
         cat = top["categorie"] if top else "—"
-        titre = top["titre"][:52] if top else "—"
-
-        score_s = top["score_similarite"] if top else 0
-        score_f = top["score_fraicheur"] if top else 0
-        score_h = top["score_final"] if top else 0
-        chunks = top.get("chunks_utilises", 1) if top else 0
-        extrait_len = len(top.get("resume_extrait", "")) if top else 0
-
         attendu_ok = any(c.strip() in cat for c in categorie_attendue.split("ou"))
         if attendu_ok:
             ok += 1
-        symbole = "✓" if attendu_ok else "~"
-
-        filtre_info = f" [filtre: {filtre_cat or ''}{f' pert>={filtre_pert}' if filtre_pert else ''}]".rstrip()
-        print(f"\n  {symbole} {requete}{filtre_info}")
-        print(f"       → {titre}... ({cat})")
-        print(f"         sim={score_s:.2f}  fraîcheur={score_f:.2f}  final={score_h:.2f}  chunks={chunks}  contexte={extrait_len}c")
 
     duree = time.time() - debut
-    print(f"\n{'='*70}")
-    print(f"Score    : {ok}/{len(REQUETES)} requêtes correctes en top 1")
-    print(f"Durée    : {duree:.2f}s pour {len(REQUETES)} recherches")
-    print(f"Seuil    : score_final >= {SCORE_MINIMUM}")
-    print("=" * 70)
-    return ok, len(REQUETES)
+    # Score de qualité : au moins 50 % des requêtes trouvent la bonne catégorie en top 1
+    assert ok >= len(REQUETES) // 2, (
+        f"Score RAG trop bas : {ok}/{len(REQUETES)} requêtes correctes "
+        f"(seuil 50 %) en {duree:.2f}s"
+    )
 
 
 if __name__ == "__main__":

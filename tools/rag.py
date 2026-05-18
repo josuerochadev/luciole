@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 import numpy as np
 
 from config import DATA_DIR
-from llm import get_openai_client, appeler_llm
+from llm import get_gemini_client, appeler_llm
 
 try:
     from rank_bm25 import BM25Okapi
@@ -40,8 +40,10 @@ logger = logging.getLogger(__name__)
 
 EMBEDDINGS_FILE = os.path.join(DATA_DIR, "embeddings.json")
 EMBEDDING_MODEL = "gemini-embedding-001"  # Gemini embedding
-BATCH_SIZE      = 100          # Inputs par appel OpenAI (limité pour rester sous 300k tokens)
-FRESHNESS_DECAY  = 90           # Jours après lesquels un article est considéré "vieux"
+BATCH_SIZE           = 100   # Inputs par appel API (limité pour rester sous 300k tokens)
+FRESHNESS_DECAY      = 90    # Jours après lesquels un article est considéré "vieux"
+MAX_TEXTE_PAR_ARTICLE = 5000  # Longueur max du texte envoyé à l'embedder par article
+MAX_CONTEXTE_ENRICHI  = 1500  # Longueur max du contexte retourné par chunk dans les résultats
 
 # --- Chunking ---
 CHUNK_SIZE       = 500          # Taille cible d'un chunk en tokens (~mots)
@@ -181,7 +183,7 @@ def _embedder_batch(textes: list[str]) -> list[list[float]]:
     tous = []
     for i in range(0, len(textes), BATCH_SIZE):
         chunk = textes[i:i + BATCH_SIZE]
-        response = get_openai_client().embeddings.create(
+        response = get_gemini_client().embeddings.create(
             input=chunk,
             model=EMBEDDING_MODEL,
         )
@@ -299,7 +301,7 @@ def indexer_articles(articles: list[dict]) -> int:
             or article.get("resume")
             or article.get("resume_brut", "")
         )
-        texte_complet = f"{titre}. {contenu}"[:5000].strip()
+        texte_complet = f"{titre}. {contenu}"[:MAX_TEXTE_PAR_ARTICLE].strip()
         if not texte_complet:
             continue
 
@@ -504,7 +506,7 @@ def rechercher_articles(
             for e in candidats
             if e["metadata"].get("lien", "") == lien
         ]
-        contexte_enrichi = "\n\n".join(chunks_article)[:1500]
+        contexte_enrichi = "\n\n".join(chunks_article)[:MAX_CONTEXTE_ENRICHI]
 
         resultats.append({
             "titre":              meta.get("titre", ""),

@@ -32,26 +32,21 @@ def selectionner_articles(nb_max: int = MAX_ARTICLES_PAR_RAPPORT) -> list[dict]:
     """
     Retourne les meilleurs articles triés par pertinence décroissante.
     Exclut les articles hors-sujet (catégorie 'Hors-sujet').
-    Lit depuis SQLite si disponible, sinon fallback JSON.
+    Lit depuis PostgreSQL, fallback JSON si indisponible.
     """
     try:
-        from tools.database import ARTICLES_DB_PATH, _init_articles_db
-        import sqlite3
-        _init_articles_db()
-        conn = sqlite3.connect(ARTICLES_DB_PATH)
-        conn.row_factory = sqlite3.Row
-        rows = conn.execute(
-            """SELECT * FROM articles
-               WHERE archive = 0 AND pertinence >= 5
-                 AND LOWER(categorie) != 'hors-sujet'
-               ORDER BY pertinence DESC LIMIT ?""",
-            (nb_max,),
-        ).fetchall()
-        conn.close()
-        if rows:
-            return [dict(r) for r in rows]
-    except Exception:
-        pass
+        from tools.database import lire_articles_actifs
+        articles = lire_articles_actifs()
+        pertinents = [
+            a for a in articles
+            if a.get("categorie", "Autre").lower() != "hors-sujet"
+            and int(a.get("pertinence", 0)) >= 5
+        ]
+        pertinents.sort(key=lambda a: int(a.get("pertinence", 0)), reverse=True)
+        if pertinents:
+            return pertinents[:nb_max]
+    except Exception as e:
+        logger.warning(f"[Email] Lecture PostgreSQL échouée, fallback JSON : {e}")
 
     # Fallback JSON
     articles = charger_json(ARTICLES_FILE)

@@ -85,7 +85,7 @@ def run(dry_run: bool = False, no_email: bool = False) -> dict:
     nouveaux = _dedoublonner_par_titre(nouveaux)
     print(f"      {len(nouveaux)} nouveaux articles ({avant_dedup - len(nouveaux)} doublons titre supprimés).")
 
-    nb_etapes_total = nb_etapes + 1 if not no_email else nb_etapes + 1
+    nb_etapes_total = nb_etapes + 1
     print(f"[3/{nb_etapes_total}] Scraping du contenu complet...")
     nouveaux = scraper_articles_batch(nouveaux)
     nb_scrapes = sum(1 for a in nouveaux if a.get("contenu_complet"))

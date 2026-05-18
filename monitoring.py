@@ -18,6 +18,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from config import DATA_DIR
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -35,8 +37,8 @@ MODEL_LABEL = "gemini-2.5-flash"
 _records: list[dict[str, Any]] = []
 _lock = threading.Lock()
 
-# Chemin optionnel pour persister les requêtes en JSONL (désactivé par défaut)
-METRICS_LOG_FILE: Path | None = None
+# Persiste les requêtes en JSONL (éphémère sur Railway, utile en local/debug)
+METRICS_LOG_FILE: Path | None = Path(DATA_DIR) / "metrics.jsonl"
 
 # Contexte par requête (compatible async/threads via contextvars)
 _ctx: contextvars.ContextVar[dict | None] = contextvars.ContextVar(
@@ -48,7 +50,7 @@ _ctx: contextvars.ContextVar[dict | None] = contextvars.ContextVar(
 # Helpers
 # ---------------------------------------------------------------------------
 def _estimate_cost_usd(prompt_tokens: int, completion_tokens: int) -> float:
-    """Estime le coût d'un appel LLM en USD (barème gpt-4o-mini)."""
+    """Estime le coût d'un appel LLM en USD (barème Gemini 2.5 Flash)."""
     return (
         prompt_tokens * PRICE_INPUT_PER_1M_USD
         + completion_tokens * PRICE_OUTPUT_PER_1M_USD

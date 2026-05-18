@@ -8,13 +8,11 @@ Tous les appels OpenAI sont mockés — aucun appel API réel.
 """
 
 import json
-import sys
 import os
+import uuid
 from unittest.mock import patch, MagicMock
 
 import pytest
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
 # ---------------------------------------------------------------------------
@@ -235,11 +233,12 @@ class TestAgentReactStream:
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def streaming_client(tmp_path, monkeypatch):
+def streaming_client(monkeypatch):
     """TestClient FastAPI configuré pour le streaming."""
+    if not os.getenv("DATABASE_URL"):
+        pytest.skip("DATABASE_URL non défini — tests PostgreSQL ignorés")
+
     import database as db_mod
-    db_path = str(tmp_path / "test_stream.db")
-    monkeypatch.setattr(db_mod, "DB_PATH", db_path)
     db_mod.init_db()
 
     monkeypatch.setenv("API_KEY", "test-key")
@@ -254,9 +253,10 @@ def streaming_client(tmp_path, monkeypatch):
     limiter.enabled = False
     client = TestClient(app)
 
-    # Créer un utilisateur et obtenir un cookie
+    # Créer un utilisateur unique et obtenir un cookie
+    test_email = f"pytest-{uuid.uuid4().hex[:8]}@luciole-test.local"
     client.post("/auth/register", json={
-        "email": "stream@test.com",
+        "email": test_email,
         "password": "testpass123",
     })
 
@@ -336,11 +336,12 @@ class TestSSEEndpoint:
         assert msgs[1]["role"] == "assistant"
         assert "Salut" in msgs[1]["content"]
 
-    def test_ask_unauthenticated_returns_401(self, tmp_path, monkeypatch):
+    def test_ask_unauthenticated_returns_401(self, monkeypatch):
         """POST /ask sans cookie → 401."""
+        if not os.getenv("DATABASE_URL"):
+            pytest.skip("DATABASE_URL non défini — tests PostgreSQL ignorés")
+
         import database as db_mod
-        db_path = str(tmp_path / "test_noauth.db")
-        monkeypatch.setattr(db_mod, "DB_PATH", db_path)
         db_mod.init_db()
 
         monkeypatch.setenv("API_KEY", "test-key")

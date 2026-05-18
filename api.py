@@ -1,18 +1,18 @@
 """
 API FastAPI pour l'agent de veille technologique.
-- M5E4 : containerisation Docker (POST /ask, GET /health).
-- M5E5 : monitoring + KPIs (GET /metrics, GET /metrics/recent).
-- M6   : digest endpoints (GET /digest, POST /digest/send).
-- Luciole_ : interface éditoriale HTML (GET /, GET /about).
-- Phase 1 : historique des conversations persistant (SQLite).
-- Phase 2 : comptes utilisateurs et authentification (JWT).
+- POST /ask       : agent ReAct (streaming SSE)
+- GET  /health    : health check
+- GET  /metrics   : monitoring + KPIs
+- GET  /digest    : digest email
+- GET  /          : interface chat
+- GET  /dashboard : historique des conversations (PostgreSQL)
+- POST /auth/*    : authentification JWT (bcrypt)
 """
 import asyncio
 import hashlib
 import json
 import logging
 import os
-import sqlite3
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -86,7 +86,16 @@ BASE_DIR = Path(__file__).resolve().parent
 
 limiter = Limiter(key_func=get_remote_address)
 
-app = FastAPI(title="luciole_ · Tech Intelligence Agent", version="2.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from database import init_db
+    init_db()
+    task = asyncio.create_task(_periodic_cleanup())
+    yield
+    task.cancel()
+
+
+app = FastAPI(title="luciole_ · Tech Intelligence Agent", version="2.0.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 
@@ -140,9 +149,6 @@ def _cleanup_expired_uploads():
         logger.info(f"[Upload] Nettoyage : {count} fichier(s) expiré(s) supprimé(s)")
 
 
-# Nettoyage périodique via tâche de fond
-_cleanup_task = None
-
 async def _periodic_cleanup():
     """Tâche de fond pour nettoyer les uploads expirés."""
     while True:
@@ -151,20 +157,6 @@ async def _periodic_cleanup():
             _cleanup_expired_uploads()
         except Exception as e:
             logger.error(f"[Upload] Erreur nettoyage : {e}")
-
-
-@app.on_event("startup")
-async def start_cleanup_task():
-    from database import init_db
-    init_db()
-    global _cleanup_task
-    _cleanup_task = asyncio.create_task(_periodic_cleanup())
-
-
-@app.on_event("shutdown")
-async def stop_cleanup_task():
-    if _cleanup_task:
-        _cleanup_task.cancel()
 
 
 # ---------------------------------------------------------------------------
@@ -475,18 +467,26 @@ def conversations_list(request: Request, user=Depends(get_current_user)):
     return list_conversations(user_id=user["id"])
 
 
-@app.get("/conversations/{conv_id}/messages")
-def conversation_messages(conv_id: str, request: Request, user=Depends(get_current_user)):
+def _check_conversation_owner(conv_id: str, user: dict) -> dict:
+    """Vérifie que la conversation existe et appartient à l'utilisateur courant."""
     conv = get_conversation(conv_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation introuvable.")
+    if conv.get("user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Accès refusé.")
+    return conv
+
+
+@app.get("/conversations/{conv_id}/messages")
+def conversation_messages(conv_id: str, request: Request, user=Depends(get_current_user)):
+    _check_conversation_owner(conv_id, user)
     return get_conversation_messages(conv_id)
 
 
 @app.delete("/conversations/{conv_id}")
 def conversation_delete(conv_id: str, request: Request, user=Depends(get_current_user)):
-    if not delete_conversation(conv_id):
-        raise HTTPException(status_code=404, detail="Conversation introuvable.")
+    _check_conversation_owner(conv_id, user)
+    delete_conversation(conv_id)
     return {"ok": True}
 
 
@@ -496,8 +496,8 @@ class ConversationUpdateRequest(BaseModel):
 
 @app.patch("/conversations/{conv_id}")
 def conversation_update(conv_id: str, req: ConversationUpdateRequest, request: Request, user=Depends(get_current_user)):
-    if not update_conversation_title(conv_id, req.title):
-        raise HTTPException(status_code=404, detail="Conversation introuvable.")
+    _check_conversation_owner(conv_id, user)
+    update_conversation_title(conv_id, req.title)
     return {"ok": True, "title": req.title}
 
 

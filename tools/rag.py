@@ -1,5 +1,5 @@
 """
-Module RAG v3 — embeddings OpenAI + similarité cosine numpy + BM25 + chunking.
+Module RAG v3 — embeddings Gemini (gemini-embedding-001) + similarité cosine numpy + BM25 + chunking.
 
 Améliorations v3 (par rapport à v2) :
   - Chunking         : découpe les articles en chunks ~500 tokens avec overlap

@@ -14,9 +14,9 @@ import logging
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from config import DATA_DIR, PERTINENCE_MIN
-from llm import resumer_article
+from config import DATA_DIR
 from tools.database import sauvegarder_articles, article_deja_traite
+from tools.enrichment import enrichir_article
 
 logging.basicConfig(
     level=logging.WARNING,
@@ -51,31 +51,10 @@ def run():
     # Enrichissement LLM parallèle
     print(f"[startup] Enrichissement LLM ({LLM_WORKERS} threads)...")
 
-    def _enrichir(article: dict) -> dict | None:
-        titre = article.get("titre", "")
-        contenu = article.get("contenu_complet", article.get("resume_brut", ""))
-        try:
-            analyse = resumer_article(titre, contenu)
-            pertinence = int(analyse.get("pertinence", 0))
-            if pertinence < PERTINENCE_MIN:
-                return None
-            article.update({
-                "resume": analyse.get("resume", contenu[:300]),
-                "categorie": analyse.get("categorie", "Autre"),
-                "pertinence": pertinence,
-                "action": analyse.get("action", "lire"),
-            })
-            return article
-        except Exception as e:
-            logging.warning(f"Enrichissement échoué pour '{titre}' : {e}")
-            article.setdefault("categorie", "Autre")
-            article.setdefault("pertinence", 5)
-            return article
-
     enrichis = []
     done = 0
     with ThreadPoolExecutor(max_workers=LLM_WORKERS) as pool:
-        futures = {pool.submit(_enrichir, a): a for a in nouveaux}
+        futures = {pool.submit(enrichir_article, a): a for a in nouveaux}
         for future in as_completed(futures):
             done += 1
             result = future.result()

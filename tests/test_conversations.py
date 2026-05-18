@@ -1,8 +1,10 @@
 """
 Tests pour l'historique des conversations (database.py + endpoints API).
+Nécessite DATABASE_URL (PostgreSQL) — ignorés si absent.
 """
+import os
+import uuid
 import pytest
-import sqlite3
 
 
 # ---------------------------------------------------------------------------
@@ -10,38 +12,36 @@ import sqlite3
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def conv_db(tmp_path, monkeypatch):
-    """Fournit un module database.py pointant vers une DB temporaire."""
+def conv_db():
+    """Fournit le module database.py connecté à la base PostgreSQL de test."""
+    if not os.getenv("DATABASE_URL"):
+        pytest.skip("DATABASE_URL non défini — tests PostgreSQL ignorés")
     import database as db_mod
-    db_path = str(tmp_path / "test_luciole.db")
-    monkeypatch.setattr(db_mod, "DB_PATH", db_path)
     db_mod.init_db()
     return db_mod
 
 
 @pytest.fixture
-def api_client(tmp_path, monkeypatch):
-    """Client TestClient FastAPI avec DB temporaire + utilisateur authentifié."""
-    # Patch database.py avant import api
-    import database as db_mod
-    db_path = str(tmp_path / "test_luciole.db")
-    monkeypatch.setattr(db_mod, "DB_PATH", db_path)
-    db_mod.init_db()
+def api_client(monkeypatch):
+    """Client TestClient FastAPI avec utilisateur de test authentifié."""
+    if not os.getenv("DATABASE_URL"):
+        pytest.skip("DATABASE_URL non défini — tests PostgreSQL ignorés")
 
-    # Patch API key + JWT secret
     monkeypatch.setenv("API_KEY", "test-key")
     monkeypatch.setenv("JWT_SECRET", "test-secret-key")
 
-    # Patch auth JWT_SECRET (already loaded at import time)
     import auth
     monkeypatch.setattr(auth, "JWT_SECRET", "test-secret-key")
+
+    import database as db_mod
+    db_mod.init_db()
 
     from fastapi.testclient import TestClient
     from api import app
 
-    # Create a test user and get a JWT cookie
+    test_email = f"pytest-{uuid.uuid4().hex[:8]}@luciole-test.local"
     user = db_mod.create_user(
-        email="test@example.com",
+        email=test_email,
         password_hash=auth.hash_password("password123"),
         display_name="Testeur",
     )
@@ -155,13 +155,7 @@ class TestDatabaseCRUD:
         conv_db.add_message(conv["id"], "user", "Msg1")
         conv_db.add_message(conv["id"], "assistant", "Msg2")
         conv_db.delete_conversation(conv["id"])
-        # Vérification directe en DB
-        conn = sqlite3.connect(conv_db.DB_PATH)
-        count = conn.execute(
-            "SELECT COUNT(*) FROM messages WHERE conversation_id = ?", (conv["id"],)
-        ).fetchone()[0]
-        conn.close()
-        assert count == 0
+        assert conv_db.get_conversation_messages(conv["id"]) == []
 
 
 # ---------------------------------------------------------------------------

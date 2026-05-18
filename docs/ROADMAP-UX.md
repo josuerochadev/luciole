@@ -1,11 +1,11 @@
 # Luciole — Roadmap UX/UI
 
-> Prompts et contexte pour chaque fonctionnalite a implementer.
-> Chaque section est autonome : copier le prompt dans une nouvelle conversation Claude Code.
+> Historique des fonctionnalites implementees. Toutes les phases (0–6) sont **terminées**.
+> Ce document conserve le contexte de chaque implementation pour reference.
 
 ---
 
-## Phase 0 — Renommage Pulse → Luciole
+## Phase 0 — Renommage Pulse → Luciole ✅
 
 ### Contexte
 Le design system s'appelle encore "Pulse" dans les fichiers techniques (CSS, JS, classes, variables) alors que le produit s'appelle "Luciole". Il faut unifier le naming avant d'ajouter des fonctionnalites.
@@ -51,7 +51,7 @@ Ne change PAS le contenu textuel visible par l'utilisateur, seulement les noms t
 
 ---
 
-## Phase 1 — Historique des conversations
+## Phase 1 — Historique des conversations ✅
 
 ### Contexte
 Actuellement, l'historique de chat est stocke dans le DOM cote client et dans une deque en memoire cote serveur (`memory/store.py`). Tout est perdu au refresh ou au redemarrage. L'utilisateur n'a aucun moyen de retrouver une conversation passee.
@@ -127,7 +127,7 @@ Design coherent avec le systeme existant (editorial, serif/sans, couleurs luciol
 
 ---
 
-## Phase 2 — Comptes utilisateurs et authentification
+## Phase 2 — Comptes utilisateurs et authentification ✅
 
 ### Contexte
 Actuellement, une seule API key partagee, pas de notion d'utilisateur. Tous les visiteurs partagent le meme agent. Il faut isoler les conversations par utilisateur.
@@ -203,7 +203,7 @@ Ajouter JWT_SECRET dans .env.example.
 
 ---
 
-## Phase 3 — Streaming des reponses (SSE)
+## Phase 3 — Streaming des reponses (SSE) ✅
 
 ### Contexte
 Actuellement, POST /ask attend la fin complete de l'execution de l'agent (qui peut prendre plusieurs secondes avec les appels outils) avant de retourner la reponse. L'utilisateur voit juste un spinner.
@@ -248,7 +248,7 @@ Le streaming doit etre compatible avec la sauvegarde en DB (historique Phase 1).
 
 ---
 
-## Phase 4 — Upload de fichiers
+## Phase 4 — Upload de fichiers ✅
 
 ### Contexte
 Les outils audio_transcription et image_analysis existent dans l'agent mais necessitent un chemin fichier sur le serveur. L'utilisateur ne peut pas uploader de fichiers depuis l'interface.
@@ -299,7 +299,7 @@ Limiter les types de fichiers cote client ET serveur. Valider cote serveur avec 
 
 ---
 
-## Phase 5 — Dark mode
+## Phase 5 — Dark mode ✅
 
 ### Contexte
 Le design system Luciole est light-only. Beaucoup d'utilisateurs preferent un mode sombre, surtout pour un outil de veille utilise quotidiennement.
@@ -339,7 +339,7 @@ Le dark mode doit couvrir : chat, sidebar, dashboard, digest, about, login.
 
 ---
 
-## Phase 6 — Feedback sur les reponses et sources RAG
+## Phase 6 — Feedback sur les reponses et sources RAG ✅
 
 ### Contexte
 L'utilisateur n'a aucun moyen de noter les reponses de l'agent ni de voir les sources utilisees. Perplexity affiche les sources en citations numerotees, ChatGPT permet thumbs up/down.
@@ -391,14 +391,12 @@ Design discret et non intrusif, coherent avec l'esthetique editoriale.
 
 ## Ordre d'implementation recommande
 
-| Phase | Fonctionnalite | Prerequis | Impact utilisateur |
-|-------|---------------|-----------|-------------------|
-| 0 | Renommage Pulse → Luciole | Aucun | Technique (nettoyage) |
-| 1 | Historique conversations | Phase 0 | Tres fort |
-| 2 | Comptes utilisateurs | Phase 1 | Fort |
-| 3 | Streaming SSE | Phase 1 | Fort |
-| 4 | Upload fichiers | Phase 0 | Moyen |
-| 5 | Dark mode | Phase 0 | Moyen |
-| 6 | Feedback + sources | Phase 1 | Moyen |
-
-> **Conseil** : les phases 4, 5, 6 sont independantes entre elles et peuvent etre faites dans n'importe quel ordre apres leurs prerequis.
+| Phase | Fonctionnalite | Statut |
+|-------|---------------|--------|
+| 0 | Renommage Pulse → Luciole | ✅ Termine |
+| 1 | Historique conversations | ✅ Termine |
+| 2 | Comptes utilisateurs | ✅ Termine |
+| 3 | Streaming SSE | ✅ Termine |
+| 4 | Upload fichiers | ✅ Termine |
+| 5 | Dark mode | ✅ Termine |
+| 6 | Feedback + sources | ✅ Termine |

@@ -1,3 +1,5 @@
+# LEGACY — Ancienne configuration Render (remplacée par Railway + railway.toml).
+# Conservé pour référence. Ne pas utiliser pour un déploiement actif.
 services:
   - type: web
     name: luciole
@@ -10,7 +12,9 @@ services:
     envVars:
       - key: API_KEY
         sync: false          # à renseigner manuellement dans le dashboard
-      - key: OPENAI_API_KEY
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DATABASE_URL
         sync: false
       - key: CORS_ORIGINS
         value: https://luciole.onrender.com

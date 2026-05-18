@@ -5,19 +5,7 @@ Tables : users, conversations, messages, response_feedback.
 import uuid
 from datetime import datetime, timezone
 
-import psycopg2
-import psycopg2.extras
-
-from config import DATABASE_URL
-
-
-# Helpers de connexion PostgreSQL — pattern identique dans tools/database.py et memory/store.py.
-def _get_connection() -> psycopg2.extensions.connection:
-    return psycopg2.connect(DATABASE_URL)
-
-
-def _cur(conn) -> psycopg2.extras.RealDictCursor:
-    return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+from db_utils import connect as _get_connection, cursor as _cur
 
 
 def init_db():

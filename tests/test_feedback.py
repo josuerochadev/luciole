@@ -2,7 +2,10 @@
 Tests pour le feedback sur les réponses (Phase 6).
 - database.py : save_response_feedback, get_response_feedback_stats
 - api.py : POST /feedback/response, GET /feedback/stats
+Nécessite DATABASE_URL (PostgreSQL) — ignorés si absent.
 """
+import os
+import uuid
 import pytest
 
 
@@ -11,22 +14,20 @@ import pytest
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def conv_db(tmp_path, monkeypatch):
-    """Module database.py pointant vers une DB temporaire."""
+def conv_db():
+    """Module database.py connecté à la base PostgreSQL de test."""
+    if not os.getenv("DATABASE_URL"):
+        pytest.skip("DATABASE_URL non défini — tests PostgreSQL ignorés")
     import database as db_mod
-    db_path = str(tmp_path / "test_luciole.db")
-    monkeypatch.setattr(db_mod, "DB_PATH", db_path)
     db_mod.init_db()
     return db_mod
 
 
 @pytest.fixture
-def api_client(tmp_path, monkeypatch):
-    """Client TestClient FastAPI avec DB temporaire + utilisateur authentifié."""
-    import database as db_mod
-    db_path = str(tmp_path / "test_luciole.db")
-    monkeypatch.setattr(db_mod, "DB_PATH", db_path)
-    db_mod.init_db()
+def api_client(monkeypatch):
+    """Client TestClient FastAPI avec utilisateur de test authentifié."""
+    if not os.getenv("DATABASE_URL"):
+        pytest.skip("DATABASE_URL non défini — tests PostgreSQL ignorés")
 
     monkeypatch.setenv("API_KEY", "test-key")
     monkeypatch.setenv("JWT_SECRET", "test-secret-key")
@@ -34,11 +35,15 @@ def api_client(tmp_path, monkeypatch):
     import auth
     monkeypatch.setattr(auth, "JWT_SECRET", "test-secret-key")
 
+    import database as db_mod
+    db_mod.init_db()
+
     from fastapi.testclient import TestClient
     from api import app
 
+    test_email = f"pytest-{uuid.uuid4().hex[:8]}@luciole-test.local"
     user = db_mod.create_user(
-        email="test@example.com",
+        email=test_email,
         password_hash=auth.hash_password("password123"),
         display_name="Testeur",
     )
@@ -98,11 +103,11 @@ class TestFeedbackDatabase:
         assert stats["pct_positive"] == pytest.approx(66.7, abs=0.1)
 
     def test_save_feedback_invalid_rating(self, conv_db):
-        """Un rating invalide doit lever une erreur SQLite CHECK."""
-        import sqlite3
+        """Un rating invalide doit lever une erreur CHECK PostgreSQL."""
+        import psycopg2
         conv = conv_db.create_conversation("Test")
         msg = conv_db.add_message(conv["id"], "assistant", "Réponse")
-        with pytest.raises(sqlite3.IntegrityError):
+        with pytest.raises(psycopg2.Error):
             conv_db.save_response_feedback(msg["id"], "invalid")
 
 

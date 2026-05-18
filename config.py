@@ -28,9 +28,6 @@ MAX_TOKENS_BY_INTENT = {
     "vision": 2048,
 }
 
-# --- Clé API (conservée pour compatibilité ascendante éventuelle) ---
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-
 # --- System prompt de l'agent ---
 SYSTEM_PROMPT = (
     "Tu es un agent de veille technologique. "

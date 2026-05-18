@@ -1,6 +1,6 @@
 """
 Point d'entrée de l'agent de veille technologique.
-Exercice 3 : boucle ReAct (Reason + Act).
+Boucle ReAct (Reason → Act → Observe) via Gemini.
 
 Utilisation : python main.py
 """
@@ -30,7 +30,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Tools OpenAI pour la décision ReAct (function calling natif)
+# Schéma des outils pour la décision ReAct (function calling via Gemini)
 # ---------------------------------------------------------------------------
 TOOLS_DECISION = [
     {
@@ -169,7 +169,7 @@ def choisir_modele(complexite: str) -> str:
 # ---------------------------------------------------------------------------
 @observe(name="choisir_outil")
 def choisir_outil(requete: str, historique: list[dict] | None = None, model: str | None = None) -> dict:
-    """Demande au LLM quel outil utiliser via function calling natif OpenAI."""
+    """Demande au LLM quel outil utiliser via function calling (Gemini)."""
     messages = [{"role": "system", "content": SYSTEM_REACT}]
     # Injecter l'historique conversationnel pour garder le contexte
     if historique:
@@ -243,7 +243,7 @@ def executer_outil(decision: dict) -> str:
             resultat = f"[ERREUR_OUTIL] Analyse image impossible : {e}"
             logger.error(f"[ReAct] {resultat}")
         except RuntimeError as e:
-            resultat = f"[ERREUR_OUTIL] Erreur GPT-4o Vision : {e}"
+            resultat = f"[ERREUR_OUTIL] Erreur Gemini Vision : {e}"
             logger.error(f"[ReAct] {resultat}")
 
     elif outil == "preview_digest":
@@ -370,10 +370,9 @@ _FORMATS_PAR_INTENT = {
 }
 
 
-@observe(name="formuler_reponse")
-def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general", historique: list[dict] | None = None, model: str | None = None, max_tokens: int | None = None) -> str:
-    """Demande au LLM de formuler une réponse finale à partir du résultat de l'outil."""
-    # Correction Log B : instruction stricte si l'outil a échoué ou retourné vide
+def _construire_prompt_reponse(requete: str, resultat_outil: str, intent: str) -> str:
+    """Construit le prompt final pour la réponse LLM à partir du résultat de l'outil.
+    Partagé entre formuler_reponse() (synchrone) et agent_react_stream() (streaming)."""
     if resultat_outil.startswith("[ERREUR_OUTIL]"):
         instruction = (
             "L'outil a retourné une erreur. "
@@ -393,12 +392,17 @@ def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general",
             f"{format_instruction}\n"
             f"{_REGLES_FIDELITE}"
         )
-
-    prompt = (
+    return (
         f"Requête initiale : {requete}\n\n"
         f"Résultat de l'outil :\n{resultat_outil}\n\n"
         f"{instruction}"
     )
+
+
+@observe(name="formuler_reponse")
+def formuler_reponse(requete: str, resultat_outil: str, intent: str = "general", historique: list[dict] | None = None, model: str | None = None, max_tokens: int | None = None) -> str:
+    """Demande au LLM de formuler une réponse finale à partir du résultat de l'outil."""
+    prompt = _construire_prompt_reponse(requete, resultat_outil, intent)
     return appeler_llm(prompt, historique=historique, model=model, max_tokens=max_tokens)
 
 
@@ -609,32 +613,7 @@ async def agent_react_stream(requete: str, conversation_id: str | None = None):
         # --- Stream la réponse finale ---
         intent = decision.get("intent", "general")
 
-        if resultat.startswith("[ERREUR_OUTIL]"):
-            instruction = (
-                "L'outil a retourné une erreur. "
-                "Informe l'utilisateur que la donnée est inaccessible. "
-                "N'invente AUCUN chiffre, nom ou donnée — dis clairement que tu ne sais pas."
-            )
-        elif resultat.startswith("[AUCUN_RESULTAT]"):
-            instruction = (
-                "L'outil n'a trouvé aucune donnée correspondante. "
-                "Informe l'utilisateur qu'aucun résultat n'existe pour sa requête. "
-                "NE JAMAIS inventer de titre d'article, d'URL, de chiffre ou de date pour combler ce vide."
-            )
-        else:
-            format_instruction = _FORMATS_PAR_INTENT.get(intent, _FORMAT_DIRECT)
-            instruction = (
-                "Formule une réponse claire et structurée en français pour l'utilisateur.\n\n"
-                f"{format_instruction}\n"
-                f"{_REGLES_FIDELITE}"
-            )
-
-        prompt = (
-            f"Requête initiale : {requete}\n\n"
-            f"Résultat de l'outil :\n{resultat}\n\n"
-            f"{instruction}"
-        )
-
+        prompt = _construire_prompt_reponse(requete, resultat, intent)
         intent_max_tokens = MAX_TOKENS_BY_INTENT.get(intent)
         full_response = ""
         for chunk in appeler_llm_stream(prompt, historique=historique, model=model_cascade, max_tokens=intent_max_tokens):
@@ -662,31 +641,9 @@ async def agent_react_stream(requete: str, conversation_id: str | None = None):
 
 
 # ---------------------------------------------------------------------------
-# Test de connexion LLM (exercice 1)
-# ---------------------------------------------------------------------------
-def test_connexion_llm():
-    """Test minimal : vérifie que l'appel LLM fonctionne."""
-    print("=" * 60)
-    print("Test de connexion à l'API OpenAI")
-    print("=" * 60)
-    try:
-        from llm import appeler_llm
-        reponse = appeler_llm("Bonjour, présente-toi en une phrase.")
-        print(f"\nRéponse du modèle :\n{reponse}\n")
-        print("Connexion OK.")
-    except ValueError as e:
-        print(f"Erreur de configuration : {e}", file=sys.stderr)
-        sys.exit(1)
-    except RuntimeError as e:
-        print(f"Erreur réseau/API : {e}", file=sys.stderr)
-        sys.exit(1)
-
-
-# ---------------------------------------------------------------------------
 # Point d'entrée
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    # Exercice 3 — Tests de la boucle ReAct
     cas_tests = [
         "Tous les clients Premium",
         "Bonjour",
@@ -694,7 +651,3 @@ if __name__ == "__main__":
     ]
     for requete in cas_tests:
         agent_react(requete)
-
-    # Exercice 4 — Tests multimodaux (décommenter avec vos fichiers)
-    # agent_react("Transcris ce fichier audio : data/sample.mp3")
-    # agent_react("Analyse cette facture : data/facture.jpg")

@@ -68,8 +68,9 @@ cp .env.example .env
 ### Lancer l'application
 
 ```bash
-# Peuplement initial de la base d'articles
-python pipeline.py
+# Initialisation de la base + peuplement initial des articles
+# (crée les tables PostgreSQL et importe les premiers articles)
+python startup.py
 
 # Interface web + API (http://localhost:8000)
 uvicorn api:app --reload
@@ -77,6 +78,8 @@ uvicorn api:app --reload
 # Agent conversationnel en ligne de commande
 python main.py
 ```
+
+> **Note :** les tables PostgreSQL sont créées automatiquement au premier démarrage. Si la base est vide, `startup.py` lance le pipeline RSS complet. Pour un peuplement rapide avec des données de démonstration, utiliser `python seed.py`.
 
 ### Tests
 
@@ -93,9 +96,11 @@ python -m pytest tests/ -v
 | `API_KEY` | oui | Clé pour protéger les endpoints |
 | `JWT_SECRET` | oui | Secret pour les tokens d'authentification |
 | `TAVILY_API_KEY` | recommandé | Recherche web temps réel |
-| `LANGFUSE_*` | non | Tracing LLM |
-| `COHERE_API_KEY` | non | Re-ranking RAG |
+| `LANGFUSE_*` | non | Tracing LLM (Langfuse cloud) |
+| `COHERE_API_KEY` | non | Re-ranking RAG (Cohere) |
 | `SMTP_*` / `EMAIL_*` | non | Envoi de rapports email |
+| `CORS_ORIGINS` | non | Origines CORS autorisées (virgule si plusieurs) |
+| `VEILLE_HEURE` | non | Heure du pipeline automatique (défaut : `08:00`) |
 
 ## Architecture
 

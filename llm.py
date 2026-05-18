@@ -134,7 +134,7 @@ def appeler_llm(
     max_tokens: int | None = None,
 ) -> str:
     """
-    Appelle l'API OpenAI et retourne le texte généré.
+    Appelle l'API Gemini et retourne le texte généré.
 
     Args:
         question: Le message utilisateur à envoyer au modèle.

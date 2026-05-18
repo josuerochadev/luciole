@@ -42,7 +42,7 @@
        ▼       ▼       ▼       ▼       ▼       ▼       ▼
    ┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐
    │ RAG  ││Search││  DB  ││Audio ││Vision││Digest││Email │
-   │      ││ Web  ││SQLite││Whisp.││GPT-4o││      ││ SMTP │
+   │      ││ Web  ││  PG  ││Vision││ RAG  ││      ││ SMTP │
    └──────┘└──────┘└──────┘└──────┘└──────┘└──────┘└──────┘
 ```
 
@@ -65,14 +65,14 @@ Protection contre les boucles infinies : maximum 2 iterations, detection de repe
 ```
 40+ flux RSS  →  Filtrage thematique  →  Deduplication  →  Scraping contenu
                                                                    │
-Email digest  ←  Stockage SQLite + RAG  ←  Enrichissement LLM  ←──┘
+Email digest  ←  Stockage PostgreSQL + RAG  ←  Enrichissement LLM  ←──┘
 ```
 
 - **Collecte** : 40+ sources RSS (Korben, ZDNet, OpenAI blog, HackerNews, AWS...)
 - **Filtrage** : Conservation des articles tech uniquement (mots-cles IA, cloud, cyber...)
 - **Deduplication** : Par URL + similarite de titre (seuil 0.85)
 - **Enrichissement LLM** : Resume, categorisation (8 categories), score de pertinence (1-10), traitement parallele (5 workers)
-- **Indexation** : Stockage SQLite + embeddings pour recherche semantique
+- **Indexation** : Stockage PostgreSQL (Neon) + embeddings pour recherche semantique
 - **Digest email** : Rapport HTML avec articles classes par categorie, envoye par SMTP
 - **Planification** : Execution quotidienne configurable (defaut 08h00)
 
@@ -82,7 +82,7 @@ Le moteur de recherche combine 3 signaux pour trouver les articles les plus pert
 
 | Signal | Poids | Methode |
 |--------|-------|---------|
-| Semantique | 50% | Similarite cosinus (text-embedding-3-small) |
+| Semantique | 50% | Similarite cosinus (gemini-embedding-001) |
 | Lexical | 25% | BM25 (correspondance de termes) |
 | Fraicheur | 25% | Decroissance lineaire sur 90 jours |
 
@@ -96,15 +96,14 @@ Fonctionnalites avancees :
 
 ### 3. Capacites multimodales
 
-- **Transcription audio** : Whisper API (MP3, WAV, M4A, WebM, FLAC...) avec analyse automatique (resume, points cles, niveau de formalite)
-- **Analyse d'images** : GPT-4o Vision (PNG, JPEG, WebP) avec extraction structuree JSON
+- **Analyse d'images** : Gemini Vision (PNG, JPEG, WebP) avec extraction structuree JSON
 - **Lecture de PDF** : Conversion premiere page en image + analyse Vision
 - **Upload de fichiers** : Drag & drop, validation par magic bytes, limite 10 Mo, nettoyage auto (TTL 1h)
 
 ### 4. Authentification et persistance
 
 - **Inscription/connexion** : Hashage bcrypt + tokens JWT (cookie httpOnly)
-- **Historique** : Conversations et messages persistes en SQLite par utilisateur
+- **Historique** : Conversations et messages persistes en PostgreSQL (Neon) par utilisateur
 - **Sidebar** : Liste des conversations, renommage, suppression
 - **Titre auto** : Generation du titre de conversation par LLM au premier message
 
@@ -163,7 +162,7 @@ Un effort particulier a ete porte sur la fiabilite des reponses :
 ### Monitoring (`/metrics`)
 - Nombre total de requetes, duree moyenne et P95
 - Tokens consommes (prompt + completion)
-- Estimation du cout en USD (tarification gpt-4o-mini)
+- Estimation du cout en USD (tarification Gemini Flash)
 - Taux d'erreur et taux de fallback
 - Historique des dernieres requetes (`/metrics/recent`)
 
@@ -198,7 +197,7 @@ Un effort particulier a ete porte sur la fiabilite des reponses :
 
 ## Optimisations de performance
 
-- **Cascade de modeles** : Classification rapide (simple → gpt-4o-mini, complexe → gpt-4o) pour reduire les couts
+- **Cascade de modeles** : Classification rapide (simple → gemini-2.5-flash, complexe → gemini-2.5-pro) pour reduire les couts
 - **Embeddings en batch** : Jusqu'a 100 textes par appel API
 - **Cache LRU** : Embeddings de requetes mis en cache
 - **Cache memoire** : Index RAG + BM25 charges une seule fois, invalides par mtime
@@ -216,8 +215,8 @@ Stage 2 (prebuild) →  Collecte RSS initiale (sans cle API)
 Stage 3 (runtime)  →  Python 3.12-slim, utilisateur non-root, health check
 ```
 
-### Hebergement : Render.com
-- Service web Docker, region Frankfurt, plan free
+### Hebergement : Railway
+- Service web Docker, region EU (configurable)
 - Variables d'environnement configurees (API keys, CORS)
 - Health check sur `/health`
 - Cold start : execution du pipeline au demarrage (`start.sh`)
@@ -251,20 +250,19 @@ Suite de **15+ fichiers de tests** couvrant l'ensemble du systeme :
 
 | Composant | Technologie |
 |-----------|-------------|
-| LLM | OpenAI API (gpt-4o-mini, gpt-4o) |
-| Embeddings | text-embedding-3-small |
+| LLM | Google Gemini API (gemini-2.5-flash, gemini-2.5-pro) |
+| Embeddings | gemini-embedding-001 |
 | Framework web | FastAPI + uvicorn |
-| Base de donnees | SQLite (WAL mode) |
+| Base de donnees | PostgreSQL (Neon) |
 | RAG | numpy (cosinus) + BM25 + Cohere reranking |
 | Auth | bcrypt + JWT (python-jose) |
-| Audio | Whisper API |
-| Vision | GPT-4o Vision |
+| Vision | Gemini Vision |
 | Recherche web | Tavily API |
 | Email | smtplib (SMTP TLS) |
 | Scraping | trafilatura + feedparser |
 | Observabilite | Langfuse |
 | Frontend | Jinja2 + CSS/JS custom |
-| Deploiement | Docker + Render |
+| Deploiement | Docker + Railway |
 | Tests | pytest |
 | Python | 3.12+ |
 
@@ -274,13 +272,14 @@ Suite de **15+ fichiers de tests** couvrant l'ensemble du systeme :
 
 | Variable | Obligatoire | Description |
 |----------|:-----------:|-------------|
-| `OPENAI_API_KEY` | Oui | Acces API OpenAI |
+| `GEMINI_API_KEY` | Oui | Acces API Google Gemini |
+| `DATABASE_URL` | Oui | URL PostgreSQL Neon |
 | `API_KEY` | Oui | Authentification API FastAPI |
-| `JWT_SECRET` | Non | Secret JWT (auto-genere si absent) |
-| `TAVILY_API_KEY` | Non | Recherche web (fallback gracieux) |
-| `LANGFUSE_*_KEY` | Non | Tracing LLM |
+| `JWT_SECRET` | Oui | Secret JWT pour les tokens d'authentification |
+| `TAVILY_API_KEY` | Recommande | Recherche web (fallback gracieux) |
+| `LANGFUSE_*` | Non | Tracing LLM |
 | `COHERE_API_KEY` | Non | Reranking RAG |
-| `SMTP_*` | Non | Configuration email |
+| `SMTP_*` / `EMAIL_*` | Non | Configuration email |
 | `VEILLE_HEURE` | Non | Heure du pipeline (defaut 08:00) |
 | `CORS_ORIGINS` | Non | Origines CORS autorisees |
 

@@ -2,9 +2,11 @@
 Tests pour le système d'upload de fichiers (Phase 4).
 - Unitaires : validation magic bytes, nettoyage fichiers expirés
 - Intégration : endpoint POST /upload, POST /ask avec file_id
+Nécessite DATABASE_URL (PostgreSQL) pour les tests d'intégration.
 """
 import io
 import os
+import uuid
 import time
 import struct
 
@@ -26,9 +28,10 @@ def upload_dir(tmp_path):
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     """TestClient FastAPI avec un utilisateur authentifié."""
+    if not os.getenv("DATABASE_URL"):
+        pytest.skip("DATABASE_URL non défini — tests PostgreSQL ignorés")
+
     import database as db_mod
-    db_path = str(tmp_path / "test_upload.db")
-    monkeypatch.setattr(db_mod, "DB_PATH", db_path)
     db_mod.init_db()
 
     monkeypatch.setenv("API_KEY", "test-key")
@@ -53,9 +56,10 @@ def client(tmp_path, monkeypatch):
 
     c = TestClient(app)
 
-    # Enregistrer un utilisateur et récupérer le cookie
+    # Enregistrer un utilisateur unique et récupérer le cookie
+    test_email = f"pytest-{uuid.uuid4().hex[:8]}@luciole-test.local"
     res = c.post("/auth/register", json={
-        "email": "uploader@test.com",
+        "email": test_email,
         "password": "password123",
         "display_name": "Uploader",
     })
@@ -70,9 +74,10 @@ def client(tmp_path, monkeypatch):
 @pytest.fixture
 def unauth_client(tmp_path, monkeypatch):
     """TestClient FastAPI sans authentification."""
+    if not os.getenv("DATABASE_URL"):
+        pytest.skip("DATABASE_URL non défini — tests PostgreSQL ignorés")
+
     import database as db_mod
-    db_path = str(tmp_path / "test_upload_unauth.db")
-    monkeypatch.setattr(db_mod, "DB_PATH", db_path)
     db_mod.init_db()
 
     monkeypatch.setenv("API_KEY", "test-key")

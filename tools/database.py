@@ -8,13 +8,11 @@ import sqlite3
 import logging
 from datetime import datetime, timezone, timedelta
 
-import psycopg2
-import psycopg2.extras
-
 from config import (
     DATA_DIR, ARTICLES_FILE, HISTORIQUE_FILE, ARCHIVES_FILE, LOGS_FILE,
-    RETENTION_ARTICLES_JOURS, RETENTION_LOGS_JOURS, DATABASE_URL,
+    RETENTION_ARTICLES_JOURS, RETENTION_LOGS_JOURS,
 )
+from db_utils import connect as _pg_connect, cursor as _cur
 
 # Base SQLite locale uniquement pour la démo agent ReAct (données fictives)
 DB_TEST_PATH = f"{DATA_DIR}/test_clients.db"
@@ -23,18 +21,6 @@ logger = logging.getLogger(__name__)
 
 # Flag pour n'exécuter la migration JSON→PG qu'une seule fois par process
 _migration_done = False
-
-
-# ---------------------------------------------------------------------------
-# Helpers PostgreSQL
-# ---------------------------------------------------------------------------
-
-def _pg_connect() -> psycopg2.extensions.connection:
-    return psycopg2.connect(DATABASE_URL)
-
-
-def _cur(conn) -> psycopg2.extras.RealDictCursor:
-    return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +139,7 @@ def _insert_articles_pg(conn, articles: list[dict], archive: int = 0) -> int:
                 ),
             )
             inseres += cur.rowcount
-        except psycopg2.Error as e:
+        except Exception as e:
             logger.debug(f"Insert échoué pour {lien} : {e}")
     conn.commit()
     return inseres

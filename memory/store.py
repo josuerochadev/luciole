@@ -7,10 +7,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
-import psycopg2
-import psycopg2.extras
-
-from config import DATABASE_URL
+from db_utils import connect as _get_connection, cursor as _cur
 
 logger = logging.getLogger(__name__)
 
@@ -27,14 +24,6 @@ def set_active_conversation(conv_id: str | None) -> None:
     global _active_conversation_id
     _active_conversation_id = conv_id
     logger.debug(f"[memory] Conversation active : {conv_id}")
-
-
-def _get_connection() -> psycopg2.extensions.connection:
-    return psycopg2.connect(DATABASE_URL)
-
-
-def _cur(conn) -> psycopg2.extras.RealDictCursor:
-    return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
 def _init_table(conn) -> None:

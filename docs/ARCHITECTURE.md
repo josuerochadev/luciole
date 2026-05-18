@@ -164,10 +164,10 @@ PHASE D'INDEXATION (une fois par article)
 Article (titre + résumé)
         │
         ▼
-API OpenAI text-embedding-3-small
+API Gemini gemini-embedding-001
         │
         ▼
-Vecteur de 1536 dimensions   ←── représentation mathématique du sens
+Vecteur haute dimension   ←── représentation mathématique du sens
         │
         ▼
 embeddings.json  {id, vecteur, métadonnées}
@@ -178,7 +178,7 @@ PHASE DE RECHERCHE (à chaque question)
 Question utilisateur
         │
         ▼
-API OpenAI  →  vecteur de la question
+API Gemini  →  vecteur de la question
         │
         ▼
 Similarité cosine avec tous les vecteurs de la base
@@ -193,7 +193,7 @@ Injectés dans le prompt → LLM génère une réponse contextualisée
 ### Pourquoi la similarité cosine
 
 Deux textes qui parlent du même sujet ont des vecteurs qui "pointent dans la même
-direction" dans l'espace à 1536 dimensions, même si les mots exacts sont différents.
+direction" dans l'espace vectoriel, même si les mots exacts sont différents.
 
 > *"Startups européennes qui lèvent des fonds"* → retrouve l'article
 > *"Mistral AI lève 600M€"* avec un score de 0.51, sans aucun mot en commun.
@@ -206,8 +206,8 @@ L'agent a deux types de mémoire distincts :
 
 | Type | Implémentation | Durée | Usage |
 |---|---|---|---|
-| **Session** | `deque(maxlen=10)` en RAM | Le temps d'une conversation | Contexte conversationnel |
-| **Long terme** | `articles.json` + `embeddings.json` | 90 jours (RGPD) | Base de connaissance RAG |
+| **Session** | Table `memory_conversations` (PostgreSQL) | Le temps d'une conversation | Contexte conversationnel |
+| **Long terme** | Table `articles` (PostgreSQL) + `embeddings.json` | 90 jours (RGPD) | Base de connaissance RAG |
 
 La mémoire de session permet des échanges cohérents :
 ```
@@ -249,12 +249,11 @@ fil-rouge/
 │
 ├── tools/
 │   ├── search.py      → recuperer_articles_rss(), search_web()
-│   ├── database.py    → sauvegarder_articles(), query_db() SQLite
+│   ├── database.py    → sauvegarder_articles(), query_db() PostgreSQL
 │   ├── rag.py         → indexer_article(), rechercher_articles()
 │   ├── email.py       → génération et envoi de rapports HTML
 │   ├── scraper.py     → scraping de pages web
-│   ├── transcribe.py  → transcription audio (Whisper)
-│   └── vision.py      → analyse d'images (GPT-4o vision)
+│   └── vision.py      → analyse d'images (Gemini Vision)
 │
 ├── memory/
 │   └── store.py       → store(), recall(), clear() — mémoire conversationnelle
@@ -275,7 +274,7 @@ fil-rouge/
 │
 ├── Dockerfile         → image Docker de production
 ├── docker-compose.yml → orchestration Docker
-├── render.yaml        → configuration déploiement Render
+├── railway.toml       → configuration déploiement Railway
 ├── start.sh           → script de démarrage (pipeline au cold start)
 │
 ├── data/              → généré automatiquement
@@ -324,10 +323,13 @@ fil-rouge/
 | Interface utilisateur web | Implémenté (FastAPI + templates Jinja2 + design system Luciole) |
 | Pipeline automatisé au démarrage | Implémenté (`start.sh`) |
 | Observabilité LLM (Langfuse) | Implémenté (`tracing.py`) |
-| Déploiement Docker / Render | Implémenté (`Dockerfile`, `render.yaml`) |
-| Outils multimodaux (audio, vision) | Implémenté (`tools/transcribe.py`, `tools/vision.py`) |
-| Historique de conversations persistant | À implémenter (voir `docs/ROADMAP-UX.md` Phase 1) |
-| Comptes utilisateurs | À implémenter (voir `docs/ROADMAP-UX.md` Phase 2) |
-| Streaming des réponses (SSE) | À implémenter (voir `docs/ROADMAP-UX.md` Phase 3) |
+| Déploiement Docker / Railway | Implémenté (`Dockerfile`, `railway.toml`) |
+| Analyse d'images (vision) | Implémenté (`tools/vision.py`, Gemini Vision) |
+| Historique de conversations persistant | Implémenté (`database.py`, PostgreSQL) |
+| Comptes utilisateurs | Implémenté (`database.py`, JWT + bcrypt) |
+| Streaming des réponses (SSE) | Implémenté (`api.py`, `main.py` — `agent_react_stream`) |
+| Upload de fichiers | Implémenté (`api.py` — `/upload`, validation magic bytes) |
+| Dark mode | Implémenté (`luciole.css`, bascule manuelle + `prefers-color-scheme`) |
+| Feedback sur les réponses et sources RAG | Implémenté (`api.py` — `/feedback/response`) |
 | Traduction des articles EN → FR | Hors périmètre |
 | Réseaux sociaux (Twitter/LinkedIn) | Hors périmètre |

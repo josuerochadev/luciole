@@ -21,7 +21,7 @@ from tools.search import recuperer_articles_rss, filtrer_par_theme
 from tools.scraper import scraper_articles_batch
 from tools.database import sauvegarder_articles, article_deja_traite
 from tools.email import selectionner_articles, envoyer_rapport
-from llm import resumer_article
+from tools.enrichment import enrichir_article
 from config import PERTINENCE_MIN
 
 TITRE_SIMILARITY_THRESHOLD = 0.85  # seuil de similarité pour considérer un doublon
@@ -94,34 +94,12 @@ def run(dry_run: bool = False, no_email: bool = False) -> dict:
     # --- Étape 4 — Enrichissement LLM parallèle (résumé + catégorie + pertinence) ---
     print(f"[4/{nb_etapes_total}] Enrichissement LLM (seuil pertinence >= {PERTINENCE_MIN}, 5 threads)...")
 
-    LLM_WORKERS = 5  # threads parallèles pour l'API OpenAI
-
-    def _enrichir_un(article: dict) -> dict | None:
-        """Enrichit un article via le LLM. Retourne l'article enrichi ou None."""
-        titre = article.get("titre", "")
-        contenu = article.get("contenu_complet", article.get("resume_brut", ""))
-        try:
-            analyse = resumer_article(titre, contenu)
-            pertinence = int(analyse.get("pertinence", 0))
-            if pertinence < PERTINENCE_MIN:
-                return None
-            article.update({
-                "resume":     analyse.get("resume", contenu[:300]),
-                "categorie":  analyse.get("categorie", "Autre"),
-                "pertinence": pertinence,
-                "action":     analyse.get("action", "lire"),
-            })
-            return article
-        except Exception as e:
-            logging.warning(f"Enrichissement échoué pour '{titre}' : {e}")
-            article.setdefault("categorie", "Autre")
-            article.setdefault("pertinence", 5)
-            return article
+    LLM_WORKERS = 5  # threads parallèles pour l'API Gemini
 
     enrichis = []
     done = 0
     with ThreadPoolExecutor(max_workers=LLM_WORKERS) as pool:
-        futures = {pool.submit(_enrichir_un, a): a for a in nouveaux}
+        futures = {pool.submit(enrichir_article, a): a for a in nouveaux}
         for future in as_completed(futures):
             done += 1
             result = future.result()

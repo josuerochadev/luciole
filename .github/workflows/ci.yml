@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Lint & Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Lint (ruff)
+        run: ruff check . --output-format=github
+        continue-on-error: true
+
+      - name: Unit tests (sans LLM)
+        run: |
+          pytest tests/test_security.py tests/test_react_e2e.py \
+            -v --tb=short
+        env:
+          GEMINI_API_KEY: "ci-dummy-key"
+          DATABASE_URL: "postgresql://ci:ci@localhost/ci"
+          API_KEY: "ci-dummy-api-key"
+          JWT_SECRET: "ci-dummy-jwt-secret-minimum-32-chars-ok"
+          LANGFUSE_PUBLIC_KEY: ""
+          LANGFUSE_SECRET_KEY: ""

@@ -234,12 +234,12 @@
 <div class="digest-actions">
   <button class="digest-btn" id="btn-preview">Previsualiser</button>
   <div class="digest-apikey-group">
-    <label class="digest-apikey-label" for="apikey-input">Cle API Gemini</label>
+    <label class="digest-apikey-label" for="apikey-input">Clé API serveur</label>
     <input
       id="apikey-input"
       class="digest-apikey-input"
       type="password"
-      placeholder="X-API-Key"
+      placeholder="Clé API serveur"
       autocomplete="off"
       aria-describedby="apikey-error"
     />
@@ -350,11 +350,21 @@
 
   // ── Preview ────────────────────────────────────────────
   btnPreview.addEventListener('click', async function () {
+    const apiKey = apikeyInput.value.trim();
+    if (!apiKey) {
+      apikeyError.classList.add('digest-apikey-error--visible');
+      apikeyInput.focus();
+      return;
+    }
+    apikeyError.classList.remove('digest-apikey-error--visible');
+
     btnPreview.disabled = true;
     setStatus('Generation en cours...', '');
 
     try {
-      const res = await fetch('/digest');
+      const res = await fetch('/digest', {
+        headers: { 'X-API-Key': apiKey }
+      });
       if (!res.ok) throw new Error('Erreur API');
       const html = await res.text();
 

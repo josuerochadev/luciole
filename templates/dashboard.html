@@ -427,6 +427,7 @@
   (function () {
     var observer = new MutationObserver(function () {
       var layout = buildPlotlyLayout();
+      var colors = buildPlotlyColors();
       ['chart-latency', 'chart-tokens'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el && el.data) {
@@ -443,6 +444,12 @@
             'hoverlabel.bgcolor': layout.hoverlabel.bgcolor,
             'hoverlabel.bordercolor': layout.hoverlabel.bordercolor
           });
+          if (id === 'chart-latency') {
+            var ink = colors.ink;
+            Plotly.restyle(id, { 'line.color': [ink], 'fillcolor': [ink + '14'] }, [0]);
+          } else if (id === 'chart-tokens') {
+            Plotly.restyle(id, { 'marker.color': [colors.accent] }, [0]);
+          }
         }
       });
     });

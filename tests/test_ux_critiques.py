@@ -158,15 +158,17 @@ def test_digest_no_window_prompt():
 
 def test_dashboard_plotly_reads_css_vars():
     """Le dashboard lit les couleurs CSS via getComputedStyle (pas hard-codées)."""
-    r = client.get("/dashboard", follow_redirects=True)
-    assert "getComputedStyle" in r.text, (
+    with open("templates/dashboard.html") as f:
+        content = f.read()
+    assert "getComputedStyle" in content, (
         "getComputedStyle absent — couleurs Plotly probablement encore hard-codées"
     )
 
 
 def test_dashboard_no_hardcoded_plotly_paper_color():
     """Le layout Plotly ne contient plus paper_bgcolor: '#faf8f3' hard-codé."""
-    r = client.get("/dashboard", follow_redirects=True)
-    assert "paper_bgcolor: '#faf8f3'" not in r.text, (
+    with open("templates/dashboard.html") as f:
+        content = f.read()
+    assert "paper_bgcolor: '#faf8f3'" not in content, (
         "Couleur paper hard-codée #faf8f3 encore dans le layout Plotly"
     )

@@ -1,0 +1,51 @@
+# Environnement virtuel
+.venv/
+venv/
+env/
+
+# Variables d'environnement — NE JAMAIS committer
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Data éphémère (reconstruite au démarrage)
+data/
+
+# Bases de données locales
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+*.jsonl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Coverage / tests
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Ancien moteur vectoriel (remplacé par numpy+PG)
+chroma_db/
+chromadb_data/

@@ -12,7 +12,7 @@ from config import MAX_TOKENS_BY_INTENT
 from llm import appeler_llm, appeler_llm_stream
 from memory.store import store as memory_store, recall as memory_recall
 from monitoring import mark_fallback
-from security import analyser_securite
+from security import analyser_securite, filtrer_sortie
 from tracing import flush, observe, update_current_trace
 from agent.cascade import classifier_complexite, choisir_modele
 from agent.prompts import _TOOL_LABELS
@@ -106,7 +106,6 @@ def agent_react(requete: str, conversation_id: str | None = None) -> str:
         reponse = "Je n'ai pas pu répondre à votre requête après plusieurs tentatives."
 
     # --- Filtrage de sortie ---
-    from security import filtrer_sortie
     reponse = filtrer_sortie(reponse)
 
     # --- Sauvegarder la réponse en mémoire ---
@@ -220,7 +219,6 @@ async def agent_react_stream(requete: str, conversation_id: str | None = None):
         yield {"type": "chunk", "content": resultat}
 
     # --- Post-traitement ---
-    from security import filtrer_sortie
     reponse = filtrer_sortie(resultat)
     memory_store(reponse, role="assistant", conversation_id=effective_conv_id)
 

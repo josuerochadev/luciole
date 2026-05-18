@@ -9,7 +9,9 @@ requête n'est actif (par exemple en mode CLI via `python main.py`).
 """
 from __future__ import annotations
 
+import collections
 import contextvars
+import hashlib
 import json
 import logging
 import threading
@@ -34,7 +36,8 @@ MODEL_LABEL = "gemini-2.5-flash"
 # ---------------------------------------------------------------------------
 # Stockage
 # ---------------------------------------------------------------------------
-_records: list[dict[str, Any]] = []
+_RECORDS_MAX = 1000  # Nombre maximum de records conservés en mémoire
+_records: collections.deque[dict[str, Any]] = collections.deque(maxlen=_RECORDS_MAX)
 _lock = threading.Lock()
 
 # Persiste les requêtes en JSONL (éphémère sur Railway, utile en local/debug)
@@ -141,8 +144,15 @@ def end_request(error: str | None = None) -> dict:
         if METRICS_LOG_FILE is not None:
             try:
                 METRICS_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+                # Remplace la question par une empreinte SHA-256 dans le fichier
+                # pour ne pas persister de données utilisateur en clair sur le disque.
+                q = (record.get("question") or "").encode()
+                record_for_file = {
+                    **record,
+                    "question": hashlib.sha256(q).hexdigest()[:12],
+                }
                 with METRICS_LOG_FILE.open("a", encoding="utf-8") as f:
-                    f.write(json.dumps(record, ensure_ascii=False) + "\n")
+                    f.write(json.dumps(record_for_file, ensure_ascii=False) + "\n")
             except OSError as e:
                 logger.warning(f"[monitoring] Impossible d'écrire le log : {e}")
 
@@ -196,7 +206,7 @@ def get_metrics() -> dict:
 def get_recent(limit: int = 20) -> list[dict]:
     """Retourne les `limit` dernières requêtes enregistrées (ordre chronologique)."""
     with _lock:
-        return list(_records[-limit:])
+        return list(_records)[-limit:]
 
 
 def reset() -> None:

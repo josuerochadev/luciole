@@ -5,6 +5,7 @@
 """
 import json
 import logging
+import os
 
 from llm import appeler_llm_tools
 from security import valider_sql
@@ -79,6 +80,10 @@ def executer_outil(decision: dict) -> str:
 
     elif outil == "analyze_image":
         fichier = decision.get("file_path", "")
+        # Reconstituer le chemin absolu si le LLM n'a reçu que le nom de fichier
+        if fichier and not os.path.isabs(fichier):
+            from config import UPLOAD_DIR
+            fichier = os.path.join(UPLOAD_DIR, fichier)
         consigne = decision.get("query_recherche", None) or None
         try:
             result = analyser_image(fichier, consigne=consigne)

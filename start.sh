@@ -7,4 +7,5 @@ echo "[start] Enrichissement des articles en arrière-plan..."
 PYTHONUNBUFFERED=1 python startup.py 2>&1 &
 
 echo "[start] Démarrage de l'API..."
-exec uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}
+# --workers 1 obligatoire : le monitoring in-process n'est pas partagé entre workers.
+exec uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1

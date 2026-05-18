@@ -338,6 +338,31 @@ def _init_db() -> None:
     conn.close()
 
 
+_ALLOWED_TABLES = frozenset({"clients"})
+
+
+def _valider_tables(sql: str) -> None:
+    """
+    Vérifie que la requête ne référence que les tables autorisées
+    et ne contient pas de sous-requête SELECT imbriquée.
+
+    Raises:
+        ValueError: si une table non autorisée ou une sous-requête est détectée.
+    """
+    import re
+
+    # Bloquer les sous-requêtes (exfiltration via SELECT imbriqué)
+    if re.search(r"\(\s*SELECT\b", sql, re.IGNORECASE):
+        raise ValueError("Les sous-requêtes SELECT ne sont pas autorisées.")
+
+    # Extraire toutes les tables référencées (FROM et JOIN)
+    tables = set(re.findall(r"\bFROM\s+(\w+)", sql, re.IGNORECASE))
+    tables |= set(re.findall(r"\bJOIN\s+(\w+)", sql, re.IGNORECASE))
+    non_autorisees = tables - _ALLOWED_TABLES
+    if non_autorisees:
+        raise ValueError(f"Table(s) non autorisée(s) : {', '.join(sorted(non_autorisees))}.")
+
+
 def query_db(sql: str) -> list[dict]:
     """
     Exécute une requête SQL SELECT sur la base de test et retourne les résultats.
@@ -351,7 +376,7 @@ def query_db(sql: str) -> list[dict]:
         Liste de dicts représentant les lignes retournées.
 
     Raises:
-        ValueError: Si la requête n'est pas un SELECT.
+        ValueError: Si la requête n'est pas un SELECT ou référence une table interdite.
         RuntimeError: En cas d'erreur SQLite.
     """
     _init_db()
@@ -359,6 +384,8 @@ def query_db(sql: str) -> list[dict]:
     sql_propre = sql.strip()
     if not sql_propre.upper().startswith("SELECT"):
         raise ValueError(f"Seules les requêtes SELECT sont autorisées. Reçu : {sql_propre[:50]}")
+
+    _valider_tables(sql_propre)
 
     # Ajouter un LIMIT si absent pour éviter les résultats non bornés
     if "LIMIT" not in sql_propre.upper():

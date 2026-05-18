@@ -9,7 +9,6 @@ API FastAPI pour l'agent de veille technologique.
 - POST /auth/*    : authentification JWT (bcrypt)
 """
 import asyncio
-import hashlib
 import json
 import logging
 import os
@@ -23,7 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import AnyHttpUrl, BaseModel, EmailStr, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -112,8 +111,8 @@ if ALLOWED_ORIGINS:
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
-# Cache-buster: changes on each server restart to force browser to reload static assets
-_cache_bust = hashlib.md5(str(time.time()).encode()).hexdigest()[:8]
+# Cache-buster: UUID unique par démarrage — pas de collision possible
+_cache_bust = uuid.uuid4().hex[:8]
 templates.env.globals["cache_bust"] = _cache_bust
 
 
@@ -382,11 +381,11 @@ async def ask(request: Request, req: AskRequest, user=Depends(get_optional_user)
         pdf_exts = {".pdf"}
 
         if ext in image_exts:
-            enriched_question = f"Analyse cette image : {file_path}\n\nConsigne de l'utilisateur : {req.question}"
-            file_meta = {"type": "image", "path": str(file_path), "filename": file_path.name}
+            enriched_question = f"Analyse cette image : {file_path.name}\n\nConsigne de l'utilisateur : {req.question}"
+            file_meta = {"type": "image", "filename": file_path.name}
         elif ext in pdf_exts:
-            enriched_question = f"Analyse ce document PDF : {file_path}\n\nConsigne de l'utilisateur : {req.question}"
-            file_meta = {"type": "pdf", "path": str(file_path), "filename": file_path.name}
+            enriched_question = f"Analyse ce document PDF : {file_path.name}\n\nConsigne de l'utilisateur : {req.question}"
+            file_meta = {"type": "pdf", "filename": file_path.name}
 
     # Sauvegarder le message utilisateur (seulement si connecté)
     if user and conv_id:
@@ -502,15 +501,17 @@ def conversation_update(conv_id: str, req: ConversationUpdateRequest, request: R
 
 
 @app.get("/metrics")
-def metrics():
-    """Agrégats de monitoring (M5E5)."""
+def metrics(x_api_key: str | None = Header(default=None)):
+    """Agrégats de monitoring (M5E5). Protégé par X-API-Key."""
+    _verifier_api_key(x_api_key)
     return get_metrics()
 
 
 @app.get("/metrics/recent")
-def metrics_recent(limit: int = 20):
-    """Les N dernières requêtes enregistrées (debug)."""
-    records = get_recent(limit=limit)
+def metrics_recent(limit: int = 20, x_api_key: str | None = Header(default=None)):
+    """Les N dernières requêtes enregistrées (debug). Protégé par X-API-Key."""
+    _verifier_api_key(x_api_key)
+    records = get_recent(limit=min(limit, 200))
     return {"count": len(records), "records": records}
 
 
@@ -518,20 +519,7 @@ def metrics_recent(limit: int = 20):
 # Digest endpoints (M6)
 # ---------------------------------------------------------------------------
 
-def _is_same_origin(request: Request) -> bool:
-    """Vérifie si la requête provient du frontend servi par ce même serveur.
-    Supporte les reverse proxies (Render, etc.) via X-Forwarded-Host."""
-    referer = request.headers.get("referer", "")
-    origin = request.headers.get("origin", "")
-    # Derrière un reverse proxy, host peut être l'IP interne
-    host = request.headers.get("x-forwarded-host", "") or request.headers.get("host", "")
-    return host and (referer.startswith(f"http://{host}") or referer.startswith(f"https://{host}")
-                     or origin == f"http://{host}" or origin == f"https://{host}")
-
-
-def _verifier_api_key(x_api_key: str | None, request: Request | None = None):
-    if request and _is_same_origin(request):
-        return
+def _verifier_api_key(x_api_key: str | None):
     if not x_api_key or x_api_key != API_KEY:
         raise HTTPException(status_code=403, detail="Clé API invalide ou manquante.")
 
@@ -544,14 +532,15 @@ async def digest_page(request: Request, user=Depends(get_current_user_page)):
 
 
 @app.get("/digest", response_class=HTMLResponse)
-def digest(limit: int = 20):
-    """Retourne le HTML du digest sans envoyer d'email."""
+def digest(limit: int = 20, x_api_key: str | None = Header(default=None)):
+    """Retourne le HTML du digest sans envoyer d'email. Protégé par X-API-Key."""
+    _verifier_api_key(x_api_key)
     articles = selectionner_articles(nb_max=limit)
     return HTMLResponse(content=generer_html(articles))
 
 
 @app.get("/digest/stats")
-def digest_stats():
+def digest_stats(user=Depends(get_current_user)):
     """Stats rapides pour la page digest."""
     articles = selectionner_articles(nb_max=100)
     categories = set(a.get("categorie", "Autre") for a in articles)
@@ -564,7 +553,7 @@ def digest_stats():
 
 
 @app.get("/digest/history")
-def digest_history():
+def digest_history(user=Depends(get_current_user)):
     """Historique des envois de digest."""
     historique = charger_json(HISTORIQUE_FILE)
     return {"historique": historique}
@@ -575,7 +564,7 @@ def digest_history():
 # ---------------------------------------------------------------------------
 
 class FeedbackRequest(BaseModel):
-    article_url: str
+    article_url: AnyHttpUrl
     score: int
 
 
@@ -585,7 +574,7 @@ def feedback(request: Request, req: FeedbackRequest, x_api_key: str | None = Hea
     """Enregistre un feedback utilisateur sur un article (score 1-10)."""
     _verifier_api_key(x_api_key)
     try:
-        result = noter_article(req.article_url, req.score)
+        result = noter_article(str(req.article_url), req.score)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return result
@@ -606,8 +595,9 @@ def response_feedback(request: Request, req: ResponseFeedbackRequest, user=Depen
 
 
 @app.get("/feedback/stats")
-def feedback_stats():
-    """Stats globales des feedbacks sur les réponses."""
+def feedback_stats(x_api_key: str | None = Header(default=None)):
+    """Stats globales des feedbacks sur les réponses. Protégé par X-API-Key."""
+    _verifier_api_key(x_api_key)
     return get_response_feedback_stats()
 
 

@@ -146,12 +146,11 @@ def test_digest_has_apikey_input():
 
 
 def test_digest_no_window_prompt():
-    """La page digest ne contient plus d'appel à prompt()."""
-    r = client.get("/digest-page", follow_redirects=True)
-    html = r.text
-    assert "= prompt(" not in html and "window.prompt" not in html, (
-        "window.prompt() encore présent sur /digest-page"
-    )
+    """Le template digest.html n'utilise plus window.prompt()."""
+    with open("templates/digest.html") as f:
+        content = f.read()
+    assert "window.prompt" not in content, "window.prompt() trouvé dans templates/digest.html"
+    assert "= prompt(" not in content, "prompt() trouvé dans templates/digest.html"
 
 
 # ── 7. Plotly — couleurs dynamiques depuis CSS vars ───────────────────────

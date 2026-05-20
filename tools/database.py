@@ -238,6 +238,74 @@ def lire_articles_actifs() -> list[dict]:
         conn.close()
 
 
+def lire_articles_filtres(
+    categorie: str | None = None,
+    date_min: str | None = None,
+    date_max: str | None = None,
+    pertinence_min: int = 5,
+    tri: str = "pertinence",
+    offset: int = 0,
+    limit: int = 20,
+) -> tuple[list[dict], int]:
+    """
+    Retourne (articles, total_count) depuis PostgreSQL avec filtrage dynamique.
+    Filtre: archive = 0, pertinence >= pertinence_min.
+    Tri: ORDER BY pertinence DESC ou date_publication DESC.
+    """
+    conn = _pg_connect()
+    try:
+        _init_articles_table(conn)
+        cur = _cur(conn)
+
+        conditions = ["archive = 0", "pertinence >= %s"]
+        params: list = [pertinence_min]
+
+        if categorie:
+            conditions.append("categorie = %s")
+            params.append(categorie)
+        if date_min:
+            conditions.append("date_publication >= %s")
+            params.append(date_min)
+        if date_max:
+            conditions.append("date_publication <= %s")
+            params.append(date_max)
+
+        where = " AND ".join(conditions)
+
+        # Count total
+        cur.execute(f"SELECT COUNT(*) AS total FROM articles WHERE {where}", params)
+        total = cur.fetchone()["total"]
+
+        # Fetch page
+        order = "pertinence DESC" if tri == "pertinence" else "date_publication DESC"
+        cur.execute(
+            f"SELECT lien, titre, resume, categorie, pertinence, source,"
+            f"       date_publication, date_ajout"
+            f" FROM articles WHERE {where}"
+            f" ORDER BY {order} OFFSET %s LIMIT %s",
+            params + [offset, limit],
+        )
+        articles = [dict(r) for r in cur.fetchall()]
+        return articles, total
+    finally:
+        conn.close()
+
+
+def lire_categories() -> list[str]:
+    """Retourne la liste des categories distinctes des articles actifs."""
+    conn = _pg_connect()
+    try:
+        _init_articles_table(conn)
+        cur = _cur(conn)
+        cur.execute(
+            "SELECT DISTINCT categorie FROM articles"
+            " WHERE archive = 0 ORDER BY categorie"
+        )
+        return [row["categorie"] for row in cur.fetchall()]
+    finally:
+        conn.close()
+
+
 def enregistrer_envoi(destinataires: list[str], nb_articles: int) -> None:
     """Enregistre un envoi email dans l'historique."""
     historique = charger_json(HISTORIQUE_FILE)

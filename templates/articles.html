@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+
+{% block head %}
+<style>
+  /* Articles page — Luciole design system */
+  h2.art-section {
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-xs);
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--luciole-accent);
+    padding-bottom: var(--luciole-space-3);
+    border-bottom: var(--luciole-rule-thin);
+    margin: var(--luciole-space-8) 0 var(--luciole-space-6);
+  }
+
+  /* Filters bar */
+  .art-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--luciole-space-4);
+    margin-bottom: var(--luciole-space-6);
+  }
+  .art-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--luciole-space-1);
+  }
+  .art-filter-label {
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-xs);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--luciole-muted);
+  }
+  .art-filter-select,
+  .art-filter-input {
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-sm);
+    border: 1px solid var(--luciole-rule);
+    border-radius: 4px;
+    padding: var(--luciole-space-2) var(--luciole-space-3);
+    background: var(--luciole-paper);
+    color: var(--luciole-ink);
+    min-width: 140px;
+  }
+  .art-filter-select:focus,
+  .art-filter-input:focus {
+    outline: 2px solid var(--luciole-accent);
+    outline-offset: 1px;
+    border-color: var(--luciole-accent);
+  }
+  .art-filter-btn {
+    font-family: var(--luciole-sans);
+    font-weight: 500;
+    font-size: var(--luciole-text-xs);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--luciole-ink);
+    background: transparent;
+    color: var(--luciole-ink);
+    padding: var(--luciole-space-2) var(--luciole-space-4);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    align-self: flex-end;
+  }
+  .art-filter-btn:hover {
+    background: var(--luciole-ink);
+    color: var(--luciole-paper);
+  }
+
+  /* Count */
+  .art-count {
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-sm);
+    color: var(--luciole-muted);
+    margin-bottom: var(--luciole-space-4);
+  }
+
+  /* Article cards */
+  .art-list { list-style: none; padding: 0; margin: 0; }
+
+  .art-card {
+    padding: var(--luciole-space-5) 0;
+    border-bottom: var(--luciole-rule-thin);
+  }
+  .art-card:first-child { padding-top: 0; }
+
+  .art-card-header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--luciole-space-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--luciole-space-2);
+  }
+  .art-card-title {
+    font-family: var(--luciole-serif);
+    font-weight: 700;
+    font-size: var(--luciole-text-base);
+    color: var(--luciole-ink);
+    text-decoration: none;
+    line-height: 1.3;
+  }
+  .art-card-title:hover { text-decoration: underline; }
+
+  .art-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 12px;
+    font-family: var(--luciole-sans);
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .art-card-resume {
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-sm);
+    color: var(--luciole-ink-soft);
+    line-height: 1.5;
+    margin-bottom: var(--luciole-space-2);
+  }
+  .art-card-meta {
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-xs);
+    color: var(--luciole-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--luciole-space-3);
+  }
+  .art-stars { letter-spacing: 1px; }
+
+  /* Load more */
+  .art-load-more {
+    text-align: center;
+    padding: var(--luciole-space-8) 0;
+  }
+  .art-load-btn {
+    font-family: var(--luciole-sans);
+    font-weight: 500;
+    font-size: var(--luciole-text-xs);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--luciole-ink);
+    background: transparent;
+    color: var(--luciole-ink);
+    padding: var(--luciole-space-3) var(--luciole-space-8);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .art-load-btn:hover {
+    background: var(--luciole-ink);
+    color: var(--luciole-paper);
+  }
+  .art-load-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .art-load-btn:disabled:hover {
+    background: transparent;
+    color: var(--luciole-ink);
+  }
+
+  /* Empty */
+  .art-empty {
+    text-align: center;
+    padding: var(--luciole-space-16) var(--luciole-space-8);
+  }
+  .art-empty h3 {
+    font-family: var(--luciole-serif);
+    font-weight: 700;
+    font-size: var(--luciole-text-xl);
+    color: var(--luciole-ink);
+    margin-bottom: var(--luciole-space-2);
+  }
+  .art-empty p { color: var(--luciole-muted); }
+
+  @media (max-width: 768px) {
+    .art-filters { flex-direction: column; align-items: stretch; }
+    .art-filter-select, .art-filter-input { min-width: 100%; }
+    .art-filter-btn { align-self: stretch; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="sr-only">Articles</h1>
+<h2 class="art-section">Articles · Veille Technologique</h2>
+
+<!-- Filters -->
+<div class="art-filters">
+  <div class="art-filter-group">
+    <label class="art-filter-label" for="f-categorie">Categorie</label>
+    <select id="f-categorie" class="art-filter-select">
+      <option value="">Toutes</option>
+    </select>
+  </div>
+  <div class="art-filter-group">
+    <label class="art-filter-label" for="f-date-min">Date min</label>
+    <input type="date" id="f-date-min" class="art-filter-input">
+  </div>
+  <div class="art-filter-group">
+    <label class="art-filter-label" for="f-date-max">Date max</label>
+    <input type="date" id="f-date-max" class="art-filter-input">
+  </div>
+  <div class="art-filter-group">
+    <label class="art-filter-label" for="f-pertinence">Pertinence min</label>
+    <select id="f-pertinence" class="art-filter-select">
+      <option value="5">5+</option>
+      <option value="6">6+</option>
+      <option value="7">7+</option>
+      <option value="8">8+</option>
+      <option value="9">9+</option>
+      <option value="10">10</option>
+    </select>
+  </div>
+  <div class="art-filter-group">
+    <label class="art-filter-label" for="f-tri">Tri</label>
+    <select id="f-tri" class="art-filter-select">
+      <option value="pertinence">Pertinence</option>
+      <option value="date">Date</option>
+    </select>
+  </div>
+  <button class="art-filter-btn" id="btn-apply">Appliquer</button>
+</div>
+
+<!-- Count -->
+<div class="art-count" id="art-count"></div>
+
+<!-- Article list -->
+<ul class="art-list" id="art-list"></ul>
+
+<!-- Load more -->
+<div class="art-load-more" id="art-load-more" hidden>
+  <button class="art-load-btn" id="btn-load-more">Charger plus</button>
+</div>
+
+<!-- Empty state -->
+<div class="art-empty" id="art-empty" hidden>
+  <h3>Aucun article</h3>
+  <p>Aucun article ne correspond aux filtres selectionnes.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  var LIMIT = 20;
+  var offset = 0;
+  var totalCount = 0;
+
+  var list = document.getElementById('art-list');
+  var countEl = document.getElementById('art-count');
+  var loadMoreWrap = document.getElementById('art-load-more');
+  var btnLoadMore = document.getElementById('btn-load-more');
+  var emptyEl = document.getElementById('art-empty');
+  var btnApply = document.getElementById('btn-apply');
+
+  var fCategorie = document.getElementById('f-categorie');
+  var fDateMin = document.getElementById('f-date-min');
+  var fDateMax = document.getElementById('f-date-max');
+  var fPertinence = document.getElementById('f-pertinence');
+  var fTri = document.getElementById('f-tri');
+
+  // Badge colors (mirrors _COULEURS_CAT in tools/email.py)
+  var COLORS = {
+    'ia': '#6366f1',
+    'cloud': '#0ea5e9',
+    'cybersecurite': '#ef4444',
+    'cybersécurité': '#ef4444',
+    'devops': '#f59e0b',
+    'donnees': '#10b981',
+    'données': '#10b981',
+    'infrastructure': '#8b5cf6'
+  };
+  var DEFAULT_COLOR = '#64748b';
+
+  function badgeColor(cat) {
+    var lower = (cat || '').toLowerCase();
+    for (var key in COLORS) {
+      if (lower.indexOf(key) !== -1) return COLORS[key];
+    }
+    return DEFAULT_COLOR;
+  }
+
+  function stars(p) {
+    var n = Math.min(Math.max(parseInt(p) || 0, 0), 10);
+    var full = Math.round(n / 2);
+    var s = '';
+    for (var i = 0; i < full; i++) s += '\u2605';
+    for (var j = full; j < 5; j++) s += '\u2606';
+    return s;
+  }
+
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function buildParams() {
+    var p = new URLSearchParams();
+    if (fCategorie.value) p.set('categorie', fCategorie.value);
+    if (fDateMin.value) p.set('date_min', fDateMin.value);
+    if (fDateMax.value) p.set('date_max', fDateMax.value);
+    p.set('pertinence_min', fPertinence.value);
+    p.set('tri', fTri.value);
+    p.set('offset', offset.toString());
+    p.set('limit', LIMIT.toString());
+    return p.toString();
+  }
+
+  function renderArticle(a) {
+    var cat = a.categorie || 'Autre';
+    var color = badgeColor(cat);
+    var resume = (a.resume || '').substring(0, 200);
+    var datePub = (a.date_publication || '').substring(0, 10);
+
+    return '<li class="art-card">' +
+      '<div class="art-card-header">' +
+        '<a href="' + esc(a.lien || '#') + '" class="art-card-title" target="_blank" rel="noopener">' + esc(a.titre || 'Sans titre') + '</a>' +
+        '<span class="art-badge" style="background:' + color + '">' + esc(cat) + '</span>' +
+      '</div>' +
+      '<div class="art-card-resume">' + esc(resume) + (resume.length >= 200 ? '&hellip;' : '') + '</div>' +
+      '<div class="art-card-meta">' +
+        '<span class="art-stars" style="color:' + color + '">' + stars(a.pertinence) + '</span>' +
+        '<span>' + esc(a.pertinence + '/10') + '</span>' +
+        '<span>' + esc(a.source || '') + '</span>' +
+        (datePub ? '<span>' + esc(datePub) + '</span>' : '') +
+      '</div>' +
+    '</li>';
+  }
+
+  async function loadArticles(append) {
+    if (!append) {
+      offset = 0;
+      list.innerHTML = '';
+    }
+    btnLoadMore.disabled = true;
+
+    try {
+      var res = await fetch('/articles?' + buildParams());
+      if (!res.ok) throw new Error('API error');
+      var data = await res.json();
+
+      totalCount = data.total;
+      countEl.textContent = totalCount + ' article' + (totalCount !== 1 ? 's' : '');
+
+      if (data.articles.length === 0 && !append) {
+        emptyEl.hidden = false;
+        loadMoreWrap.hidden = true;
+        return;
+      }
+
+      emptyEl.hidden = true;
+      var html = '';
+      for (var i = 0; i < data.articles.length; i++) {
+        html += renderArticle(data.articles[i]);
+      }
+
+      if (append) {
+        list.insertAdjacentHTML('beforeend', html);
+      } else {
+        list.innerHTML = html;
+      }
+
+      loadMoreWrap.hidden = !data.has_more;
+      btnLoadMore.disabled = false;
+    } catch (e) {
+      countEl.textContent = 'Erreur de chargement';
+      emptyEl.hidden = true;
+      loadMoreWrap.hidden = true;
+    }
+  }
+
+  // Load categories for dropdown
+  async function loadCategories() {
+    try {
+      var res = await fetch('/articles/categories');
+      if (!res.ok) return;
+      var data = await res.json();
+      for (var i = 0; i < data.categories.length; i++) {
+        var opt = document.createElement('option');
+        opt.value = data.categories[i];
+        opt.textContent = data.categories[i];
+        fCategorie.appendChild(opt);
+      }
+    } catch (e) {
+      // silently ignore
+    }
+  }
+
+  // Events
+  btnApply.addEventListener('click', function () { loadArticles(false); });
+  btnLoadMore.addEventListener('click', function () {
+    offset += LIMIT;
+    loadArticles(true);
+  });
+
+  // Init
+  loadCategories();
+  loadArticles(false);
+})();
+</script>
+{% endblock %}

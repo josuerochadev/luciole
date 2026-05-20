@@ -48,6 +48,7 @@ from database import (
     get_conversation_messages,
     add_message,
     delete_conversation,
+    purge_old_messages,
     update_conversation_title,
     save_response_feedback,
     get_response_feedback_stats,
@@ -149,13 +150,22 @@ def _cleanup_expired_uploads():
 
 
 async def _periodic_cleanup():
-    """Tâche de fond pour nettoyer les uploads expirés."""
+    """Tâche de fond pour nettoyer les uploads expirés et purger les vieilles données."""
     while True:
         await asyncio.sleep(600)  # Toutes les 10 minutes
         try:
             _cleanup_expired_uploads()
         except Exception as e:
             logger.error(f"[Upload] Erreur nettoyage : {e}")
+
+        # Purge RGPD des conversations anciennes (1x par cycle)
+        try:
+            from config import RETENTION_MESSAGES_JOURS
+            deleted = purge_old_messages(RETENTION_MESSAGES_JOURS)
+            if deleted:
+                logger.info(f"[RGPD] Purge : {deleted} conversation(s) > {RETENTION_MESSAGES_JOURS}j supprimée(s)")
+        except Exception as e:
+            logger.error(f"[RGPD] Erreur purge messages : {e}")
 
 
 # ---------------------------------------------------------------------------

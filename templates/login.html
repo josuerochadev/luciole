@@ -58,6 +58,12 @@
         <label for="register-password" class="t-eyebrow">Mot de passe</label>
         <input type="password" id="register-password" class="luciole-auth-input" placeholder="6 caracteres minimum" required autocomplete="new-password" minlength="6">
       </div>
+      <div class="luciole-auth-consent">
+        <label class="luciole-auth-consent-label">
+          <input type="checkbox" id="register-consent" required>
+          <span>J'accepte la <a href="/privacy" target="_blank">politique de confidentialite</a> et les <a href="/terms" target="_blank">CGU</a>.</span>
+        </label>
+      </div>
       <div class="luciole-auth-error" id="register-error" role="alert" hidden></div>
       <button type="submit" class="luciole-auth-submit">
         Creer un compte <span class="luciole-submit-arrow" aria-hidden="true">&rarr;</span>
@@ -158,6 +164,12 @@
 
     if (password.length < 6) {
       showError(registerError, 'Le mot de passe doit contenir au moins 6 caracteres.');
+      return;
+    }
+
+    var consent = document.getElementById('register-consent');
+    if (!consent.checked) {
+      showError(registerError, 'Vous devez accepter la politique de confidentialite et les CGU.');
       return;
     }
 

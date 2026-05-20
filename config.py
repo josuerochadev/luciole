@@ -152,6 +152,7 @@ MAGIC_BYTES = {
 # --- Rétention des données (en jours) ---
 RETENTION_ARTICLES_JOURS = 90
 RETENTION_LOGS_JOURS = 30
+RETENTION_MESSAGES_JOURS = 180
 
 # --- Configuration email ---
 EMAIL_EXPEDITEUR = os.getenv("EMAIL_EXPEDITEUR", "veille@example.com")

@@ -411,6 +411,45 @@ def export_user_data(user_id: str) -> dict:
         conn.close()
 
 
+def purge_old_messages(retention_days: int = 180) -> int:
+    """Supprime les messages et conversations plus anciens que retention_days (RGPD rétention).
+
+    Retourne le nombre de conversations supprimées.
+    """
+    from datetime import timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=retention_days)).isoformat()
+    conn = _get_connection()
+    try:
+        cur = _cur(conn)
+
+        # Feedbacks liés aux vieux messages
+        cur.execute("""
+            DELETE FROM response_feedback
+            WHERE message_id IN (
+                SELECT m.id FROM messages m
+                JOIN conversations c ON m.conversation_id = c.id
+                WHERE c.updated_at < %s
+            )
+        """, (cutoff,))
+
+        # Mémoire conversationnelle liée aux vieilles conversations
+        cur.execute("""
+            DELETE FROM memory_conversations
+            WHERE session_id IN (
+                SELECT id FROM conversations WHERE updated_at < %s
+            )
+        """, (cutoff,))
+
+        # Conversations (messages cascadent via ON DELETE CASCADE)
+        cur.execute("DELETE FROM conversations WHERE updated_at < %s", (cutoff,))
+        deleted = cur.rowcount
+
+        conn.commit()
+        return deleted
+    finally:
+        conn.close()
+
+
 # init_db() est appelé explicitement au démarrage de l'application (api.py lifespan)
 # et ne doit PAS être exécuté à l'import pour éviter des connexions réseau non désirées
 # (tests, CI/CD sans DATABASE_URL, imports isolés).

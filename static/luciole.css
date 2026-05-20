@@ -1496,6 +1496,48 @@ body.chat-active .luciole-footer {
   transform: scale(0.98);
 }
 
+.luciole-auth-consent {
+  margin: var(--luciole-space-4) 0;
+}
+
+.luciole-auth-consent-label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--luciole-space-2);
+  font-family: var(--luciole-sans);
+  font-size: var(--luciole-text-sm);
+  color: var(--luciole-muted);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.luciole-auth-consent-label input[type="checkbox"] {
+  margin-top: 2px;
+  accent-color: var(--luciole-accent);
+  flex-shrink: 0;
+}
+
+.luciole-auth-consent-label a {
+  color: var(--luciole-accent);
+  text-decoration: underline;
+}
+
+.luciole-legal-section {
+  margin-bottom: var(--luciole-space-10);
+}
+
+.luciole-legal-section h2 {
+  margin-bottom: var(--luciole-space-4);
+}
+
+.luciole-legal-section ul {
+  margin-top: var(--luciole-space-3);
+}
+
+.luciole-legal-section li {
+  margin-bottom: var(--luciole-space-2);
+}
+
 /* User info in masthead */
 .luciole-masthead-right {
   display: flex;

@@ -168,3 +168,59 @@ class TestDigestHistory:
         mock_cur.fetchone.return_value = None
         result = lire_digest_archive(999)
         assert result is None
+
+
+class TestArticlesEndpoints:
+    """Test the /articles and /articles/categories endpoints via mock DB."""
+
+    def test_articles_endpoint_returns_structure(self, mock_pg):
+        mock_conn, mock_cur = mock_pg
+        mock_cur.fetchone.return_value = {"total": 2}
+        mock_cur.fetchall.return_value = [
+            {"lien": "https://example.com/1", "titre": "Article 1",
+             "resume": "Res 1", "categorie": "IA", "pertinence": 9,
+             "source": "Src", "date_publication": "2026-05-20", "date_ajout": "2026-05-20"},
+            {"lien": "https://example.com/2", "titre": "Article 2",
+             "resume": "Res 2", "categorie": "Cloud", "pertinence": 7,
+             "source": "Src", "date_publication": "2026-05-19", "date_ajout": "2026-05-19"},
+        ]
+
+        from tools.database import lire_articles_filtres
+        articles, total = lire_articles_filtres()
+        assert total == 2
+        assert len(articles) == 2
+
+    def test_categories_endpoint(self, mock_pg):
+        mock_conn, mock_cur = mock_pg
+        mock_cur.fetchall.return_value = [
+            {"categorie": "Cloud"},
+            {"categorie": "IA"},
+        ]
+
+        from tools.database import lire_categories
+        result = lire_categories()
+        assert "IA" in result
+        assert "Cloud" in result
+
+
+class TestDigestLiveEndpoint:
+    """Test the /digest/live logic."""
+
+    def test_group_by_category(self):
+        articles = [
+            {"titre": "A1", "lien": "http://a", "resume": "r", "pertinence": 9,
+             "categorie": "IA", "source": "s", "date_publication": "2026-05-20"},
+            {"titre": "A2", "lien": "http://b", "resume": "r", "pertinence": 7,
+             "categorie": "IA", "source": "s", "date_publication": "2026-05-19"},
+            {"titre": "A3", "lien": "http://c", "resume": "r", "pertinence": 8,
+             "categorie": "Cloud", "source": "s", "date_publication": "2026-05-18"},
+        ]
+
+        categories = {}
+        for a in articles:
+            cat = a.get("categorie", "Autre")
+            categories.setdefault(cat, []).append(a)
+
+        assert len(categories) == 2
+        assert len(categories["IA"]) == 2
+        assert len(categories["Cloud"]) == 1

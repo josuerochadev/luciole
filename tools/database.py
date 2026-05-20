@@ -547,3 +547,70 @@ def ajouter_log(niveau: str, message: str, extra: dict = None) -> None:
     }
     with open(LOGS_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps(entree, ensure_ascii=False) + "\n")
+
+
+# ---------------------------------------------------------------------------
+# Digest history — PostgreSQL
+# ---------------------------------------------------------------------------
+
+def _init_digest_history_table(conn) -> None:
+    """Cree la table digest_history si elle n'existe pas."""
+    cur = _cur(conn)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS digest_history (
+            id            SERIAL PRIMARY KEY,
+            sent_at       TEXT NOT NULL,
+            recipients    TEXT[] NOT NULL DEFAULT '{}',
+            nb_articles   INTEGER NOT NULL DEFAULT 0,
+            html_content  TEXT NOT NULL DEFAULT ''
+        )
+    """)
+    conn.commit()
+
+
+def enregistrer_envoi_pg(destinataires: list[str], nb_articles: int, html_content: str = "") -> None:
+    """Enregistre un envoi de digest dans PostgreSQL."""
+    conn = _pg_connect()
+    try:
+        _init_digest_history_table(conn)
+        cur = _cur(conn)
+        cur.execute(
+            "INSERT INTO digest_history (sent_at, recipients, nb_articles, html_content)"
+            " VALUES (%s, %s, %s, %s)",
+            (datetime.now(timezone.utc).isoformat(), destinataires, nb_articles, html_content),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    logger.info(f"[Digest] Envoi enregistre en PG : {nb_articles} articles, {len(destinataires)} dest.")
+
+
+def lire_historique_digest() -> list[dict]:
+    """Retourne l'historique des envois de digest depuis PostgreSQL."""
+    conn = _pg_connect()
+    try:
+        _init_digest_history_table(conn)
+        cur = _cur(conn)
+        cur.execute(
+            "SELECT id, sent_at, recipients, nb_articles"
+            " FROM digest_history ORDER BY id DESC LIMIT 50"
+        )
+        return [dict(r) for r in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def lire_digest_archive(digest_id: int) -> str | None:
+    """Retourne le HTML archive d'un digest, ou None si introuvable."""
+    conn = _pg_connect()
+    try:
+        _init_digest_history_table(conn)
+        cur = _cur(conn)
+        cur.execute(
+            "SELECT html_content FROM digest_history WHERE id = %s",
+            (digest_id,),
+        )
+        row = cur.fetchone()
+        return row["html_content"] if row else None
+    finally:
+        conn.close()

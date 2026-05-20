@@ -127,3 +127,44 @@ class TestLireCategories:
 
         result = lire_categories()
         assert result == []
+
+
+class TestDigestHistory:
+    def test_init_creates_table(self, mock_pg):
+        from tools.database import _init_digest_history_table
+        mock_conn, mock_cur = mock_pg
+        _init_digest_history_table(mock_conn)
+        create_sql = mock_cur.execute.call_args[0][0]
+        assert "digest_history" in create_sql
+        assert "SERIAL PRIMARY KEY" in create_sql
+
+    def test_enregistrer_envoi_pg(self, mock_pg):
+        from tools.database import enregistrer_envoi_pg
+        mock_conn, mock_cur = mock_pg
+        enregistrer_envoi_pg(["a@b.com"], 5, "<html>test</html>")
+        insert_sql = mock_cur.execute.call_args_list[-1][0][0]
+        assert "INSERT INTO digest_history" in insert_sql
+
+    def test_lire_historique_digest(self, mock_pg):
+        from tools.database import lire_historique_digest
+        mock_conn, mock_cur = mock_pg
+        mock_cur.fetchall.return_value = [
+            {"id": 1, "sent_at": "2026-05-20", "recipients": ["a@b.com"], "nb_articles": 5}
+        ]
+        result = lire_historique_digest()
+        assert len(result) == 1
+        assert result[0]["id"] == 1
+
+    def test_lire_digest_archive(self, mock_pg):
+        from tools.database import lire_digest_archive
+        mock_conn, mock_cur = mock_pg
+        mock_cur.fetchone.return_value = {"html_content": "<html>archived</html>"}
+        result = lire_digest_archive(1)
+        assert result == "<html>archived</html>"
+
+    def test_lire_digest_archive_not_found(self, mock_pg):
+        from tools.database import lire_digest_archive
+        mock_conn, mock_cur = mock_pg
+        mock_cur.fetchone.return_value = None
+        result = lire_digest_archive(999)
+        assert result is None

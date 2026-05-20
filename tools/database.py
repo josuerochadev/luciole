@@ -306,15 +306,19 @@ def lire_categories() -> list[str]:
         conn.close()
 
 
-def enregistrer_envoi(destinataires: list[str], nb_articles: int) -> None:
-    """Enregistre un envoi email dans l'historique."""
-    historique = charger_json(HISTORIQUE_FILE)
-    historique.append({
-        "date": datetime.now(timezone.utc).isoformat(),
-        "destinataires": destinataires,
-        "nb_articles": nb_articles,
-    })
-    sauvegarder_json(HISTORIQUE_FILE, historique)
+def enregistrer_envoi(destinataires: list[str], nb_articles: int, html_content: str = "") -> None:
+    """Enregistre un envoi de digest — PG principal, JSON fallback."""
+    try:
+        enregistrer_envoi_pg(destinataires, nb_articles, html_content)
+    except Exception as e:
+        logger.warning(f"[Digest] PG echoue, fallback JSON : {e}")
+        historique = charger_json(HISTORIQUE_FILE)
+        historique.append({
+            "date": datetime.now(timezone.utc).isoformat(),
+            "destinataires": destinataires,
+            "nb_articles": nb_articles,
+        })
+        sauvegarder_json(HISTORIQUE_FILE, historique)
 
 
 def archiver_articles_traites(articles: list[dict]) -> None:

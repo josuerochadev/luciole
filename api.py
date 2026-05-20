@@ -589,18 +589,28 @@ def digest_stats(user=Depends(get_current_user)):
     """Stats rapides pour la page digest."""
     articles = selectionner_articles(nb_max=100)
     categories = set(a.get("categorie", "Autre") for a in articles)
-    historique = charger_json(HISTORIQUE_FILE)
+    from tools.database import lire_historique_digest
+    try:
+        historique = lire_historique_digest()
+        nb_envois = len(historique)
+    except Exception:
+        historique = charger_json(HISTORIQUE_FILE)
+        nb_envois = len(historique)
     return {
         "nb_articles": len(articles),
         "nb_categories": len(categories),
-        "nb_envois": len(historique),
+        "nb_envois": nb_envois,
     }
 
 
 @app.get("/digest/history")
 def digest_history(user=Depends(get_current_user)):
-    """Historique des envois de digest."""
-    historique = charger_json(HISTORIQUE_FILE)
+    """Historique des envois de digest depuis PostgreSQL."""
+    from tools.database import lire_historique_digest
+    try:
+        historique = lire_historique_digest()
+    except Exception:
+        historique = charger_json(HISTORIQUE_FILE)
     return {"historique": historique}
 
 

@@ -40,6 +40,8 @@ from config import HISTORIQUE_FILE, UPLOAD_DIR, MAX_FILE_SIZE, ALLOWED_TYPES, UP
 from database import (
     create_conversation,
     create_user,
+    delete_user_cascade,
+    export_user_data,
     get_user_by_email,
     list_conversations,
     get_conversation,
@@ -292,6 +294,33 @@ async def auth_me(user=Depends(get_current_user)):
 
 
 # ---------------------------------------------------------------------------
+# RGPD endpoints — droit d'accès, portabilité, effacement
+# ---------------------------------------------------------------------------
+
+@app.get("/users/me/export")
+async def user_export(user=Depends(get_current_user)):
+    """RGPD : exporte toutes les données de l'utilisateur au format JSON."""
+    data = export_user_data(user["id"])
+    if not data:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
+    return JSONResponse(
+        content=data,
+        headers={"Content-Disposition": f'attachment; filename="luciole-export-{user["id"][:8]}.json"'},
+    )
+
+
+@app.delete("/users/me")
+async def user_delete(user=Depends(get_current_user)):
+    """RGPD : supprime le compte et toutes les données associées (irréversible)."""
+    deleted = delete_user_cascade(user["id"])
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
+    response = JSONResponse(content={"ok": True, "message": "Compte et données supprimés définitivement."})
+    response.delete_cookie(key=COOKIE_NAME)
+    return response
+
+
+# ---------------------------------------------------------------------------
 # Pages HTML (protégées par auth)
 # ---------------------------------------------------------------------------
 
@@ -314,6 +343,16 @@ async def landing(request: Request, user=Depends(get_optional_user)):
 @app.get("/about", response_class=HTMLResponse)
 async def about(request: Request, user=Depends(get_optional_user)):
     return templates.TemplateResponse(request, "about.html", {"active_page": "about", "user": user})
+
+
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy(request: Request, user=Depends(get_optional_user)):
+    return templates.TemplateResponse(request, "privacy.html", {"active_page": "privacy", "user": user})
+
+
+@app.get("/terms", response_class=HTMLResponse)
+async def terms(request: Request, user=Depends(get_optional_user)):
+    return templates.TemplateResponse(request, "terms.html", {"active_page": "terms", "user": user})
 
 
 @app.get("/dashboard", response_class=HTMLResponse)

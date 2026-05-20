@@ -317,6 +317,100 @@ def get_response_feedback_stats() -> dict:
         conn.close()
 
 
+def delete_user_cascade(user_id: str) -> bool:
+    """Supprime un utilisateur et toutes ses données (RGPD droit à l'effacement).
+
+    Cascade : response_feedback → messages → conversations → memory → user.
+    """
+    conn = _get_connection()
+    try:
+        cur = _cur(conn)
+
+        # 1. Supprimer les feedbacks liés aux messages de l'utilisateur
+        cur.execute("""
+            DELETE FROM response_feedback
+            WHERE message_id IN (
+                SELECT m.id FROM messages m
+                JOIN conversations c ON m.conversation_id = c.id
+                WHERE c.user_id = %s
+            )
+        """, (user_id,))
+
+        # 2. Supprimer la mémoire conversationnelle (avant les conversations !)
+        cur.execute("""
+            DELETE FROM memory_conversations
+            WHERE session_id IN (
+                SELECT id FROM conversations WHERE user_id = %s
+            )
+        """, (user_id,))
+
+        # 3. Supprimer les conversations (messages cascadent via ON DELETE CASCADE)
+        cur.execute("DELETE FROM conversations WHERE user_id = %s", (user_id,))
+
+        # 4. Supprimer l'utilisateur
+        cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        deleted = cur.rowcount > 0
+
+        conn.commit()
+        return deleted
+    finally:
+        conn.close()
+
+
+def export_user_data(user_id: str) -> dict:
+    """Exporte toutes les données d'un utilisateur (RGPD droit d'accès / portabilité)."""
+    conn = _get_connection()
+    try:
+        cur = _cur(conn)
+
+        # Profil
+        cur.execute(
+            "SELECT id, email, display_name, created_at FROM users WHERE id = %s",
+            (user_id,),
+        )
+        user = cur.fetchone()
+        if not user:
+            return {}
+
+        # Conversations + messages
+        cur.execute(
+            "SELECT id, title, created_at, updated_at FROM conversations WHERE user_id = %s ORDER BY created_at",
+            (user_id,),
+        )
+        conversations = []
+        for conv in cur.fetchall():
+            conv_dict = dict(conv)
+            cur.execute(
+                "SELECT id, role, content, tokens_used, latency_ms, created_at"
+                " FROM messages WHERE conversation_id = %s ORDER BY created_at",
+                (conv_dict["id"],),
+            )
+            conv_dict["messages"] = [dict(m) for m in cur.fetchall()]
+
+            # Feedbacks sur les messages de cette conversation
+            message_ids = [m["id"] for m in conv_dict["messages"]]
+            if message_ids:
+                placeholders = ",".join(["%s"] * len(message_ids))
+                cur.execute(
+                    f"SELECT id, message_id, rating, comment, created_at"
+                    f" FROM response_feedback WHERE message_id IN ({placeholders})",
+                    message_ids,
+                )
+                conv_dict["feedbacks"] = [dict(f) for f in cur.fetchall()]
+            else:
+                conv_dict["feedbacks"] = []
+
+            conversations.append(conv_dict)
+
+        return {
+            "user": dict(user),
+            "conversations": conversations,
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+        }
+    finally:
+        conn.close()
+
+
 # init_db() est appelé explicitement au démarrage de l'application (api.py lifespan)
 # et ne doit PAS être exécuté à l'import pour éviter des connexions réseau non désirées
 # (tests, CI/CD sans DATABASE_URL, imports isolés).

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section style="padding: var(--luciole-space-16) 0; max-width: 720px;">
+
+  <span class="t-eyebrow-accent">Juridique</span>
+  <h1 class="t-display-md" style="margin: var(--luciole-space-4) 0 var(--luciole-space-8);">
+    Politique de confidentialite
+  </h1>
+  <p class="t-meta" style="color: var(--luciole-muted); margin-bottom: var(--luciole-space-12);">
+    Derniere mise a jour : 20 mai 2026
+  </p>
+
+  <!-- Intro -->
+  <div class="luciole-legal-section">
+    <p class="t-body" style="color: var(--luciole-ink-soft);">
+      luciole_ est un projet personnel a but educatif, developpe dans le cadre d'une formation en intelligence artificielle (AJC Formation).
+      Ce n'est pas un service commercial. Nous prenons neanmoins la protection de vos donnees au serieux.
+    </p>
+  </div>
+
+  <!-- 1. Responsable -->
+  <div class="luciole-legal-section">
+    <h2 class="t-headline-sm">1. Responsable du traitement</h2>
+    <p class="t-body" style="color: var(--luciole-ink-soft);">
+      <strong>Josue Xavier Rocha</strong><br>
+      Projet realise dans le cadre de la formation AJC Formation.<br>
+      Contact : <a href="https://github.com/josuerochadev">github.com/josuerochadev</a>
+    </p>
+  </div>
+
+  <!-- 2. Donnees collectees -->
+  <div class="luciole-legal-section">
+    <h2 class="t-headline-sm">2. Donnees collectees</h2>
+    <p class="t-body" style="color: var(--luciole-ink-soft);">
+      Lorsque vous creez un compte et utilisez luciole_, nous collectons :
+    </p>
+    <ul class="t-body" style="color: var(--luciole-ink-soft); padding-left: var(--luciole-space-6);">
+      <li><strong>Compte utilisateur</strong> : adresse email, nom d'affichage, mot de passe (stocke sous forme de hash bcrypt irreversible).</li>
+      <li><strong>Conversations</strong> : vos messages et les reponses de l'agent IA, horodates.</li>
+      <li><strong>Feedbacks</strong> : notes (pouce haut/bas) et commentaires optionnels sur les reponses.</li>
+    </ul>
+    <p class="t-body" style="color: var(--luciole-ink-soft);">
+      Nous ne collectons <strong>aucun cookie de tracking</strong>, <strong>aucune donnee de navigation</strong> et n'utilisons <strong>aucun outil d'analyse tiers</strong> (pas de Google Analytics, etc.).
+    </p>
+  </div>
+
+  <!-- 3. Finalites -->
+  <div class="luciole-legal-section">
+    <h2 class="t-headline-sm">3. Finalites du traitement</h2>
+    <ul class="t-body" style="color: var(--luciole-ink-soft); padding-left: var(--luciole-space-6);">
+      <li>Fournir le service de veille technologique conversationnel.</li>
+      <li>Conserver l'historique de vos conversations pour votre confort d'utilisation.</li>
+      <li>Ameliorer la qualite des reponses grace a vos feedbacks.</li>
+    </ul>
+    <p class="t-body" style="color: var(--luciole-ink-soft);">
+      <strong>Base legale</strong> : consentement (article 6.1.a du RGPD) — vous choisissez librement de creer un compte.
+    </p>
+  </div>
+
+  <!-- 4. Sous-traitants -->
+  <div class="luciole-legal-section">
+    <h2 class="t-headline-sm">4. Sous-traitants et transferts de donnees</h2>
+    <p class="t-body" style="color: var(--luciole-ink-soft);">
+      Vos messages sont transmis a <strong>Google Gemini API</strong> pour generer les reponses de l'agent.
+      Google traite ces donnees conformement a ses
+      <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">conditions d'utilisation de l'API Gemini</a>.
+    </p>
+    <ul class="t-body" style="color: var(--luciole-ink-soft); padding-left: var(--luciole-space-6);">
+      <li><strong>Hebergement</strong> : Railway (serveur applicatif), Neon (base de donnees PostgreSQL).</li>
+      <li><strong>IA</strong> : Google Gemini API (generation de reponses).</li>
+    </ul>
+  </div>
+
+  <!-- 5. Duree de conservation -->
+  <div class="luciole-legal-section">
+    <h2 class="t-headline-sm">5. Duree de conservation</h2>
+    <ul class="t-body" style="color: var(--luciole-ink-soft); padding-left: var(--luciole-space-6);">
+      <li><strong>Compte et conversations</strong> : conserves tant que votre compte est actif. Supprimes immediatement et definitivement sur demande.</li>
+      <li><strong>Articles de veille</strong> : archives automatiquement apres 90 jours.</li>
+      <li><strong>Logs techniques</strong> : purges automatiquement apres 30 jours.</li>
+    </ul>
+  </div>
+
+  <!-- 6. Vos droits -->
+  <div class="luciole-legal-section">
+    <h2 class="t-headline-sm">6. Vos droits (RGPD)</h2>
+    <p class="t-body" style="color: var(--luciole-ink-soft);">
+      Conformement au Reglement General sur la Protection des Donnees, vous disposez des droits suivants :
+    </p>
+    <ul class="t-body" style="color: var(--luciole-ink-soft); padding-left: var(--luciole-space-6);">
+      <li><strong>Droit d'acces</strong> : exportez toutes vos donnees au format JSON depuis votre compte.</li>
+      <li><strong>Droit de rectification</strong> : modifiez vos informations de profil a tout moment.</li>
+      <li><strong>Droit a l'effacement</strong> : supprimez votre compte et toutes vos donnees en un clic.</li>
+      <li><strong>Droit a la portabilite</strong> : telechargez vos donnees dans un format structure (JSON).</li>
+    </ul>
+    <p class="t-body" style="color: var(--luciole-ink-soft);">
+      Ces actions sont disponibles directement dans l'interface, sans avoir a nous contacter.
+      Pour toute autre demande, contactez-nous via
+      <a href="https://github.com/josuerochadev">GitHub</a>.
+    </p>
+  </div>
+
+  <!-- 7. Securite -->
+  <div class="luciole-legal-section">
+    <h2 class="t-headline-sm">7. Securite</h2>
+    <ul class="t-body" style="color: var(--luciole-ink-soft); padding-left: var(--luciole-space-6);">
+      <li>Mots de passe hashes avec bcrypt (irreversible).</li>
+      <li>Authentification par JWT en cookie HttpOnly + Secure + SameSite.</li>
+      <li>Communications chiffrees en HTTPS.</li>
+      <li>Protection contre les injections SQL et le prompt injection.</li>
+      <li>Limitation de debit (rate limiting) sur tous les endpoints.</li>
+    </ul>
+  </div>
+
+  <!-- 8. Cookies -->
+  <div class="luciole-legal-section">
+    <h2 class="t-headline-sm">8. Cookies</h2>
+    <p class="t-body" style="color: var(--luciole-ink-soft);">
+      luciole_ utilise un <strong>seul cookie technique</strong> (<code>access_token</code>) strictement necessaire au fonctionnement de l'authentification.
+      Aucun cookie de tracking ou publicitaire n'est utilise.
+      Ce cookie est exempt de consentement au titre de l'article 82 de la loi Informatique et Libertes.
+    </p>
+  </div>
+
+  <!-- Links -->
+  <div style="margin-top: var(--luciole-space-12); padding-top: var(--luciole-space-8); border-top: 1px solid var(--luciole-border);">
+    <a href="/terms" class="t-body" style="color: var(--luciole-accent);">
+      Conditions generales d'utilisation &rarr;
+    </a>
+  </div>
+
+</section>
+{% endblock %}

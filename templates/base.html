@@ -62,6 +62,7 @@
     </div>
     <nav class="luciole-nav" aria-label="Navigation principale">
       <a href="/" {% if active_page == "chat" %}class="active"{% endif %}>Chat</a>
+      <a href="/articles-page" {% if active_page == "articles" %}class="active"{% endif %}>Articles</a>
       <a href="/digest-page" {% if active_page == "digest" %}class="active"{% endif %}>Digest</a>
       <a href="/dashboard" {% if active_page == "dashboard" %}class="active"{% endif %}>Tableau de bord</a>
       <a href="/about" {% if active_page == "about" %}class="active"{% endif %}>À propos</a>

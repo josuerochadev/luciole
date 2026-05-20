@@ -270,7 +270,7 @@ def envoyer_rapport(
                 serveur.login(SMTP_USER, SMTP_PASSWORD)
             serveur.sendmail(EMAIL_EXPEDITEUR, destinataires, msg.as_bytes())
 
-        enregistrer_envoi(destinataires, len(articles))
+        enregistrer_envoi(destinataires, len(articles), html)
         logger.info(f"[Email] Rapport envoyé à {destinataires} — {len(articles)} articles.")
         return {
             "ok": True,

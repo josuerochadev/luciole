@@ -238,15 +238,87 @@ def lire_articles_actifs() -> list[dict]:
         conn.close()
 
 
-def enregistrer_envoi(destinataires: list[str], nb_articles: int) -> None:
-    """Enregistre un envoi email dans l'historique."""
-    historique = charger_json(HISTORIQUE_FILE)
-    historique.append({
-        "date": datetime.now(timezone.utc).isoformat(),
-        "destinataires": destinataires,
-        "nb_articles": nb_articles,
-    })
-    sauvegarder_json(HISTORIQUE_FILE, historique)
+def lire_articles_filtres(
+    categorie: str | None = None,
+    date_min: str | None = None,
+    date_max: str | None = None,
+    pertinence_min: int = 5,
+    tri: str = "pertinence",
+    offset: int = 0,
+    limit: int = 20,
+) -> tuple[list[dict], int]:
+    """
+    Retourne (articles, total_count) depuis PostgreSQL avec filtrage dynamique.
+    Filtre: archive = 0, pertinence >= pertinence_min.
+    Tri: ORDER BY pertinence DESC ou date_publication DESC.
+    """
+    conn = _pg_connect()
+    try:
+        _init_articles_table(conn)
+        cur = _cur(conn)
+
+        conditions = ["archive = 0", "pertinence >= %s"]
+        params: list = [pertinence_min]
+
+        if categorie:
+            conditions.append("categorie = %s")
+            params.append(categorie)
+        if date_min:
+            conditions.append("date_publication >= %s")
+            params.append(date_min)
+        if date_max:
+            conditions.append("date_publication <= %s")
+            params.append(date_max)
+
+        where = " AND ".join(conditions)
+
+        # Count total
+        cur.execute(f"SELECT COUNT(*) AS total FROM articles WHERE {where}", params)
+        total = cur.fetchone()["total"]
+
+        # Fetch page
+        order = "pertinence DESC" if tri == "pertinence" else "date_publication DESC"
+        cur.execute(
+            f"SELECT lien, titre, resume, categorie, pertinence, source,"
+            f"       date_publication, date_ajout"
+            f" FROM articles WHERE {where}"
+            f" ORDER BY {order} OFFSET %s LIMIT %s",
+            params + [offset, limit],
+        )
+        articles = [dict(r) for r in cur.fetchall()]
+        return articles, total
+    finally:
+        conn.close()
+
+
+def lire_categories() -> list[str]:
+    """Retourne la liste des categories distinctes des articles actifs."""
+    conn = _pg_connect()
+    try:
+        _init_articles_table(conn)
+        cur = _cur(conn)
+        cur.execute(
+            "SELECT DISTINCT categorie FROM articles"
+            " WHERE archive = 0 ORDER BY categorie"
+        )
+        return [row["categorie"] for row in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def enregistrer_envoi(destinataires: list[str], nb_articles: int, html_content: str = "") -> None:
+    """Enregistre un envoi de digest — PG principal, JSON fallback."""
+    try:
+        enregistrer_envoi_pg(destinataires, nb_articles, html_content)
+    except Exception as e:
+        logger.warning(f"[Digest] PG echoue, fallback JSON : {e}")
+        historique = charger_json(HISTORIQUE_FILE)
+        historique.append({
+            "date": datetime.now(timezone.utc).isoformat(),
+            "destinataires": destinataires,
+            "nb_articles": nb_articles,
+        })
+        sauvegarder_json(HISTORIQUE_FILE, historique)
 
 
 def archiver_articles_traites(articles: list[dict]) -> None:
@@ -479,3 +551,70 @@ def ajouter_log(niveau: str, message: str, extra: dict = None) -> None:
     }
     with open(LOGS_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps(entree, ensure_ascii=False) + "\n")
+
+
+# ---------------------------------------------------------------------------
+# Digest history — PostgreSQL
+# ---------------------------------------------------------------------------
+
+def _init_digest_history_table(conn) -> None:
+    """Cree la table digest_history si elle n'existe pas."""
+    cur = _cur(conn)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS digest_history (
+            id            SERIAL PRIMARY KEY,
+            sent_at       TEXT NOT NULL,
+            recipients    TEXT[] NOT NULL DEFAULT '{}',
+            nb_articles   INTEGER NOT NULL DEFAULT 0,
+            html_content  TEXT NOT NULL DEFAULT ''
+        )
+    """)
+    conn.commit()
+
+
+def enregistrer_envoi_pg(destinataires: list[str], nb_articles: int, html_content: str = "") -> None:
+    """Enregistre un envoi de digest dans PostgreSQL."""
+    conn = _pg_connect()
+    try:
+        _init_digest_history_table(conn)
+        cur = _cur(conn)
+        cur.execute(
+            "INSERT INTO digest_history (sent_at, recipients, nb_articles, html_content)"
+            " VALUES (%s, %s, %s, %s)",
+            (datetime.now(timezone.utc).isoformat(), destinataires, nb_articles, html_content),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    logger.info(f"[Digest] Envoi enregistre en PG : {nb_articles} articles, {len(destinataires)} dest.")
+
+
+def lire_historique_digest() -> list[dict]:
+    """Retourne l'historique des envois de digest depuis PostgreSQL."""
+    conn = _pg_connect()
+    try:
+        _init_digest_history_table(conn)
+        cur = _cur(conn)
+        cur.execute(
+            "SELECT id, sent_at, recipients, nb_articles"
+            " FROM digest_history ORDER BY id DESC LIMIT 50"
+        )
+        return [dict(r) for r in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def lire_digest_archive(digest_id: int) -> str | None:
+    """Retourne le HTML archive d'un digest, ou None si introuvable."""
+    conn = _pg_connect()
+    try:
+        _init_digest_history_table(conn)
+        cur = _cur(conn)
+        cur.execute(
+            "SELECT html_content FROM digest_history WHERE id = %s",
+            (digest_id,),
+        )
+        row = cur.fetchone()
+        return row["html_content"] if row else None
+    finally:
+        conn.close()

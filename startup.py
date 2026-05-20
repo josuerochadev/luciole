@@ -27,47 +27,57 @@ RAW_FILE = os.path.join(DATA_DIR, "articles_raw.json")
 LLM_WORKERS = 5
 
 
+def _db_has_articles() -> bool:
+    """Verifie si la table articles contient au moins 1 article actif."""
+    try:
+        from tools.database import lire_articles_actifs
+        return len(lire_articles_actifs()) > 0
+    except Exception:
+        return False
+
+
 def run():
-    # Vérifier si les articles pré-collectés existent
-    if not os.path.exists(RAW_FILE):
-        print("[startup] Pas de cache prebuild — lancement du pipeline complet...")
+    # Cas 1 : articles pre-collectes au build (prebuild.py)
+    if os.path.exists(RAW_FILE):
+        with open(RAW_FILE, "r", encoding="utf-8") as f:
+            articles = json.load(f)
+
+        print(f"[startup] {len(articles)} articles pre-collectes trouves.")
+
+        nouveaux = [a for a in articles if not article_deja_traite(a.get("lien", ""))]
+        print(f"[startup] {len(nouveaux)} nouveaux articles a enrichir.")
+
+        if not nouveaux:
+            print("[startup] Rien a faire, base deja a jour.")
+            return
+
+        print(f"[startup] Enrichissement LLM ({LLM_WORKERS} threads)...")
+        enrichis = []
+        done = 0
+        with ThreadPoolExecutor(max_workers=LLM_WORKERS) as pool:
+            futures = {pool.submit(enrichir_article, a): a for a in nouveaux}
+            for future in as_completed(futures):
+                done += 1
+                result = future.result()
+                if result:
+                    enrichis.append(result)
+                if done % 50 == 0:
+                    print(f"[startup] {done}/{len(nouveaux)} traites...")
+
+        print(f"[startup] {len(enrichis)} articles enrichis et pertinents.")
+        nb = sauvegarder_articles(enrichis)
+        print(f"[startup] {nb} articles sauvegardes et indexes.")
+        return
+
+    # Cas 2 : pas de cache prebuild et DB vide -> pipeline complet
+    if not _db_has_articles():
+        print("[startup] DB vide et pas de cache prebuild — lancement du pipeline complet...")
         from pipeline import run as pipeline_run
         pipeline_run(no_email=True)
         return
 
-    with open(RAW_FILE, "r", encoding="utf-8") as f:
-        articles = json.load(f)
-
-    print(f"[startup] {len(articles)} articles pré-collectés trouvés.")
-
-    # Filtrer les articles déjà en base
-    nouveaux = [a for a in articles if not article_deja_traite(a.get("lien", ""))]
-    print(f"[startup] {len(nouveaux)} nouveaux articles à enrichir.")
-
-    if not nouveaux:
-        print("[startup] Rien à faire, base déjà à jour.")
-        return
-
-    # Enrichissement LLM parallèle
-    print(f"[startup] Enrichissement LLM ({LLM_WORKERS} threads)...")
-
-    enrichis = []
-    done = 0
-    with ThreadPoolExecutor(max_workers=LLM_WORKERS) as pool:
-        futures = {pool.submit(enrichir_article, a): a for a in nouveaux}
-        for future in as_completed(futures):
-            done += 1
-            result = future.result()
-            if result:
-                enrichis.append(result)
-            if done % 50 == 0:
-                print(f"[startup] {done}/{len(nouveaux)} traités...")
-
-    print(f"[startup] {len(enrichis)} articles enrichis et pertinents.")
-
-    # Sauvegarde PostgreSQL + indexation RAG
-    nb = sauvegarder_articles(enrichis)
-    print(f"[startup] {nb} articles sauvegardés et indexés.")
+    # Cas 3 : DB deja peuplee, rien a faire
+    print("[startup] Base deja peuplee, pas de pipeline necessaire.")
 
 
 def _rebuild_rag_if_needed() -> None:

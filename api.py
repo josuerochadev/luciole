@@ -328,6 +328,25 @@ def health():
     return {"status": "ok"}
 
 
+@app.post("/veille/run")
+@limiter.limit("1/hour")
+def veille_run(request: Request, x_api_key: str | None = Header(default=None)):
+    """Lance le pipeline de veille en arriere-plan. Protege par X-API-Key."""
+    _verifier_api_key(x_api_key)
+    import threading
+    from pipeline import run as pipeline_run
+
+    def _run_pipeline():
+        try:
+            pipeline_run(no_email=True)
+            logger.info("[Veille] Pipeline termine avec succes.")
+        except Exception as e:
+            logger.error(f"[Veille] Pipeline echoue : {e}")
+
+    threading.Thread(target=_run_pipeline, daemon=True).start()
+    return {"ok": True, "message": "Pipeline lance en arriere-plan."}
+
+
 def _generate_title(question: str) -> str:
     """Génère un titre court pour une conversation à partir du 1er message."""
     try:
@@ -498,6 +517,55 @@ def conversation_update(conv_id: str, req: ConversationUpdateRequest, request: R
     return {"ok": True, "title": req.title}
 
 
+# ---------------------------------------------------------------------------
+# Articles endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/articles-page", response_class=HTMLResponse)
+async def articles_page(request: Request, user=Depends(get_current_user_page)):
+    if isinstance(user, RedirectResponse):
+        return user
+    return templates.TemplateResponse(request, "articles.html", {"active_page": "articles", "user": user})
+
+
+@app.get("/articles")
+def articles_list(
+    request: Request,
+    categorie: str | None = None,
+    date_min: str | None = None,
+    date_max: str | None = None,
+    pertinence_min: int = 5,
+    tri: str = "pertinence",
+    offset: int = 0,
+    limit: int = 20,
+    user=Depends(get_current_user),
+):
+    from tools.database import lire_articles_filtres
+    limit = min(limit, 100)
+    if tri not in ("pertinence", "date"):
+        tri = "pertinence"
+    articles, total = lire_articles_filtres(
+        categorie=categorie,
+        date_min=date_min,
+        date_max=date_max,
+        pertinence_min=pertinence_min,
+        tri=tri,
+        offset=offset,
+        limit=limit,
+    )
+    return {
+        "articles": articles,
+        "total": total,
+        "has_more": offset + limit < total,
+    }
+
+
+@app.get("/articles/categories")
+def articles_categories(request: Request, user=Depends(get_current_user)):
+    from tools.database import lire_categories
+    return {"categories": lire_categories()}
+
+
 @app.get("/metrics")
 def metrics(x_api_key: str | None = Header(default=None)):
     """Agrégats de monitoring (M5E5). Protégé par X-API-Key."""
@@ -540,19 +608,62 @@ def digest_stats(user=Depends(get_current_user)):
     """Stats rapides pour la page digest."""
     articles = selectionner_articles(nb_max=100)
     categories = set(a.get("categorie", "Autre") for a in articles)
-    historique = charger_json(HISTORIQUE_FILE)
+    from tools.database import lire_historique_digest
+    try:
+        historique = lire_historique_digest()
+        nb_envois = len(historique)
+    except Exception:
+        historique = charger_json(HISTORIQUE_FILE)
+        nb_envois = len(historique)
     return {
         "nb_articles": len(articles),
         "nb_categories": len(categories),
-        "nb_envois": len(historique),
+        "nb_envois": nb_envois,
     }
 
 
 @app.get("/digest/history")
 def digest_history(user=Depends(get_current_user)):
-    """Historique des envois de digest."""
-    historique = charger_json(HISTORIQUE_FILE)
+    """Historique des envois de digest depuis PostgreSQL."""
+    from tools.database import lire_historique_digest
+    try:
+        historique = lire_historique_digest()
+    except Exception:
+        historique = charger_json(HISTORIQUE_FILE)
     return {"historique": historique}
+
+
+@app.get("/digest/live")
+def digest_live(user=Depends(get_current_user)):
+    """Retourne les meilleurs articles actuels groupes par categorie."""
+    from datetime import datetime, timezone
+    articles = selectionner_articles(nb_max=100)
+    categories: dict[str, list[dict]] = {}
+    for a in articles:
+        cat = a.get("categorie", "Autre")
+        categories.setdefault(cat, []).append({
+            "titre": a.get("titre", ""),
+            "lien": a.get("lien", ""),
+            "resume": a.get("resume", a.get("resume_brut", ""))[:300],
+            "pertinence": int(a.get("pertinence", 0)),
+            "source": a.get("source", ""),
+            "date_publication": a.get("date_publication", "")[:10],
+        })
+    return {
+        "categories": categories,
+        "total": len(articles),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/digest/archive/{digest_id}")
+def digest_archive(digest_id: int, user=Depends(get_current_user)):
+    """Retourne le HTML archive d'un digest passe."""
+    from tools.database import lire_digest_archive
+    html = lire_digest_archive(digest_id)
+    if html is None:
+        raise HTTPException(status_code=404, detail="Digest introuvable.")
+    return HTMLResponse(content=html)
 
 
 # ---------------------------------------------------------------------------

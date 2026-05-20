@@ -141,15 +141,18 @@ class TestHistoriqueEtLogs:
     """Tests d'enregistrement d'envoi et de logs."""
 
     def test_enregistrer_envoi(self, data_dir):
-        enregistrer_envoi(["a@b.com"], 5)
+        # Mock PG to fail so JSON fallback is exercised
+        with patch("tools.database.enregistrer_envoi_pg", side_effect=Exception("no PG")):
+            enregistrer_envoi(["a@b.com"], 5)
         hist = charger_json(str(data_dir / "historique_envois.json"))
         assert len(hist) == 1
         assert hist[0]["nb_articles"] == 5
         assert "date" in hist[0]
 
     def test_enregistrer_plusieurs_envois(self, data_dir):
-        enregistrer_envoi(["a@b.com"], 3)
-        enregistrer_envoi(["c@d.com"], 7)
+        with patch("tools.database.enregistrer_envoi_pg", side_effect=Exception("no PG")):
+            enregistrer_envoi(["a@b.com"], 3)
+            enregistrer_envoi(["c@d.com"], 7)
         hist = charger_json(str(data_dir / "historique_envois.json"))
         assert len(hist) == 2
 

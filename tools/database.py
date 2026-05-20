@@ -229,7 +229,7 @@ def lire_articles_actifs() -> list[dict]:
         _init_articles_table(conn)
         cur = _cur(conn)
         cur.execute(
-            "SELECT lien, titre, resume, contenu_complet, categorie, pertinence,"
+            "SELECT lien, titre, resume, resume_brut, contenu_complet, categorie, pertinence,"
             "       source, date_publication"
             " FROM articles WHERE archive = 0 ORDER BY date_ajout DESC"
         )
@@ -279,7 +279,7 @@ def lire_articles_filtres(
         # Fetch page
         order = "pertinence DESC" if tri == "pertinence" else "date_publication DESC"
         cur.execute(
-            f"SELECT lien, titre, resume, categorie, pertinence, source,"
+            f"SELECT lien, titre, resume, resume_brut, categorie, pertinence, source,"
             f"       date_publication, date_ajout"
             f" FROM articles WHERE {where}"
             f" ORDER BY {order} OFFSET %s LIMIT %s",

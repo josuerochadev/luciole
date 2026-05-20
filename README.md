@@ -37,7 +37,7 @@ Projet réalisé en équipe avec Alex Dubus, Zhengfeng Ding et Stéphanie Consol
 | Catégorie | Outils |
 |---|---|
 | Backend | Python 3.12, FastAPI, uvicorn |
-| LLM | Google Gemini API (gemini-2.5-flash, gemini-2.5-pro, gemini-embedding-001) |
+| LLM | Google Gemini API via [couche de compatibilité OpenAI](https://ai.google.dev/gemini-api/docs/openai) — voir [ADR-001](docs/adr/ADR-001-migration-openai-vers-gemini.md) |
 | RAG | numpy (cosinus), rank-bm25, Cohere re-ranking (optionnel) |
 | Base de données | PostgreSQL (Neon) |
 | Auth | PyJWT, bcrypt |

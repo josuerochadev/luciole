@@ -614,6 +614,39 @@ def digest_history(user=Depends(get_current_user)):
     return {"historique": historique}
 
 
+@app.get("/digest/live")
+def digest_live(user=Depends(get_current_user)):
+    """Retourne les meilleurs articles actuels groupes par categorie."""
+    from datetime import datetime, timezone
+    articles = selectionner_articles(nb_max=100)
+    categories: dict[str, list[dict]] = {}
+    for a in articles:
+        cat = a.get("categorie", "Autre")
+        categories.setdefault(cat, []).append({
+            "titre": a.get("titre", ""),
+            "lien": a.get("lien", ""),
+            "resume": a.get("resume", a.get("resume_brut", ""))[:300],
+            "pertinence": int(a.get("pertinence", 0)),
+            "source": a.get("source", ""),
+            "date_publication": a.get("date_publication", "")[:10],
+        })
+    return {
+        "categories": categories,
+        "total": len(articles),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/digest/archive/{digest_id}")
+def digest_archive(digest_id: int, user=Depends(get_current_user)):
+    """Retourne le HTML archive d'un digest passe."""
+    from tools.database import lire_digest_archive
+    html = lire_digest_archive(digest_id)
+    if html is None:
+        raise HTTPException(status_code=404, detail="Digest introuvable.")
+    return HTMLResponse(content=html)
+
+
 # ---------------------------------------------------------------------------
 # Feedback utilisateur (amélioration continue RAG)
 # ---------------------------------------------------------------------------

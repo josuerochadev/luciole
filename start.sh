@@ -1,5 +1,5 @@
 #!/bin/sh
-# Script de démarrage pour Render (et autres hébergeurs).
+# Script de démarrage pour Railway.
 # 1. Enrichit les articles pré-collectés au build (LLM, en arrière-plan)
 # 2. Démarre l'API immédiatement
 

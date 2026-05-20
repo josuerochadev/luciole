@@ -40,7 +40,7 @@ Projet réalisé en équipe avec Alex Dubus, Zhengfeng Ding et Stéphanie Consol
 | LLM | Google Gemini API (gemini-2.5-flash, gemini-2.5-pro, gemini-embedding-001) |
 | RAG | numpy (cosinus), rank-bm25, Cohere re-ranking (optionnel) |
 | Base de données | PostgreSQL (Neon) |
-| Auth | python-jose (JWT), bcrypt |
+| Auth | PyJWT, bcrypt |
 | Observabilité | Langfuse, slowapi |
 | Web & scraping | trafilatura, feedparser, Jinja2 |
 | Déploiement | Docker, Railway |

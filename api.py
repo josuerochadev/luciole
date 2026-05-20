@@ -498,6 +498,55 @@ def conversation_update(conv_id: str, req: ConversationUpdateRequest, request: R
     return {"ok": True, "title": req.title}
 
 
+# ---------------------------------------------------------------------------
+# Articles endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/articles-page", response_class=HTMLResponse)
+async def articles_page(request: Request, user=Depends(get_current_user_page)):
+    if isinstance(user, RedirectResponse):
+        return user
+    return templates.TemplateResponse(request, "articles.html", {"active_page": "articles", "user": user})
+
+
+@app.get("/articles")
+def articles_list(
+    request: Request,
+    categorie: str | None = None,
+    date_min: str | None = None,
+    date_max: str | None = None,
+    pertinence_min: int = 5,
+    tri: str = "pertinence",
+    offset: int = 0,
+    limit: int = 20,
+    user=Depends(get_current_user),
+):
+    from tools.database import lire_articles_filtres
+    limit = min(limit, 100)
+    if tri not in ("pertinence", "date"):
+        tri = "pertinence"
+    articles, total = lire_articles_filtres(
+        categorie=categorie,
+        date_min=date_min,
+        date_max=date_max,
+        pertinence_min=pertinence_min,
+        tri=tri,
+        offset=offset,
+        limit=limit,
+    )
+    return {
+        "articles": articles,
+        "total": total,
+        "has_more": offset + limit < total,
+    }
+
+
+@app.get("/articles/categories")
+def articles_categories(request: Request, user=Depends(get_current_user)):
+    from tools.database import lire_categories
+    return {"categories": lire_categories()}
+
+
 @app.get("/metrics")
 def metrics(x_api_key: str | None = Header(default=None)):
     """Agrégats de monitoring (M5E5). Protégé par X-API-Key."""

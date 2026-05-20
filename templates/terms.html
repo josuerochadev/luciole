@@ -1,15 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section style="padding: var(--luciole-space-16) 0; max-width: 720px;">
+<section class="luciole-legal">
 
-  <span class="t-eyebrow-accent">Juridique</span>
-  <h1 class="t-display-md" style="margin: var(--luciole-space-4) 0 var(--luciole-space-8);">
-    Conditions generales d'utilisation
-  </h1>
-  <p class="t-meta" style="color: var(--luciole-muted); margin-bottom: var(--luciole-space-12);">
-    Derniere mise a jour : 20 mai 2026
-  </p>
+  <div class="luciole-legal-header">
+    <span class="t-eyebrow-accent">Juridique</span>
+    <h1 class="t-display-md">Conditions generales d'utilisation</h1>
+    <p class="t-meta" style="color: var(--luciole-muted);">Derniere mise a jour : 20 mai 2026</p>
+  </div>
 
   <!-- 1. Objet -->
   <div class="luciole-legal-section">
@@ -45,7 +43,7 @@
   <!-- 4. Responsabilites utilisateur -->
   <div class="luciole-legal-section">
     <h2 class="t-headline-sm">4. Responsabilites de l'utilisateur</h2>
-    <ul class="t-body" style="color: var(--luciole-ink-soft); padding-left: var(--luciole-space-6);">
+    <ul class="t-body" style="color: var(--luciole-ink-soft);">
       <li>Fournir une adresse email valide lors de l'inscription.</li>
       <li>Ne pas tenter de contourner les mesures de securite (injection, scraping abusif, etc.).</li>
       <li>Ne pas utiliser le service pour generer du contenu illicite ou nuisible.</li>
@@ -112,8 +110,7 @@
     </p>
   </div>
 
-  <!-- Links -->
-  <div style="margin-top: var(--luciole-space-12); padding-top: var(--luciole-space-8); border-top: 1px solid var(--luciole-border);">
+  <div class="luciole-legal-footer">
     <a href="/privacy" class="t-body" style="color: var(--luciole-accent);">
       Politique de confidentialite &rarr;
     </a>

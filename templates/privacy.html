@@ -1,15 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section style="padding: var(--luciole-space-16) 0; max-width: 720px;">
+<section class="luciole-legal">
 
-  <span class="t-eyebrow-accent">Juridique</span>
-  <h1 class="t-display-md" style="margin: var(--luciole-space-4) 0 var(--luciole-space-8);">
-    Politique de confidentialite
-  </h1>
-  <p class="t-meta" style="color: var(--luciole-muted); margin-bottom: var(--luciole-space-12);">
-    Derniere mise a jour : 20 mai 2026
-  </p>
+  <div class="luciole-legal-header">
+    <span class="t-eyebrow-accent">Juridique</span>
+    <h1 class="t-display-md">Politique de confidentialite</h1>
+    <p class="t-meta" style="color: var(--luciole-muted);">Derniere mise a jour : 20 mai 2026</p>
+  </div>
 
   <!-- Intro -->
   <div class="luciole-legal-section">
@@ -35,7 +33,7 @@
     <p class="t-body" style="color: var(--luciole-ink-soft);">
       Lorsque vous creez un compte et utilisez luciole_, nous collectons :
     </p>
-    <ul class="t-body" style="color: var(--luciole-ink-soft); padding-left: var(--luciole-space-6);">
+    <ul class="t-body" style="color: var(--luciole-ink-soft);">
       <li><strong>Compte utilisateur</strong> : adresse email, nom d'affichage, mot de passe (stocke sous forme de hash bcrypt irreversible).</li>
       <li><strong>Conversations</strong> : vos messages et les reponses de l'agent IA, horodates.</li>
       <li><strong>Feedbacks</strong> : notes (pouce haut/bas) et commentaires optionnels sur les reponses.</li>
@@ -48,7 +46,7 @@
   <!-- 3. Finalites -->
   <div class="luciole-legal-section">
     <h2 class="t-headline-sm">3. Finalites du traitement</h2>
-    <ul class="t-body" style="color: var(--luciole-ink-soft); padding-left: var(--luciole-space-6);">
+    <ul class="t-body" style="color: var(--luciole-ink-soft);">
       <li>Fournir le service de veille technologique conversationnel.</li>
       <li>Conserver l'historique de vos conversations pour votre confort d'utilisation.</li>
       <li>Ameliorer la qualite des reponses grace a vos feedbacks.</li>
@@ -66,7 +64,7 @@
       Google traite ces donnees conformement a ses
       <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">conditions d'utilisation de l'API Gemini</a>.
     </p>
-    <ul class="t-body" style="color: var(--luciole-ink-soft); padding-left: var(--luciole-space-6);">
+    <ul class="t-body" style="color: var(--luciole-ink-soft);">
       <li><strong>Hebergement</strong> : Railway (serveur applicatif), Neon (base de donnees PostgreSQL).</li>
       <li><strong>IA</strong> : Google Gemini API (generation de reponses).</li>
     </ul>
@@ -75,8 +73,8 @@
   <!-- 5. Duree de conservation -->
   <div class="luciole-legal-section">
     <h2 class="t-headline-sm">5. Duree de conservation</h2>
-    <ul class="t-body" style="color: var(--luciole-ink-soft); padding-left: var(--luciole-space-6);">
-      <li><strong>Compte et conversations</strong> : conserves tant que votre compte est actif. Supprimes immediatement et definitivement sur demande.</li>
+    <ul class="t-body" style="color: var(--luciole-ink-soft);">
+      <li><strong>Compte et conversations</strong> : conserves tant que votre compte est actif, purges automatiquement apres 180 jours d'inactivite.</li>
       <li><strong>Articles de veille</strong> : archives automatiquement apres 90 jours.</li>
       <li><strong>Logs techniques</strong> : purges automatiquement apres 30 jours.</li>
     </ul>
@@ -88,7 +86,7 @@
     <p class="t-body" style="color: var(--luciole-ink-soft);">
       Conformement au Reglement General sur la Protection des Donnees, vous disposez des droits suivants :
     </p>
-    <ul class="t-body" style="color: var(--luciole-ink-soft); padding-left: var(--luciole-space-6);">
+    <ul class="t-body" style="color: var(--luciole-ink-soft);">
       <li><strong>Droit d'acces</strong> : exportez toutes vos donnees au format JSON depuis votre compte.</li>
       <li><strong>Droit de rectification</strong> : modifiez vos informations de profil a tout moment.</li>
       <li><strong>Droit a l'effacement</strong> : supprimez votre compte et toutes vos donnees en un clic.</li>
@@ -104,7 +102,7 @@
   <!-- 7. Securite -->
   <div class="luciole-legal-section">
     <h2 class="t-headline-sm">7. Securite</h2>
-    <ul class="t-body" style="color: var(--luciole-ink-soft); padding-left: var(--luciole-space-6);">
+    <ul class="t-body" style="color: var(--luciole-ink-soft);">
       <li>Mots de passe hashes avec bcrypt (irreversible).</li>
       <li>Authentification par JWT en cookie HttpOnly + Secure + SameSite.</li>
       <li>Communications chiffrees en HTTPS.</li>
@@ -142,15 +140,14 @@
     <p class="t-body" style="color: var(--luciole-ink-soft);">
       Conformement a l'article 33 du RGPD, en cas de violation de donnees a caractere personnel, nous nous engageons a :
     </p>
-    <ul class="t-body" style="color: var(--luciole-ink-soft); padding-left: var(--luciole-space-6);">
+    <ul class="t-body" style="color: var(--luciole-ink-soft);">
       <li>Notifier la CNIL dans les <strong>72 heures</strong> suivant la decouverte de la violation.</li>
       <li>Informer les utilisateurs concernes si la violation presente un risque eleve pour leurs droits et libertes.</li>
       <li>Documenter l'incident et les mesures correctives prises.</li>
     </ul>
   </div>
 
-  <!-- Links -->
-  <div style="margin-top: var(--luciole-space-12); padding-top: var(--luciole-space-8); border-top: 1px solid var(--luciole-border);">
+  <div class="luciole-legal-footer">
     <a href="/terms" class="t-body" style="color: var(--luciole-accent);">
       Conditions generales d'utilisation &rarr;
     </a>

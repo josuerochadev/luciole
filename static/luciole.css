@@ -991,9 +991,10 @@ body.chat-active .luciole-footer {
 }
 
 .luciole-footer-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: var(--luciole-space-8);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--luciole-space-6) var(--luciole-space-8);
   max-width: var(--luciole-max-width);
   margin: 0 auto;
   padding: 0 var(--luciole-gutter);
@@ -1004,7 +1005,6 @@ body.chat-active .luciole-footer {
   flex-direction: column;
   gap: var(--luciole-space-1);
 }
-.luciole-footer-col:nth-child(2) { text-align: center; }
 .luciole-footer-col:last-child { text-align: right; }
 
 .luciole-footer-label {
@@ -1171,12 +1171,12 @@ body.chat-active .luciole-footer {
     margin-top: var(--luciole-space-12);
   }
   .luciole-footer-row {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
-    gap: var(--luciole-space-6);
+    gap: var(--luciole-space-4);
   }
   .luciole-footer-col,
-  .luciole-footer-col:nth-child(2),
   .luciole-footer-col:last-child {
     text-align: center;
   }
@@ -1522,20 +1522,54 @@ body.chat-active .luciole-footer {
   text-decoration: underline;
 }
 
+/* Legal pages */
+.luciole-legal {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: var(--luciole-space-12) 0 var(--luciole-space-16);
+}
+
+.luciole-legal-header {
+  margin-bottom: var(--luciole-space-12);
+  padding-bottom: var(--luciole-space-8);
+  border-bottom: 1px solid var(--luciole-rule);
+}
+
+.luciole-legal-header h1 {
+  margin: var(--luciole-space-3) 0 var(--luciole-space-4);
+}
+
 .luciole-legal-section {
   margin-bottom: var(--luciole-space-10);
 }
 
 .luciole-legal-section h2 {
-  margin-bottom: var(--luciole-space-4);
+  margin-top: var(--luciole-space-8);
+  margin-bottom: var(--luciole-space-3);
+}
+
+.luciole-legal-section p {
+  margin-bottom: var(--luciole-space-3);
+}
+
+.luciole-legal-section p:last-child {
+  margin-bottom: 0;
 }
 
 .luciole-legal-section ul {
-  margin-top: var(--luciole-space-3);
+  margin: var(--luciole-space-2) 0 var(--luciole-space-3);
+  padding-left: var(--luciole-space-6);
 }
 
 .luciole-legal-section li {
   margin-bottom: var(--luciole-space-2);
+  line-height: 1.6;
+}
+
+.luciole-legal-footer {
+  margin-top: var(--luciole-space-12);
+  padding-top: var(--luciole-space-6);
+  border-top: 1px solid var(--luciole-rule);
 }
 
 /* User info in masthead */

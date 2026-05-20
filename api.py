@@ -328,6 +328,25 @@ def health():
     return {"status": "ok"}
 
 
+@app.post("/veille/run")
+@limiter.limit("1/hour")
+def veille_run(request: Request, x_api_key: str | None = Header(default=None)):
+    """Lance le pipeline de veille en arriere-plan. Protege par X-API-Key."""
+    _verifier_api_key(x_api_key)
+    import threading
+    from pipeline import run as pipeline_run
+
+    def _run_pipeline():
+        try:
+            pipeline_run(no_email=True)
+            logger.info("[Veille] Pipeline termine avec succes.")
+        except Exception as e:
+            logger.error(f"[Veille] Pipeline echoue : {e}")
+
+    threading.Thread(target=_run_pipeline, daemon=True).start()
+    return {"ok": True, "message": "Pipeline lance en arriere-plan."}
+
+
 def _generate_title(question: str) -> str:
     """Génère un titre court pour une conversation à partir du 1er message."""
     try:

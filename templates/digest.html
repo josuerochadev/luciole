@@ -2,8 +2,8 @@
 
 {% block head %}
 <style>
-  /* Digest page — follows Luciole design system */
-  h2.digest-section, .digest-section {
+  /* Digest page — Luciole design system */
+  h2.digest-section {
     font-family: var(--luciole-sans);
     font-size: var(--luciole-text-xs);
     font-weight: 500;
@@ -19,7 +19,34 @@
     margin-top: var(--luciole-space-8);
   }
 
-  /* KPI row */
+  /* Tabs */
+  .digest-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: var(--luciole-rule-medium);
+    margin-bottom: var(--luciole-space-6);
+  }
+  .digest-tab {
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-sm);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: var(--luciole-space-3) var(--luciole-space-6);
+    color: var(--luciole-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .digest-tab:hover { color: var(--luciole-ink); }
+  .digest-tab.active {
+    color: var(--luciole-ink);
+    border-bottom-color: var(--luciole-ink);
+  }
+
+  /* KPIs */
   .digest-kpis {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -53,7 +80,76 @@
     color: var(--luciole-muted);
   }
 
-  /* Actions bar */
+  /* Accordion */
+  .digest-cat-header {
+    display: flex;
+    align-items: center;
+    gap: var(--luciole-space-3);
+    padding: var(--luciole-space-4) 0;
+    border-bottom: var(--luciole-rule-thin);
+    cursor: pointer;
+    user-select: none;
+  }
+  .digest-cat-header:hover { opacity: 0.8; }
+  .digest-cat-arrow {
+    font-size: var(--luciole-text-sm);
+    transition: transform 0.2s;
+    color: var(--luciole-muted);
+  }
+  .digest-cat-header.collapsed .digest-cat-arrow { transform: rotate(-90deg); }
+  .digest-cat-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 12px;
+    font-family: var(--luciole-sans);
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .digest-cat-name {
+    font-family: var(--luciole-serif);
+    font-weight: 700;
+    font-size: var(--luciole-text-base);
+    color: var(--luciole-ink);
+  }
+  .digest-cat-count {
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-xs);
+    color: var(--luciole-muted);
+  }
+  .digest-cat-body { overflow: hidden; }
+  .digest-cat-body.collapsed { display: none; }
+
+  /* Article cards */
+  .digest-art {
+    padding: var(--luciole-space-4) 0 var(--luciole-space-4) var(--luciole-space-6);
+    border-bottom: var(--luciole-rule-thin);
+  }
+  .digest-art-title {
+    font-family: var(--luciole-serif);
+    font-weight: 700;
+    font-size: var(--luciole-text-sm);
+    color: var(--luciole-ink);
+    text-decoration: none;
+  }
+  .digest-art-title:hover { text-decoration: underline; }
+  .digest-art-resume {
+    font-family: var(--luciole-sans);
+    font-size: var(--luciole-text-xs);
+    color: var(--luciole-ink-soft);
+    margin: var(--luciole-space-1) 0;
+    line-height: 1.5;
+  }
+  .digest-art-meta {
+    font-family: var(--luciole-sans);
+    font-size: 11px;
+    color: var(--luciole-muted);
+    display: flex;
+    gap: var(--luciole-space-3);
+  }
+  .digest-art-stars { letter-spacing: 1px; }
+
+  /* Admin section */
   .digest-actions {
     display: flex;
     align-items: center;
@@ -95,9 +191,7 @@
     color: var(--luciole-accent);
     display: none;
   }
-  .digest-apikey-error--visible {
-    display: block;
-  }
+  .digest-apikey-error--visible { display: block; }
   .digest-btn {
     font-family: var(--luciole-sans);
     font-weight: 500;
@@ -124,52 +218,23 @@
     background: var(--luciole-accent);
     color: var(--luciole-white);
   }
-  .digest-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-  .digest-btn:disabled:hover {
-    background: transparent;
-    color: var(--luciole-ink);
-  }
-  .digest-btn--accent:disabled:hover {
-    color: var(--luciole-accent);
-  }
+  .digest-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .digest-btn:disabled:hover { background: transparent; color: var(--luciole-ink); }
+  .digest-btn--accent:disabled:hover { color: var(--luciole-accent); }
   .digest-status {
     font-family: var(--luciole-sans);
     font-size: var(--luciole-text-sm);
     color: var(--luciole-muted);
-    transition: color 0.2s;
   }
   .digest-status--ok { color: #22c55e; }
   .digest-status--err { color: var(--luciole-accent); }
 
-  /* Preview iframe */
   .digest-preview-frame {
     width: 100%;
     min-height: 600px;
     border: 1px solid var(--luciole-rule);
     border-radius: 6px;
     background: var(--luciole-white);
-  }
-
-  /* Empty state */
-  .digest-empty {
-    text-align: center;
-    padding: var(--luciole-space-16) var(--luciole-space-8);
-    border: 1px dashed var(--luciole-rule);
-    border-radius: 6px;
-  }
-  .digest-empty h3 {
-    font-family: var(--luciole-serif);
-    font-weight: 700;
-    font-size: var(--luciole-text-xl);
-    color: var(--luciole-ink);
-    margin-bottom: var(--luciole-space-2);
-  }
-  .digest-empty p {
-    color: var(--luciole-muted);
-    font-size: var(--luciole-text-sm);
   }
 
   /* History table */
@@ -195,8 +260,31 @@
     border-bottom: var(--luciole-rule-thin);
     color: var(--luciole-ink-soft);
   }
-  .digest-table tr:hover td {
-    background: var(--luciole-paper-alt);
+  .digest-table tr:hover td { background: var(--luciole-paper-alt); }
+  .digest-table a {
+    color: var(--luciole-accent);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .digest-table a:hover { text-decoration: underline; }
+
+  /* Empty state */
+  .digest-empty {
+    text-align: center;
+    padding: var(--luciole-space-16) var(--luciole-space-8);
+    border: 1px dashed var(--luciole-rule);
+    border-radius: 6px;
+  }
+  .digest-empty h3 {
+    font-family: var(--luciole-serif);
+    font-weight: 700;
+    font-size: var(--luciole-text-xl);
+    color: var(--luciole-ink);
+    margin-bottom: var(--luciole-space-2);
+  }
+  .digest-empty p {
+    color: var(--luciole-muted);
+    font-size: var(--luciole-text-sm);
   }
 
   @media (max-width: 768px) {
@@ -208,61 +296,64 @@
 
 {% block content %}
 <h1 class="sr-only">Digest Email</h1>
-<h2 class="digest-section digest-section--accent">Digest Email · Veille Technologique</h2>
+<h2 class="digest-section digest-section--accent">Digest · Veille Technologique</h2>
 
-<!-- KPIs -->
-<div class="digest-kpis" id="digest-kpis">
-  <div class="digest-kpi">
-    <div class="digest-kpi-label">Articles disponibles</div>
-    <div class="digest-kpi-value" id="kpi-articles">--</div>
-    <div class="digest-kpi-sub">pertinence >= 5</div>
+<!-- Tabs -->
+<div class="digest-tabs" role="tablist" aria-label="Mode digest">
+  <button class="digest-tab active" role="tab" id="tab-live" aria-selected="true" aria-controls="panel-live" tabindex="0">Digest du jour</button>
+  <button class="digest-tab" role="tab" id="tab-admin" aria-selected="false" aria-controls="panel-admin" tabindex="-1">Historique &amp; envoi</button>
+</div>
+
+<!-- Panel 1: Live digest -->
+<div id="panel-live" role="tabpanel" aria-labelledby="tab-live">
+  <div class="digest-kpis" id="digest-kpis">
+    <div class="digest-kpi">
+      <div class="digest-kpi-label">Articles</div>
+      <div class="digest-kpi-value" id="kpi-articles">--</div>
+      <div class="digest-kpi-sub">pertinence >= 5</div>
+    </div>
+    <div class="digest-kpi">
+      <div class="digest-kpi-label">Categories</div>
+      <div class="digest-kpi-value" id="kpi-categories">--</div>
+      <div class="digest-kpi-sub">thematiques</div>
+    </div>
+    <div class="digest-kpi">
+      <div class="digest-kpi-label">Genere le</div>
+      <div class="digest-kpi-value" id="kpi-date" style="font-size:var(--luciole-text-lg);">--</div>
+      <div class="digest-kpi-sub">mise a jour</div>
+    </div>
   </div>
-  <div class="digest-kpi">
-    <div class="digest-kpi-label">Categories</div>
-    <div class="digest-kpi-value" id="kpi-categories">--</div>
-    <div class="digest-kpi-sub">thematiques</div>
-  </div>
-  <div class="digest-kpi">
-    <div class="digest-kpi-label">Derniers envois</div>
-    <div class="digest-kpi-value" id="kpi-envois">--</div>
-    <div class="digest-kpi-sub">total</div>
+
+  <div id="digest-live-content">
+    <div class="digest-empty">
+      <h3>Chargement...</h3>
+      <p>Recuperation du digest.</p>
+    </div>
   </div>
 </div>
 
-<!-- Actions -->
-<h2 class="digest-section">Actions</h2>
-<div class="digest-actions">
-  <button class="digest-btn" id="btn-preview">Previsualiser</button>
-  <div class="digest-apikey-group">
-    <label class="digest-apikey-label" for="apikey-input">Clé API serveur</label>
-    <input
-      id="apikey-input"
-      class="digest-apikey-input"
-      type="password"
-      placeholder="Clé API serveur"
-      autocomplete="off"
-      aria-describedby="apikey-error"
-    />
-    <span id="apikey-error" class="digest-apikey-error" role="alert">Veuillez saisir votre cle API avant d'envoyer.</span>
+<!-- Panel 2: Admin -->
+<div id="panel-admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
+  <h2 class="digest-section">Actions</h2>
+  <div class="digest-actions">
+    <button class="digest-btn" id="btn-preview">Previsualiser</button>
+    <div class="digest-apikey-group">
+      <label class="digest-apikey-label" for="apikey-input">Cle API serveur</label>
+      <input id="apikey-input" class="digest-apikey-input" type="password" placeholder="Cle API serveur" autocomplete="off" aria-describedby="apikey-error">
+      <span id="apikey-error" class="digest-apikey-error" role="alert">Veuillez saisir votre cle API avant d'envoyer.</span>
+    </div>
+    <button class="digest-btn digest-btn--accent" id="btn-send" disabled>Envoyer par email</button>
+    <span class="digest-status" id="digest-status"></span>
   </div>
-  <button class="digest-btn digest-btn--accent" id="btn-send" disabled>Envoyer par email</button>
-  <span class="digest-status" id="digest-status"></span>
-</div>
 
-<!-- Preview -->
-<div id="digest-preview-container">
-  <div class="digest-empty" id="digest-empty">
-    <h3>Aucun apercu</h3>
-    <p>Cliquez sur Previsualiser pour generer le digest.</p>
-  </div>
-</div>
+  <div id="digest-preview-container"></div>
 
-<!-- History -->
-<h2 class="digest-section">Historique des envois</h2>
-<div id="digest-history">
-  <div class="digest-empty">
-    <h3>Chargement...</h3>
-    <p>Recuperation de l'historique.</p>
+  <h2 class="digest-section">Historique des envois</h2>
+  <div id="digest-history">
+    <div class="digest-empty">
+      <h3>Chargement...</h3>
+      <p>Recuperation de l'historique.</p>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -272,163 +363,188 @@
 (function () {
   'use strict';
 
-  const btnPreview = document.getElementById('btn-preview');
-  const btnSend = document.getElementById('btn-send');
-  const status = document.getElementById('digest-status');
-  const previewContainer = document.getElementById('digest-preview-container');
-  const emptyState = document.getElementById('digest-empty');
-  const historyContainer = document.getElementById('digest-history');
-  const apikeyInput = document.getElementById('apikey-input');
-  const apikeyError = document.getElementById('apikey-error');
+  var COLORS = {
+    'ia': '#6366f1', 'cloud': '#0ea5e9', 'cybersecurite': '#ef4444',
+    'cybersécurité': '#ef4444', 'devops': '#f59e0b', 'donnees': '#10b981',
+    'données': '#10b981', 'infrastructure': '#8b5cf6'
+  };
+  var DEFAULT_COLOR = '#64748b';
+
+  function badgeColor(cat) {
+    var lower = (cat || '').toLowerCase();
+    for (var key in COLORS) { if (lower.indexOf(key) !== -1) return COLORS[key]; }
+    return DEFAULT_COLOR;
+  }
+
+  function stars(p) {
+    var n = Math.min(Math.max(parseInt(p) || 0, 0), 10);
+    var full = Math.round(n / 2);
+    var s = '';
+    for (var i = 0; i < full; i++) s += '\u2605';
+    for (var j = full; j < 5; j++) s += '\u2606';
+    return s;
+  }
+
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // Tab switching
+  var tabs = document.querySelectorAll('.digest-tab');
+  var panelLive = document.getElementById('panel-live');
+  var panelAdmin = document.getElementById('panel-admin');
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      tabs.forEach(function (t) {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+        t.setAttribute('tabindex', '-1');
+      });
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+      tab.setAttribute('tabindex', '0');
+      panelLive.hidden = tab.id !== 'tab-live';
+      panelAdmin.hidden = tab.id !== 'tab-admin';
+    });
+  });
+
+  var tablist = document.querySelector('[role="tablist"]');
+  tablist.addEventListener('keydown', function (e) {
+    var arr = Array.from(tabs);
+    var idx = arr.indexOf(document.activeElement);
+    if (e.key === 'ArrowRight' && idx < arr.length - 1) { e.preventDefault(); arr[idx+1].focus(); arr[idx+1].click(); }
+    if (e.key === 'ArrowLeft' && idx > 0) { e.preventDefault(); arr[idx-1].focus(); arr[idx-1].click(); }
+  });
+
+  // Live digest
+  var liveContent = document.getElementById('digest-live-content');
+
+  async function loadLive() {
+    try {
+      var res = await fetch('/digest/live');
+      if (!res.ok) throw new Error();
+      var data = await res.json();
+
+      document.getElementById('kpi-articles').textContent = data.total;
+      var catKeys = Object.keys(data.categories);
+      document.getElementById('kpi-categories').textContent = catKeys.length;
+      document.getElementById('kpi-date').textContent = data.generated_at ? new Date(data.generated_at).toLocaleDateString('fr-FR') : '--';
+
+      if (data.total === 0) {
+        liveContent.innerHTML = '<div class="digest-empty"><h3>Aucun article</h3><p>Le pipeline n\'a pas encore collecte d\'articles.</p></div>';
+        return;
+      }
+
+      var html = '';
+      for (var ci = 0; ci < catKeys.length; ci++) {
+        var cat = catKeys[ci];
+        var arts = data.categories[cat];
+        var color = badgeColor(cat);
+
+        html += '<div class="digest-cat-header" data-cat="' + ci + '">';
+        html += '<span class="digest-cat-arrow">\u25BC</span>';
+        html += '<span class="digest-cat-badge" style="background:' + color + '">' + esc(cat) + '</span>';
+        html += '<span class="digest-cat-name">' + esc(cat) + '</span>';
+        html += '<span class="digest-cat-count">' + arts.length + ' article' + (arts.length > 1 ? 's' : '') + '</span>';
+        html += '</div>';
+        html += '<div class="digest-cat-body" data-cat-body="' + ci + '">';
+
+        for (var ai = 0; ai < arts.length; ai++) {
+          var a = arts[ai];
+          html += '<div class="digest-art">';
+          html += '<a href="' + esc(a.lien || '#') + '" class="digest-art-title" target="_blank" rel="noopener">' + esc(a.titre) + '</a>';
+          html += '<div class="digest-art-resume">' + esc((a.resume || '').substring(0, 200)) + '</div>';
+          html += '<div class="digest-art-meta">';
+          html += '<span class="digest-art-stars" style="color:' + color + '">' + stars(a.pertinence) + '</span>';
+          html += '<span>' + a.pertinence + '/10</span>';
+          html += '<span>' + esc(a.source || '') + '</span>';
+          html += (a.date_publication ? '<span>' + esc(a.date_publication) + '</span>' : '');
+          html += '</div></div>';
+        }
+        html += '</div>';
+      }
+
+      liveContent.innerHTML = html;
+
+      document.querySelectorAll('.digest-cat-header').forEach(function (header) {
+        header.addEventListener('click', function () {
+          var id = header.getAttribute('data-cat');
+          var body = document.querySelector('[data-cat-body="' + id + '"]');
+          header.classList.toggle('collapsed');
+          body.classList.toggle('collapsed');
+        });
+      });
+    } catch (e) {
+      liveContent.innerHTML = '<div class="digest-empty"><h3>Erreur</h3><p>Impossible de charger le digest.</p></div>';
+    }
+  }
+
+  // Admin: preview/send
+  var btnPreview = document.getElementById('btn-preview');
+  var btnSend = document.getElementById('btn-send');
+  var status = document.getElementById('digest-status');
+  var previewContainer = document.getElementById('digest-preview-container');
+  var apikeyInput = document.getElementById('apikey-input');
+  var apikeyError = document.getElementById('apikey-error');
+  var historyContainer = document.getElementById('digest-history');
 
   function setStatus(msg, type) {
     status.textContent = msg;
     status.className = 'digest-status' + (type ? ' digest-status--' + type : '');
   }
 
-  function esc(s) {
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
-  }
-
-  // ── Load digest stats ──────────────────────────────────
-  async function loadStats() {
-    try {
-      const res = await fetch('/digest/stats');
-      if (!res.ok) return;
-      const data = await res.json();
-
-      document.getElementById('kpi-articles').textContent = data.nb_articles;
-      document.getElementById('kpi-categories').textContent = data.nb_categories;
-      document.getElementById('kpi-envois').textContent = data.nb_envois;
-    } catch {
-      // API offline
-    }
-  }
-
-  // ── Load history ───────────────────────────────────────
-  async function loadHistory() {
-    try {
-      const res = await fetch('/digest/history');
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-
-      if (!data.historique || data.historique.length === 0) {
-        historyContainer.innerHTML =
-          '<div class="digest-empty">' +
-          '<h3>Aucun envoi</h3>' +
-          '<p>Le digest n\'a pas encore ete envoye.</p>' +
-          '</div>';
-        return;
-      }
-
-      let html = '<table class="digest-table"><thead><tr>' +
-        '<th>Date</th><th>Destinataires</th><th>Articles</th>' +
-        '</tr></thead><tbody>';
-
-      const sorted = data.historique.slice().reverse();
-      for (const entry of sorted) {
-        const date = entry.date ? new Date(entry.date).toLocaleString('fr-FR') : '--';
-        const dest = (entry.destinataires || []).join(', ') || '--';
-        html += '<tr>' +
-          '<td>' + esc(date) + '</td>' +
-          '<td>' + esc(dest) + '</td>' +
-          '<td>' + (entry.nb_articles || 0) + '</td>' +
-          '</tr>';
-      }
-      html += '</tbody></table>';
-      historyContainer.innerHTML = html;
-    } catch {
-      historyContainer.innerHTML =
-        '<div class="digest-empty">' +
-        '<h3>API indisponible</h3>' +
-        '<p>Impossible de charger l\'historique.</p>' +
-        '</div>';
-    }
-  }
-
-  // ── Preview ────────────────────────────────────────────
   btnPreview.addEventListener('click', async function () {
-    const apiKey = apikeyInput.value.trim();
-    if (!apiKey) {
-      apikeyError.classList.add('digest-apikey-error--visible');
-      apikeyInput.focus();
-      return;
-    }
+    var apiKey = apikeyInput.value.trim();
+    if (!apiKey) { apikeyError.classList.add('digest-apikey-error--visible'); apikeyInput.focus(); return; }
     apikeyError.classList.remove('digest-apikey-error--visible');
-
     btnPreview.disabled = true;
     setStatus('Generation en cours...', '');
-
     try {
-      const res = await fetch('/digest', {
-        headers: { 'X-API-Key': apiKey }
-      });
-      if (!res.ok) throw new Error('Erreur API');
-      const html = await res.text();
-
-      if (emptyState) emptyState.remove();
-
-      // Remove old iframe
-      const oldFrame = previewContainer.querySelector('iframe');
-      if (oldFrame) oldFrame.remove();
-
-      const iframe = document.createElement('iframe');
+      var res = await fetch('/digest', { headers: { 'X-API-Key': apiKey } });
+      if (!res.ok) throw new Error();
+      var html = await res.text();
+      previewContainer.innerHTML = '';
+      var iframe = document.createElement('iframe');
       iframe.className = 'digest-preview-frame';
       iframe.setAttribute('sandbox', 'allow-same-origin');
       iframe.title = 'Apercu du digest';
       previewContainer.appendChild(iframe);
-
       iframe.contentDocument.open();
       iframe.contentDocument.write(html);
       iframe.contentDocument.close();
-
       btnSend.disabled = false;
       setStatus('Apercu genere', 'ok');
-    } catch {
+    } catch (e) {
       setStatus('Erreur lors de la generation', 'err');
     } finally {
       btnPreview.disabled = false;
     }
   });
 
-  // ── Send ───────────────────────────────────────────────
   btnSend.addEventListener('click', async function () {
     if (!confirm('Envoyer le digest par email aux destinataires configures ?')) return;
-
-    const apiKey = apikeyInput.value.trim();
-    if (!apiKey) {
-      apikeyError.classList.add('digest-apikey-error--visible');
-      apikeyInput.focus();
-      return;
-    }
+    var apiKey = apikeyInput.value.trim();
+    if (!apiKey) { apikeyError.classList.add('digest-apikey-error--visible'); apikeyInput.focus(); return; }
     apikeyError.classList.remove('digest-apikey-error--visible');
-
     btnSend.disabled = true;
     setStatus('Envoi en cours...', '');
-
     try {
-
-      const res = await fetch('/digest/send', {
+      var res = await fetch('/digest/send', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': apiKey,
-        },
-        body: JSON.stringify({}),
+        headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
+        body: JSON.stringify({})
       });
-
-      const data = await res.json();
-
+      var data = await res.json();
       if (res.ok && data.ok) {
         setStatus('Digest envoye — ' + data.nb_articles + ' articles', 'ok');
         loadHistory();
-        loadStats();
       } else {
         setStatus(data.message || data.detail || 'Erreur', 'err');
       }
-    } catch {
+    } catch (e) {
       setStatus('Erreur reseau', 'err');
     } finally {
       btnSend.disabled = false;
@@ -436,8 +552,34 @@
     }
   });
 
-  // ── Init ───────────────────────────────────────────────
-  loadStats();
+  // History
+  async function loadHistory() {
+    try {
+      var res = await fetch('/digest/history');
+      if (!res.ok) throw new Error();
+      var data = await res.json();
+      if (!data.historique || data.historique.length === 0) {
+        historyContainer.innerHTML = '<div class="digest-empty"><h3>Aucun envoi</h3><p>Le digest n\'a pas encore ete envoye.</p></div>';
+        return;
+      }
+      var html = '<table class="digest-table"><thead><tr><th>Date</th><th>Destinataires</th><th>Articles</th><th>Archive</th></tr></thead><tbody>';
+      var sorted = data.historique.slice();
+      for (var i = 0; i < sorted.length; i++) {
+        var entry = sorted[i];
+        var date = entry.sent_at ? new Date(entry.sent_at).toLocaleString('fr-FR') : (entry.date ? new Date(entry.date).toLocaleString('fr-FR') : '--');
+        var dest = (entry.recipients || entry.destinataires || []).join(', ') || '--';
+        var archiveLink = entry.id ? '<a href="/digest/archive/' + entry.id + '" target="_blank">Voir</a>' : '--';
+        html += '<tr><td>' + esc(date) + '</td><td>' + esc(dest) + '</td><td>' + (entry.nb_articles || 0) + '</td><td>' + archiveLink + '</td></tr>';
+      }
+      html += '</tbody></table>';
+      historyContainer.innerHTML = html;
+    } catch (e) {
+      historyContainer.innerHTML = '<div class="digest-empty"><h3>API indisponible</h3><p>Impossible de charger l\'historique.</p></div>';
+    }
+  }
+
+  // Init
+  loadLive();
   loadHistory();
 })();
 </script>

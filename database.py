@@ -175,7 +175,7 @@ def get_conversation(conv_id: str) -> dict | None:
     try:
         cur = _cur(conn)
         cur.execute(
-            "SELECT id, title, created_at, updated_at FROM conversations WHERE id = %s",
+            "SELECT id, user_id, title, created_at, updated_at FROM conversations WHERE id = %s",
             (conv_id,),
         )
         row = cur.fetchone()

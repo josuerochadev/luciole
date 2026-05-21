@@ -6,9 +6,9 @@
 
   /* Header */
   .digest-header {
-    padding: var(--luciole-space-16) 0 var(--luciole-space-8);
+    padding: var(--luciole-space-8) 0 var(--luciole-space-4);
   }
-  .digest-header h2 { margin: var(--luciole-space-4) 0 var(--luciole-space-4); }
+  .digest-header h2 { margin: var(--luciole-space-2) 0 var(--luciole-space-2); }
   .digest-header-sub {
     font-family: var(--luciole-sans);
     font-size: var(--luciole-text-lg);
@@ -20,9 +20,9 @@
   .digest-tabs {
     display: flex;
     gap: 0;
-    border-top: var(--luciole-rule-heavy);
+    border-top: var(--luciole-rule-thin);
     border-bottom: var(--luciole-rule-thin);
-    margin-bottom: var(--luciole-space-12);
+    margin-bottom: var(--luciole-space-6);
   }
   .digest-tab {
     font-family: var(--luciole-sans);
@@ -44,43 +44,7 @@
     border-bottom-color: var(--luciole-accent);
   }
 
-  /* KPIs — aligned with dashboard pattern */
-  .digest-kpis {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--luciole-space-6);
-    margin-bottom: var(--luciole-space-8);
-  }
-  .digest-kpi {
-    padding: var(--luciole-space-6) 0;
-    border-top: var(--luciole-rule-thin);
-  }
-  .digest-kpi-label {
-    font-family: var(--luciole-sans);
-    font-size: var(--luciole-text-xs);
-    font-weight: 500;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--luciole-muted);
-  }
-  .digest-kpi-value {
-    font-family: var(--luciole-serif);
-    font-weight: 900;
-    font-size: var(--luciole-text-3xl);
-    line-height: 1.1;
-    color: var(--luciole-ink);
-    margin: var(--luciole-space-2) 0 var(--luciole-space-1);
-  }
-  .digest-kpi-value--sm {
-    font-size: var(--luciole-text-lg);
-  }
-  .digest-kpi-sub {
-    font-family: var(--luciole-sans);
-    font-size: var(--luciole-text-xs);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--luciole-muted);
-  }
+  /* Count bar — single line summary */
 
   /* Count bar — mirrors articles page */
   .digest-count-bar {
@@ -89,7 +53,7 @@
     justify-content: space-between;
     padding-bottom: var(--luciole-space-4);
     border-bottom: var(--luciole-rule-thin);
-    margin-bottom: var(--luciole-space-8);
+    margin-bottom: var(--luciole-space-6);
   }
   .digest-count {
     font-family: var(--luciole-sans);
@@ -102,7 +66,7 @@
   .digest-section-divider {
     padding-bottom: var(--luciole-space-3);
     border-bottom: var(--luciole-rule-thin);
-    margin: var(--luciole-space-12) 0 var(--luciole-space-6);
+    margin: var(--luciole-space-8) 0 var(--luciole-space-6);
     display: block;
   }
 
@@ -111,15 +75,17 @@
     display: flex;
     align-items: center;
     gap: var(--luciole-space-3);
-    padding: var(--luciole-space-5) 0;
-    border-bottom: var(--luciole-rule-thin);
+    padding: var(--luciole-space-4) 0;
+    border-top: var(--luciole-rule-thin);
+    margin-top: var(--luciole-space-6);
     cursor: pointer;
     user-select: none;
     transition: opacity 0.15s;
   }
+  .digest-cat-header:first-child { margin-top: 0; }
   .digest-cat-header:hover { opacity: 0.75; }
   .digest-cat-arrow {
-    font-size: var(--luciole-text-xs);
+    font-size: 10px;
     transition: transform 0.2s;
     color: var(--luciole-muted);
   }
@@ -138,8 +104,9 @@
     font-family: var(--luciole-sans);
     font-size: var(--luciole-text-xs);
     color: var(--luciole-muted);
+    margin-left: auto;
   }
-  .digest-cat-body { overflow: hidden; }
+  .digest-cat-body { overflow: hidden; padding-bottom: var(--luciole-space-4); }
   .digest-cat-body.collapsed { display: none; }
 
   /* Article cards & grid: shared in luciole.css (.art-item-*, .art-grid-*) */
@@ -287,9 +254,8 @@
   }
 
   @media (max-width: 768px) {
-    .digest-kpis { grid-template-columns: 1fr; }
     .digest-admin-row { flex-direction: column; align-items: stretch; }
-    .digest-header { padding-top: var(--luciole-space-8); }
+    .digest-header { padding-top: var(--luciole-space-4); }
   }
 </style>
 {% endblock %}
@@ -316,26 +282,9 @@
 
 <!-- Panel 1: Live digest -->
 <div id="panel-live" role="tabpanel" aria-labelledby="tab-live">
-  <div class="digest-kpis" id="digest-kpis">
-    <div class="digest-kpi">
-      <div class="digest-kpi-label">Articles</div>
-      <div class="digest-kpi-value" id="kpi-articles">--</div>
-      <div class="digest-kpi-sub">pertinence &ge; 5</div>
-    </div>
-    <div class="digest-kpi">
-      <div class="digest-kpi-label">Categories</div>
-      <div class="digest-kpi-value" id="kpi-categories">--</div>
-      <div class="digest-kpi-sub">thematiques couvertes</div>
-    </div>
-    <div class="digest-kpi">
-      <div class="digest-kpi-label">Genere le</div>
-      <div class="digest-kpi-value digest-kpi-value--sm" id="kpi-date">--</div>
-      <div class="digest-kpi-sub">derniere mise a jour</div>
-    </div>
-  </div>
-
   <div class="digest-count-bar">
     <div class="digest-count" id="digest-count"></div>
+    <div class="digest-count" id="digest-date"></div>
   </div>
 
   <div id="digest-live-content">
@@ -446,7 +395,7 @@
   function renderArticle(a, cat) {
     var datePub = (a.date_publication || '').substring(0, 10);
     var p = a.pertinence || 0;
-    var fullResume = stripHtml(a.resume || '');
+    var fullResume = stripHtml(a.resume || a.resume_brut || '');
     var parts = splitLead(fullResume);
 
     return '<li class="art-item">' +
@@ -472,20 +421,20 @@
       if (!res.ok) throw new Error();
       var data = await res.json();
 
-      document.getElementById('kpi-articles').textContent = data.total;
       var catKeys = Object.keys(data.categories);
-      document.getElementById('kpi-categories').textContent = catKeys.length;
-      document.getElementById('kpi-date').textContent = data.generated_at ? new Date(data.generated_at).toLocaleDateString('fr-FR') : '--';
 
       if (data.total === 0) {
         liveContent.innerHTML = '<div class="digest-empty"><h3>Aucun article</h3><p>Le pipeline n\'a pas encore collecte d\'articles.</p></div>';
         return;
       }
 
-      // Update count bar
       var digestCountEl = document.getElementById('digest-count');
       if (digestCountEl) {
         digestCountEl.innerHTML = '<strong>' + data.total + '</strong> article' + (data.total !== 1 ? 's' : '') + ' dans <strong>' + catKeys.length + '</strong> categorie' + (catKeys.length !== 1 ? 's' : '');
+      }
+      var digestDateEl = document.getElementById('digest-date');
+      if (digestDateEl && data.generated_at) {
+        digestDateEl.textContent = new Date(data.generated_at).toLocaleDateString('fr-FR');
       }
 
       var html = '';

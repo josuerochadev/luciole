@@ -655,7 +655,7 @@ def digest(limit: int = 20, x_api_key: str | None = Header(default=None)):
 @app.get("/digest/stats")
 def digest_stats(user=Depends(get_current_user)):
     """Stats rapides pour la page digest."""
-    articles = selectionner_articles(nb_max=100)
+    articles = selectionner_articles()
     categories = set(a.get("categorie", "Autre") for a in articles)
     from tools.database import lire_historique_digest
     try:
@@ -686,7 +686,7 @@ def digest_history(user=Depends(get_current_user)):
 def digest_live(user=Depends(get_current_user)):
     """Retourne les meilleurs articles actuels groupes par categorie."""
     from datetime import datetime, timezone
-    articles = selectionner_articles(nb_max=100)
+    articles = selectionner_articles()
     categories: dict[str, list[dict]] = {}
     for a in articles:
         cat = a.get("categorie", "Autre")

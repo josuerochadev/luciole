@@ -5,10 +5,10 @@
   /* Articles page — Luciole editorial magazine layout */
 
   .art-header {
-    padding: var(--luciole-space-16) 0 var(--luciole-space-8);
+    padding: var(--luciole-space-8) 0 var(--luciole-space-4);
   }
   .art-header h2 {
-    margin: var(--luciole-space-4) 0 var(--luciole-space-4);
+    margin: var(--luciole-space-2) 0 var(--luciole-space-2);
   }
   .art-header-sub {
     font-family: var(--luciole-sans);
@@ -19,9 +19,9 @@
 
   /* Filters — tucked under a horizontal rule */
   .art-filters-wrap {
-    border-top: var(--luciole-rule-heavy);
+    border-top: var(--luciole-rule-thin);
     padding-top: var(--luciole-space-6);
-    margin-bottom: var(--luciole-space-12);
+    margin-bottom: var(--luciole-space-6);
   }
   .art-filters {
     display: flex;
@@ -106,7 +106,7 @@
     justify-content: space-between;
     padding-bottom: var(--luciole-space-4);
     border-bottom: var(--luciole-rule-thin);
-    margin-bottom: var(--luciole-space-8);
+    margin-bottom: var(--luciole-space-6);
   }
   .art-count {
     font-family: var(--luciole-sans);
@@ -117,8 +117,8 @@
 
   /* ── FEATURED ARTICLE (first one, "à la une") ── */
   .art-featured {
-    margin-bottom: var(--luciole-space-12);
-    padding-bottom: var(--luciole-space-12);
+    margin-bottom: var(--luciole-space-6);
+    padding-bottom: var(--luciole-space-6);
     border-bottom: var(--luciole-rule-thin);
   }
   .art-featured-eyebrow {
@@ -193,7 +193,7 @@
   /* Load more */
   .art-load-more {
     text-align: center;
-    padding: var(--luciole-space-12) 0 var(--luciole-space-16);
+    padding: var(--luciole-space-8) 0 var(--luciole-space-8);
   }
   .art-load-btn {
     font-family: var(--luciole-sans);
@@ -239,7 +239,7 @@
     .art-filters { flex-direction: column; align-items: stretch; }
     .art-filter-select, .art-filter-input { min-width: 100%; }
     .art-filter-btn { align-self: stretch; text-align: center; }
-    .art-header { padding-top: var(--luciole-space-8); }
+    .art-header { padding-top: var(--luciole-space-4); }
   }
 </style>
 {% endblock %}

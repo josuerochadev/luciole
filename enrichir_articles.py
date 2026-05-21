@@ -35,8 +35,7 @@ def charger_articles_non_classes(limit: int | None = None) -> list[dict]:
         if limit:
             query += f" LIMIT {int(limit)}"
         cur.execute(query)
-        cols = [desc[0] for desc in cur.description]
-        return [dict(zip(cols, row)) for row in cur.fetchall()]
+        return [dict(row) for row in cur.fetchall()]
     finally:
         conn.close()
 

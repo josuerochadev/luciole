@@ -4,29 +4,29 @@ Utilise trafilatura (rapide, gère bien la presse tech).
 Fallback sur le résumé RSS si le scraping échoue.
 """
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import trafilatura
+from trafilatura.settings import use_config
 
 logger = logging.getLogger(__name__)
 
-# Limite de caractères pour éviter les articles géants (livres blancs, etc.)
 MAX_CONTENT_LENGTH = 5000
-SCRAPE_TIMEOUT = 10  # secondes par article
-MAX_WORKERS = 8  # threads parallèles pour le scraping
+SCRAPE_TIMEOUT = 8  # secondes par requête HTTP
+MAX_WORKERS = 8
+BATCH_TIMEOUT = 300  # 5 min max pour tout le batch (sécurité build Docker)
+
+# Config trafilatura avec timeout HTTP
+_traf_config = use_config()
+_traf_config.set("DEFAULT", "DOWNLOAD_TIMEOUT", str(SCRAPE_TIMEOUT))
 
 
 def scraper_article(url: str) -> str | None:
-    """
-    Extrait le contenu textuel principal d'une URL.
-
-    Returns:
-        Le texte extrait (tronqué à MAX_CONTENT_LENGTH), ou None si échec.
-    """
     if not url:
         return None
     try:
-        html = trafilatura.fetch_url(url)
+        html = trafilatura.fetch_url(url, config=_traf_config)
         if not html:
             return None
         texte = trafilatura.extract(html, include_comments=False, include_tables=False)
@@ -38,20 +38,10 @@ def scraper_article(url: str) -> str | None:
         return None
 
 
-def scraper_articles_batch(articles: list[dict]) -> list[dict]:
-    """
-    Enrichit une liste d'articles avec leur contenu complet (parallèle).
-    Ajoute la clé 'contenu_complet' à chaque article.
-    Si le scraping échoue, conserve le resume_brut existant.
-
-    Args:
-        articles: Liste de dicts avec au moins 'lien' et 'resume_brut'.
-
-    Returns:
-        La même liste, enrichie avec 'contenu_complet'.
-    """
+def scraper_articles_batch(articles: list[dict], batch_timeout: int = BATCH_TIMEOUT) -> list[dict]:
     total = len(articles)
     succes = 0
+    deadline = time.monotonic() + batch_timeout
 
     def _scrape_one(idx_article):
         idx, article = idx_article
@@ -61,8 +51,14 @@ def scraper_articles_batch(articles: list[dict]) -> list[dict]:
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
         futures = {pool.submit(_scrape_one, (i, a)): i for i, a in enumerate(articles)}
         for future in as_completed(futures):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                logger.warning(f"[scraper] Timeout global ({batch_timeout}s) atteint, arrêt du batch.")
+                for f in futures:
+                    f.cancel()
+                break
             try:
-                idx, contenu = future.result(timeout=SCRAPE_TIMEOUT + 5)
+                idx, contenu = future.result(timeout=min(remaining, SCRAPE_TIMEOUT + 2))
                 if contenu:
                     articles[idx]["contenu_complet"] = contenu
                     succes += 1

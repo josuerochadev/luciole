@@ -616,16 +616,14 @@ def articles_categories(request: Request, user=Depends(get_current_user)):
 
 
 @app.get("/metrics")
-def metrics(x_api_key: str | None = Header(default=None)):
-    """Agrégats de monitoring (M5E5). Protégé par X-API-Key."""
-    _verifier_api_key(x_api_key)
+def metrics(user=Depends(get_current_user)):
+    """Agrégats de monitoring (M5E5). Protégé par auth JWT."""
     return get_metrics()
 
 
 @app.get("/metrics/recent")
-def metrics_recent(limit: int = 20, x_api_key: str | None = Header(default=None)):
-    """Les N dernières requêtes enregistrées (debug). Protégé par X-API-Key."""
-    _verifier_api_key(x_api_key)
+def metrics_recent(limit: int = 20, user=Depends(get_current_user)):
+    """Les N dernières requêtes enregistrées (debug). Protégé par auth JWT."""
     records = get_recent(limit=min(limit, 200))
     return {"count": len(records), "records": records}
 

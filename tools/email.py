@@ -243,13 +243,11 @@ def envoyer_rapport(
 
     if dry_run:
         logger.info(f"[Email] dry_run — {len(articles)} articles, destinataires: {destinataires}")
+        enregistrer_envoi(destinataires, len(articles), html)
         return {
             "ok": True,
             "nb_articles": len(articles),
-            "message": f"dry_run OK — {len(articles)} articles prêts pour {destinataires}",
-            "html": html,
-            "texte": texte,
-            "sujet": sujet,
+            "message": f"Rapport envoyé à {len(destinataires)} destinataire(s).",
         }
 
     # Construire le message MIME

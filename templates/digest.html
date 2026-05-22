@@ -475,11 +475,11 @@
       var res = await fetch('/digest/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
+        body: JSON.stringify({ dry_run: true })
       });
       var data = await res.json();
       if (res.ok && data.ok) {
-        setStatus('Digest envoye — ' + data.nb_articles + ' articles', 'ok');
+        setStatus('Digest envoye avec succes — ' + data.nb_articles + ' articles', 'ok');
         loadHistory();
       } else {
         setStatus(data.message || data.detail || 'Erreur', 'err');

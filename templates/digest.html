@@ -122,43 +122,6 @@
     flex-wrap: wrap;
     margin-bottom: var(--luciole-space-4);
   }
-  .digest-apikey-group {
-    display: flex;
-    flex-direction: column;
-    gap: var(--luciole-space-1);
-  }
-  .digest-apikey-label {
-    font-family: var(--luciole-sans);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--luciole-muted);
-  }
-  .digest-apikey-input {
-    font-family: var(--luciole-sans);
-    font-size: var(--luciole-text-sm);
-    border: 1px solid var(--luciole-rule);
-    border-radius: 4px;
-    padding: var(--luciole-space-2) var(--luciole-space-3);
-    background: var(--luciole-paper);
-    color: var(--luciole-ink);
-    min-width: 220px;
-    transition: border-color 0.2s;
-  }
-  .digest-apikey-input:focus {
-    outline: none;
-    border-color: var(--luciole-accent);
-    box-shadow: 0 0 0 3px var(--luciole-accent-soft);
-  }
-  .digest-apikey-error {
-    font-family: var(--luciole-sans);
-    font-size: var(--luciole-text-xs);
-    color: var(--luciole-accent);
-    display: none;
-  }
-  .digest-apikey-error--visible { display: block; }
-
   .digest-btn {
     font-family: var(--luciole-sans);
     font-weight: 500;
@@ -299,13 +262,6 @@
 <div id="panel-admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
   <span class="t-eyebrow digest-section-divider">Actions</span>
   <div class="digest-admin-form">
-    <div class="digest-admin-row">
-      <div class="digest-apikey-group">
-        <label class="digest-apikey-label" for="apikey-input">Cle API serveur</label>
-        <input id="apikey-input" class="digest-apikey-input" type="password" placeholder="Cle API serveur" autocomplete="off" aria-describedby="apikey-error">
-        <span id="apikey-error" class="digest-apikey-error" role="alert">Veuillez saisir votre cle API avant d'envoyer.</span>
-      </div>
-    </div>
     <div class="digest-admin-row">
       <button class="digest-btn" id="btn-preview">Previsualiser</button>
       <button class="digest-btn digest-btn--accent" id="btn-send" disabled>Envoyer par email</button>
@@ -479,8 +435,6 @@
   var btnSend = document.getElementById('btn-send');
   var status = document.getElementById('digest-status');
   var previewContainer = document.getElementById('digest-preview-container');
-  var apikeyInput = document.getElementById('apikey-input');
-  var apikeyError = document.getElementById('apikey-error');
   var historyContainer = document.getElementById('digest-history');
 
   function setStatus(msg, type) {
@@ -489,13 +443,10 @@
   }
 
   btnPreview.addEventListener('click', async function () {
-    var apiKey = apikeyInput.value.trim();
-    if (!apiKey) { apikeyError.classList.add('digest-apikey-error--visible'); apikeyInput.focus(); return; }
-    apikeyError.classList.remove('digest-apikey-error--visible');
     btnPreview.disabled = true;
     setStatus('Generation en cours...', '');
     try {
-      var res = await fetch('/digest', { headers: { 'X-API-Key': apiKey } });
+      var res = await fetch('/digest');
       if (!res.ok) throw new Error();
       var html = await res.text();
       previewContainer.innerHTML = '';
@@ -518,15 +469,12 @@
 
   btnSend.addEventListener('click', async function () {
     if (!confirm('Envoyer le digest par email aux destinataires configures ?')) return;
-    var apiKey = apikeyInput.value.trim();
-    if (!apiKey) { apikeyError.classList.add('digest-apikey-error--visible'); apikeyInput.focus(); return; }
-    apikeyError.classList.remove('digest-apikey-error--visible');
     btnSend.disabled = true;
     setStatus('Envoi en cours...', '');
     try {
       var res = await fetch('/digest/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({})
       });
       var data = await res.json();
@@ -540,7 +488,6 @@
       setStatus('Erreur reseau', 'err');
     } finally {
       btnSend.disabled = false;
-      apikeyInput.value = '';
     }
   });
 

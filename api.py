@@ -643,9 +643,8 @@ async def digest_page(request: Request, user=Depends(get_current_user_page)):
 
 
 @app.get("/digest", response_class=HTMLResponse)
-def digest(limit: int = 20, x_api_key: str | None = Header(default=None)):
-    """Retourne le HTML du digest sans envoyer d'email. Protégé par X-API-Key."""
-    _verifier_api_key(x_api_key)
+def digest(limit: int = 20, user=Depends(get_current_user)):
+    """Retourne le HTML du digest sans envoyer d'email. Protégé par auth JWT."""
     articles = selectionner_articles(nb_max=limit)
     return HTMLResponse(content=generer_html(articles))
 
@@ -763,10 +762,9 @@ class DigestSendRequest(BaseModel):
 @app.post("/digest/send")
 def digest_send(
     req: DigestSendRequest | None = None,
-    x_api_key: str | None = Header(default=None),
+    user=Depends(get_current_user),
 ):
-    """Déclenche l'envoi du digest par email. Protégé par X-API-Key."""
-    _verifier_api_key(x_api_key)
+    """Déclenche l'envoi du digest par email. Protégé par auth JWT."""
     body = req or DigestSendRequest()
     return envoyer_rapport(
         destinataires=body.destinataires,

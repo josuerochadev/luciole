@@ -135,14 +135,14 @@ def test_js_sidebar_delete_is_button():
     )
 
 
-# ── 6. Digest — champ API key inline (pas de prompt()) ────────────────────
+# ── 6. Digest — pas de champ API key (auth JWT) ───────────────────────────
 
 
-def test_digest_has_apikey_input():
-    """Le template digest.html contient le champ inline #apikey-input."""
+def test_digest_no_apikey_input():
+    """Le template digest.html n'expose plus de champ API key (auth JWT)."""
     with open("templates/digest.html") as f:
         content = f.read()
-    assert 'id="apikey-input"' in content, "Champ #apikey-input absent de templates/digest.html"
+    assert 'id="apikey-input"' not in content, "Champ #apikey-input encore présent dans digest.html"
 
 
 def test_digest_no_window_prompt():

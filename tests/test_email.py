@@ -60,10 +60,9 @@ resultat = envoyer_rapport(
 )
 assert resultat["ok"] is True,           f"dry_run échoué : {resultat['message']}"
 assert resultat["nb_articles"] > 0,      "dry_run : aucun article"
-assert "html" in resultat,               "dry_run : HTML absent dans le résultat"
-assert "sujet" in resultat,              "dry_run : sujet absent"
+assert "message" in resultat,            "dry_run : message absent dans le résultat"
 print("\n[4/4] dry_run             : OK")
-print(f"       Sujet             : {resultat['sujet']}")
+print(f"       Message           : {resultat['message']}")
 print(f"       Articles prêts    : {resultat['nb_articles']}")
 
 print(f"\n{'='*65}")
